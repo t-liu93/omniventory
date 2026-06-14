@@ -6,7 +6,20 @@
 
 ## Working language (non-negotiable — read this first)
 
-**Reply in whatever language the user writes to you in.** User writes Chinese → answer in Chinese; user writes English → answer in English. Re-evaluate every turn and default to the user's language; switch only when the user **explicitly** asks for another language. This file and the other repo docs are written in English for future open-sourcing — that is a documentation choice and **does not** set the conversation language.
+**Reply in whatever language the user writes to you in.** User writes Chinese → answer in Chinese; user writes English → answer in English. Re-evaluate every turn and default to the user's language; switch only when the user **explicitly** asks for another language. This file is written in English for future open-sourcing (durable docs under `docs/` are **bilingual** — see the next section); that is a documentation choice and **does not** set the conversation language.
+
+## Bilingual documentation (non-negotiable)
+
+Every durable doc under `docs/` (roadmap, plan, milestone design docs, references, design notes) **must exist in both languages**:
+
+- **English is the primary / canonical version**, named `<name>.md` (e.g. `roadmap.md`) — what outside readers and the future open-source audience see.
+- **Chinese is a faithful mirror**, named `<name>_zh.md` (e.g. `roadmap_zh.md`).
+- **Cross-reference at the top of both files** (immediately under the H1 title), each linking the other language:
+  - English file → `> 🌐 **Languages:** English (this doc) · [中文](./<name>_zh.md)`
+  - Chinese file → `> 🌐 **语言:** [English](./<name>.md) · 中文(当前)`
+- **No drift**: when one side changes, update the other in the **same** round.
+
+Applies to durable docs under `docs/`. Does **not** apply to: (a) this meta file (`AGENTS.md` and its `CLAUDE.md` symlink — English only); (b) `review-notes/` implementation / review briefs (single language = the author's working language, per "Implementation / Review briefs").
 
 ## What this project is
 
