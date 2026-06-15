@@ -27,7 +27,12 @@ test:
 	@echo "==> Frontend: vitest"
 	cd frontend && pnpm test
 
-# Contract-first codegen: OpenAPI → TS types
-# Stub until Step 5 wires up the full flow (requires the backend app + endpoints).
+# Contract-first codegen: OpenAPI snapshot → TS types
+# Step 1: export the FastAPI OpenAPI document to repo-root openapi.json
+# Step 2: generate TypeScript type declarations from openapi.json
+# Both artifacts are committed and gate-checked by the CI contract job.
 codegen:
-	@echo "codegen: stub — will be implemented in Step 5"
+	@echo "==> Codegen step 1: export OpenAPI → openapi.json"
+	cd backend && uv run python scripts/export_openapi.py
+	@echo "==> Codegen step 2: openapi-typescript → frontend/src/api/schema.d.ts"
+	cd frontend && pnpm exec openapi-typescript ../openapi.json -o src/api/schema.d.ts

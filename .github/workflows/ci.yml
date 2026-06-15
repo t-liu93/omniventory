@@ -87,3 +87,57 @@ jobs:
 
       - name: Build — vite
         run: pnpm build
+
+  contract:
+    name: Contract (no-drift gate)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.11.8"
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
+
+      - name: Set up Python
+        run: uv python install 3.13
+        working-directory: backend
+
+      - name: Install backend dependencies
+        run: uv sync --frozen
+        working-directory: backend
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Enable pnpm via corepack
+        run: corepack enable pnpm
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+        working-directory: frontend
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: frontend
+
+      - name: Regenerate OpenAPI artifacts
+        run: make codegen
+
+      - name: Assert no drift
+        run: git diff --exit-code openapi.json frontend/src/api/schema.d.ts
