@@ -1,0 +1,67 @@
+# ============================================================
+# Omniventory · .gitignore
+# Monorepo: backend/ (Python + uv) · frontend/ (React + pnpm)
+# ============================================================
+
+# ---- Review / working briefs (intentionally untracked) ----
+# Implementation / review briefs are local working artifacts, never committed.
+review-notes/
+
+# ---- Python / backend ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.Python
+# virtualenvs
+.venv/
+venv/
+env/
+# uv
+.uv/
+# tooling caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+*.cover
+
+# ---- Node / frontend ----
+node_modules/
+.pnpm-store/
+frontend/dist/
+dist-ssr/
+.vite/
+# vite-plugin-pwa dev output
+dev-dist/
+*.local
+
+# ---- App data / runtime (SQLite volume) ----
+data/
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# ---- Env / secrets ----
+.env
+.env.*
+!.env.example
+
+# ---- Docker ----
+docker-compose.override.yaml
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
