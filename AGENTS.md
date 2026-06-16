@@ -38,18 +38,37 @@ Personal use first, intended to be **open-sourced** later. **Status: pre-impleme
 - **Before implementing anything**: read the current milestone's `docs/plan/milestones/M<x>.md`. The **active milestone = the one marked 🟡 in the roadmap progress table** ("how far we've got" is tracked only there, never in this file).
 - **Design docs are self-contained**: every design / implementation-reference doc under `docs/plan/` stands on its own. Don't bake design decisions into this file, and don't treat `investigation.md` as a design spec — it's inspiration; the real design lands in the design docs.
 
-## Tech stack & commands — TBD
+## Tech stack & commands
 
-The stack is **deliberately undecided** (the investigation defers it on purpose). Until **M0 scaffolding** lands and picks one:
+Ratified at **M0** (see `docs/plan/roadmap.md` §1.1 for the locked decisions, and `docs/plan/milestones/M0.md` for how it's wired). Monorepo: **`backend/`** + **`frontend/`**.
 
-- Don't assume a stack, framework, package manager, or directory layout.
-- This section and a concrete command list get filled in **once M0 is chosen**, and only then.
+- **Backend** — Python **3.13**, package manager **uv**; **FastAPI**, **SQLAlchemy 2.0** (typed), **Alembic** (migrations), **SQLite** (default); `pydantic-settings` for config, **argon2** for passwords. Quality tools: **ruff** (lint + format), **mypy** (type-check), **pytest**. App factory: `app.main:create_app` (no import side-effects). Auth = opaque server-side **session cookies**; business logic stays in the app/service layer (no SQL-side logic), all DB access via the repository + `RequestContext` layer.
+- **Frontend** — **React 19 + TypeScript**, **Vite**, package manager **pnpm**; **Mantine** (`@mantine/core` — the single style foundation is `src/theme.ts`), **react-feather** icons, **PWA** via `vite-plugin-pwa`. Quality tools: **eslint**, **tsc**, **vitest**.
+- **Contract-first** — the FastAPI app exports `openapi.json` (repo root) → `frontend/src/api/schema.d.ts` via `openapi-typescript`; the API client is `openapi-fetch`. Both artifacts are committed and gated by a **no-drift CI** check.
+- **Deploy** — single multi-stage **Docker** image (`docker/Dockerfile`); the backend serves the embedded SPA. SQLite lives on a **bind mount** (`DATA_DIR` → `/app/data`); the container runs as **uid/gid 1000**. Migrations run in a one-shot compose **`migrate`** service (`alembic upgrade head`); `app` starts only after it succeeds (**fail-closed**) — the entrypoint does **not** migrate. Config via optional `.env` (zero-config by default): `APP_PORT`, `DATA_DIR`, `SECRET_KEY` (auto-generated + persisted in `app_config` if blank), `DATABASE_URL`, `ENVIRONMENT`. First run is a **setup/onboarding** flow (no env-seeded admin).
+
+### Commands
+
+`Makefile` aliases (run from repo root) are the canonical entry points — humans and CI call the same targets:
+
+- `make check` — all quality gates (lint + type-check + tests, both sides). This is the **Definition of Done** gate.
+- `make lint` — backend `ruff check` + `ruff format --check` + `mypy`; frontend `eslint` + `tsc`.
+- `make test` — backend `pytest` + frontend `vitest`.
+- `make codegen` — regenerate `openapi.json` + `frontend/src/api/schema.d.ts`. **Re-run and commit whenever the API changes** (the `contract` CI job fails on drift).
+- `make docker-build` — build the prod image `omniventory:latest`.
+- `make docker-dev` — build + run via the dev compose override.
+
+Per-side, when you need finer control:
+
+- **Backend** (in `backend/`): `uv sync --frozen` · `uv run ruff check .` · `uv run mypy app` · `uv run pytest` · `uv run alembic upgrade head` · `uv run alembic revision --autogenerate -m "..."` · dev server `uv run uvicorn app.main:create_app --factory --reload`.
+- **Frontend** (in `frontend/`): `pnpm install --frozen-lockfile` · `pnpm lint` · `pnpm typecheck` · `pnpm test` · `pnpm build` · dev server `pnpm dev`.
+- **Run the whole thing**: `docker compose up -d` (prod, prebuilt image — `migrate` runs first, then `app`); `docker compose down` to stop.
 
 ## Workflow & quality gates
 
 - **Atomic changes**: one independently-deployable, test-backed small thing at a time.
 - **Single developer, no forced PR**: self-test + CI green ⇒ merge straight to `main` (open a branch/PR only when you want a human review).
-- **Definition of Done** (every step passes): lint + type-check + tests green; build passes; **logic that's easy to get wrong must have unit tests** — quantity math, expiry / lead-time date computation, stock in/out and consumption order (e.g. FIFO), threshold / low-stock triggers; no convention violations. *(Exact commands and any contract/codegen gates arrive with the stack at M0.)*
+- **Definition of Done** (every step passes): lint + type-check + tests green; build passes; **logic that's easy to get wrong must have unit tests** — quantity math, expiry / lead-time date computation, stock in/out and consumption order (e.g. FIFO), threshold / low-stock triggers; no convention violations. *(Concrete commands + the contract/codegen no-drift gate: see "Tech stack & commands" above; `make check` is the gate, `make codegen` keeps the contract in sync.)*
 
 ## Implementation / Review briefs
 
