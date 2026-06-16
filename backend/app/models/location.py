@@ -8,10 +8,14 @@ Design notes
 - ``parent_id = NULL`` denotes a root node (top-level location).
 - Cycle prevention is enforced in the **service layer** (``LocationService``),
   not via a DB trigger — per roadmap §2.11 (logic in the app layer).
-- ``item_instance_id`` (the container-as-item bridge) is intentionally absent
-  here; it arrives in Step 4 / migration 0008, after ``stock_instances`` exists
+- ``item_instance_id`` is the container-as-item bridge (nullable, unique FK →
+  ``stock_instances.id``).  It expresses "this location *is* that tracked
+  durable asset" (e.g. the toolbox location IS the tracked toolbox instance).
+  Added in Step 4 / migration 0008, after ``stock_instances`` is created
   (§3.6 of M1.md).
 """
+
+from __future__ import annotations
 
 from datetime import datetime
 
@@ -26,11 +30,14 @@ class Location(Base):
 
     Columns
     -------
-    id            Auto-increment surrogate PK.
-    name          Human-readable label (e.g. "Garage", "Top drawer").
-    description   Optional longer description.
-    parent_id     FK → locations.id; NULL = root node.
-    created_at    Row-creation timestamp (UTC, set by DB on insert).
+    id                Auto-increment surrogate PK.
+    name              Human-readable label (e.g. "Garage", "Top drawer").
+    description       Optional longer description.
+    parent_id         FK → locations.id; NULL = root node.
+    item_instance_id  FK → stock_instances.id; nullable, unique.
+                      The container-as-item bridge: when set, this location
+                      physically *is* the tracked durable instance.
+    created_at        Row-creation timestamp (UTC, set by DB on insert).
     """
 
     __tablename__ = "locations"
@@ -44,6 +51,17 @@ class Location(Base):
         nullable=True,
         default=None,
     )
+    item_instance_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey(
+            "stock_instances.id",
+            name="fk_locations_item_instance_id",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+        unique=True,
+        default=None,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -51,13 +69,13 @@ class Location(Base):
     )
 
     # Self-referential relationships.
-    parent: Mapped["Location | None"] = relationship(
+    parent: Mapped[Location | None] = relationship(
         "Location",
         back_populates="children",
         remote_side="Location.id",
         foreign_keys="[Location.parent_id]",
     )
-    children: Mapped[list["Location"]] = relationship(
+    children: Mapped[list[Location]] = relationship(
         "Location",
         back_populates="parent",
         foreign_keys="[Location.parent_id]",
@@ -65,4 +83,7 @@ class Location(Base):
     )
 
     def __repr__(self) -> str:
-        return f"Location(id={self.id!r}, name={self.name!r}, parent_id={self.parent_id!r})"
+        return (
+            f"Location(id={self.id!r}, name={self.name!r}, "
+            f"parent_id={self.parent_id!r}, item_instance_id={self.item_instance_id!r})"
+        )

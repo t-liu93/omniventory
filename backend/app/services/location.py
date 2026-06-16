@@ -5,21 +5,29 @@ Holds the easy-to-get-wrong tree logic by delegating to ``TreeServiceMixin``:
 1. **Cycle prevention** on reparent: the new parent must not be the node
    itself, nor any of its descendants (roadmap §2.11, M1 §3.1).
 2. **Delete-guard**: deleting a non-empty node (one with children) is blocked
-   with HTTP 409 (M1 §2 "Tree delete semantics").
+   with HTTP 409 (M1 §2 "Tree delete semantics").  Step 4 extends this: a
+   location is also blocked if it has assigned stock instances or is linked
+   as a container (``item_instance_id`` is set).
 3. **Nested tree DTO building**: assembles the recursive ``LocationTreeNode``
    structure from a flat list of all locations (single DB read, recursive
    nesting in Python — no recursive SQL, per roadmap §2.11).
+4. **Container-as-item link/unlink** (Step 4): ``item_instance_id`` can be
+   set via ``PATCH /locations/{id}``; the service enforces uniqueness
+   (one instance ↔ one location) and that the target instance exists.
 
-All DB access goes through ``LocationRepository``.
+All DB access goes through ``LocationRepository`` (and
+``StockInstanceRepository`` for the instance-existence check).
 """
 
 from __future__ import annotations
 
 from fastapi import HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.location import Location
 from app.repositories.location import LocationRepository
+from app.repositories.stock_instance import StockInstanceRepository
 from app.schemas.location import LocationCreate, LocationTreeNode, LocationUpdate
 from app.services.tree import TreeServiceMixin
 
@@ -32,6 +40,7 @@ class LocationService(TreeServiceMixin):
     def __init__(self, db: Session) -> None:
         self._db = db
         self._repo = LocationRepository(db)
+        self._inst_repo = StockInstanceRepository(db)
 
     # ---------------------------------------------------------------------- #
     # Helpers                                                                  #
@@ -53,6 +62,73 @@ class LocationService(TreeServiceMixin):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Parent location {parent_id} not found.",
+            )
+
+    def _assert_instance_exists(self, instance_id: int) -> None:
+        """Raise HTTP 404 if the stock instance does not exist."""
+        if self._inst_repo.get(instance_id) is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Stock instance {instance_id} not found.",
+            )
+
+    def _assert_instance_id_unique(
+        self,
+        instance_id: int,
+        *,
+        exclude_location_id: int | None = None,
+    ) -> None:
+        """Raise HTTP 409 if another location is already linked to this instance.
+
+        The ``item_instance_id`` column has a DB-level UNIQUE constraint, but
+        we enforce it here (in the service layer) first to return a meaningful
+        409 instead of a raw DB IntegrityError.
+        """
+        stmt = select(Location).where(Location.item_instance_id == instance_id)
+        if exclude_location_id is not None:
+            stmt = stmt.where(Location.id != exclude_location_id)
+        existing = self._db.scalars(stmt).first()
+        if existing is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Stock instance {instance_id} is already linked to location "
+                    f"'{existing.name}' (id={existing.id}). "
+                    "Unlink it there first."
+                ),
+            )
+
+    def _assert_deletable_location(self, loc: Location) -> None:
+        """Raise HTTP 409 if the location cannot be deleted.
+
+        Blocks deletion when:
+        - The location has child locations (inherited tree-guard).
+        - The location has stock instances assigned to it.
+        - The location is linked as a container (item_instance_id is set).
+        """
+        # 1. Child locations (tree-guard from mixin).
+        self._assert_deletable(loc.id, loc.name, kind="location")
+
+        # 2. Assigned stock instances.
+        if self._inst_repo.has_instances_at_location(loc.id):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Location '{loc.name}' (id={loc.id}) cannot be deleted "
+                    "because it has stock instances assigned to it. "
+                    "Move or delete the instances first."
+                ),
+            )
+
+        # 3. Linked as a container-as-item.
+        if loc.item_instance_id is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Location '{loc.name}' (id={loc.id}) cannot be deleted "
+                    "because it is linked as a container to stock instance "
+                    f"{loc.item_instance_id}. Unlink it first."
+                ),
             )
 
     # ---------------------------------------------------------------------- #
@@ -90,6 +166,8 @@ class LocationService(TreeServiceMixin):
         """Apply a partial update to a location.
 
         If ``parent_id`` is present in the payload, cycle-checks are run.
+        If ``item_instance_id`` is present, container-as-item link/unlink
+        is validated and applied.
         """
         loc = self._get_or_404(location_id)
 
@@ -101,18 +179,26 @@ class LocationService(TreeServiceMixin):
             self._assert_parent_exists(new_parent_id)
             self._assert_no_cycle(location_id, new_parent_id, kind="location")
 
+        # Container-as-item link/unlink.
+        item_instance_id_changed = "item_instance_id" in data.model_fields_set
+        if item_instance_id_changed and data.item_instance_id is not None:
+            self._assert_instance_exists(data.item_instance_id)
+            self._assert_instance_id_unique(data.item_instance_id, exclude_location_id=location_id)
+
         return self._repo.update(
             loc,
             name=data.name,
             description=data.description,
             set_parent_id=parent_id_changed,
             parent_id=new_parent_id,
+            set_item_instance_id=item_instance_id_changed,
+            item_instance_id=data.item_instance_id,
         )
 
     def delete(self, location_id: int) -> None:
-        """Delete a location (guarded — 409 if it has children)."""
+        """Delete a location (guarded — 409 if it has children, instances, or is a container)."""
         loc = self._get_or_404(location_id)
-        self._assert_deletable(location_id, loc.name, kind="location")
+        self._assert_deletable_location(loc)
         self._repo.delete(loc)
 
     # ---------------------------------------------------------------------- #
@@ -157,6 +243,7 @@ def _build_tree(locations: list[Location]) -> list[LocationTreeNode]:
             name=loc.name,
             description=loc.description,
             parent_id=loc.parent_id,
+            item_instance_id=loc.item_instance_id,
             created_at=loc.created_at,
             children=[],
         )

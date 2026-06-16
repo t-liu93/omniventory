@@ -304,6 +304,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/instances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Instances
+         * @description Return a flat list of stock instances, optionally filtered.
+         */
+        get: operations["list_instances_api_instances_get"];
+        put?: never;
+        /**
+         * Create Instance
+         * @description Create a new stock instance.
+         *
+         *     Returns 422 if a serial is provided with quantity != 1.
+         *     Returns 404 if definition_id or location_id does not exist.
+         */
+        post: operations["create_instance_api_instances_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/instances/{instance_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Instance
+         * @description Return a single stock instance by id.
+         */
+        get: operations["get_instance_api_instances__instance_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Instance
+         * @description Delete a stock instance.
+         */
+        delete: operations["delete_instance_api_instances__instance_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Instance
+         * @description Partially update a stock instance.
+         *
+         *     Returns 422 if the update would result in a serial with quantity != 1.
+         */
+        patch: operations["update_instance_api_instances__instance_id__patch"];
+        trace?: never;
+    };
     "/api/kinds": {
         parameters: {
             query?: never;
@@ -561,6 +618,95 @@ export interface components {
             version: string;
         };
         /**
+         * InstanceCreate
+         * @description Body for POST /instances.
+         */
+        InstanceCreate: {
+            /** Definition Id */
+            definition_id: number;
+            /** Location Id */
+            location_id?: number | null;
+            /** Manufacturer */
+            manufacturer?: string | null;
+            /** Model Number */
+            model_number?: string | null;
+            /** Purchase Date */
+            purchase_date?: string | null;
+            /** Purchase Price */
+            purchase_price?: number | string | null;
+            /** Purchase Source */
+            purchase_source?: string | null;
+            /** Quantity */
+            quantity?: number | string | null;
+            /** Serial */
+            serial?: string | null;
+            /** Warranty Details */
+            warranty_details?: string | null;
+            /** Warranty Expires */
+            warranty_expires?: string | null;
+        };
+        /**
+         * InstanceResponse
+         * @description Public representation of a StockInstance.
+         */
+        InstanceResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Definition Id */
+            definition_id: number;
+            /** Id */
+            id: number;
+            /** Location Id */
+            location_id: number | null;
+            /** Manufacturer */
+            manufacturer: string | null;
+            /** Model Number */
+            model_number: string | null;
+            /** Purchase Date */
+            purchase_date: string | null;
+            /** Purchase Price */
+            purchase_price: string | null;
+            /** Purchase Source */
+            purchase_source: string | null;
+            /** Quantity */
+            quantity: string;
+            /** Serial */
+            serial: string | null;
+            /** Warranty Details */
+            warranty_details: string | null;
+            /** Warranty Expires */
+            warranty_expires: string | null;
+        };
+        /**
+         * InstanceUpdate
+         * @description Body for PATCH /instances/{id} — all fields optional.
+         */
+        InstanceUpdate: {
+            /** Location Id */
+            location_id?: number | null;
+            /** Manufacturer */
+            manufacturer?: string | null;
+            /** Model Number */
+            model_number?: string | null;
+            /** Purchase Date */
+            purchase_date?: string | null;
+            /** Purchase Price */
+            purchase_price?: number | string | null;
+            /** Purchase Source */
+            purchase_source?: string | null;
+            /** Quantity */
+            quantity?: number | string | null;
+            /** Serial */
+            serial?: string | null;
+            /** Warranty Details */
+            warranty_details?: string | null;
+            /** Warranty Expires */
+            warranty_expires?: string | null;
+        };
+        /**
          * KindResponse
          * @description Public representation of an ItemKind.
          */
@@ -605,6 +751,8 @@ export interface components {
             description: string | null;
             /** Id */
             id: number;
+            /** Item Instance Id */
+            item_instance_id: number | null;
             /** Name */
             name: string;
             /** Parent Id */
@@ -629,6 +777,8 @@ export interface components {
             description: string | null;
             /** Id */
             id: number;
+            /** Item Instance Id */
+            item_instance_id: number | null;
             /** Name */
             name: string;
             /** Parent Id */
@@ -641,6 +791,8 @@ export interface components {
         LocationUpdate: {
             /** Description */
             description?: string | null;
+            /** Item Instance Id */
+            item_instance_id?: number | null;
             /** Name */
             name?: string | null;
             /** Parent Id */
@@ -1216,6 +1368,170 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    list_instances_api_instances_get: {
+        parameters: {
+            query?: {
+                /** @description Case-insensitive substring match on serial, model_number, or manufacturer. */
+                q?: string | null;
+                /** @description Filter by definition_id. */
+                definition_id?: number | null;
+                /** @description Filter by location_id. */
+                location_id?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstanceResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_instance_api_instances_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstanceCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstanceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_instance_api_instances__instance_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstanceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_instance_api_instances__instance_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_instance_api_instances__instance_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstanceUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstanceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

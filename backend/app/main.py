@@ -174,6 +174,7 @@ def create_app() -> FastAPI:
     from app.api.routes import auth, health
     from app.api.routes.categories import router as categories_router
     from app.api.routes.definitions import router as definitions_router
+    from app.api.routes.instances import router as instances_router
     from app.api.routes.kinds import router as kinds_router
     from app.api.routes.locations import router as locations_router
 
@@ -184,6 +185,7 @@ def create_app() -> FastAPI:
     root_router.include_router(categories_router)
     root_router.include_router(kinds_router)
     root_router.include_router(definitions_router)
+    root_router.include_router(instances_router)
 
     app.include_router(root_router, prefix=settings.api_prefix)
 

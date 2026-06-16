@@ -127,13 +127,17 @@ class LocationRepository:
         description: str | None = None,
         set_parent_id: bool = False,
         parent_id: int | None = None,
+        set_item_instance_id: bool = False,
+        item_instance_id: int | None = None,
     ) -> Location:
         """Apply field updates to a Location.
 
-        ``parent_id`` uses an explicit ``set_parent_id`` flag to distinguish
-        "don't change parent_id" from "explicitly set parent_id = None" (root).
+        ``parent_id`` and ``item_instance_id`` use explicit ``set_*`` flags to
+        distinguish "don't change" from "explicitly set to None".
         When ``set_parent_id=True``, the ``parent_id`` value (which may be
         ``None`` for reparenting to root) is written.
+        When ``set_item_instance_id=True``, the ``item_instance_id`` value
+        (which may be ``None`` to unlink the container-as-item bridge) is written.
         """
         if name is not None:
             loc.name = name
@@ -141,6 +145,8 @@ class LocationRepository:
             loc.description = description
         if set_parent_id:
             loc.parent_id = parent_id
+        if set_item_instance_id:
+            loc.item_instance_id = item_instance_id
         self._db.flush()
         return loc
 
