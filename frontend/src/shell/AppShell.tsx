@@ -8,6 +8,10 @@
  * mounts inside <AppShell> via the {children} slot.
  *
  * Color-scheme toggle and logout action live in the header.
+ *
+ * Nav links use react-router-dom's NavLink so they get the active style
+ * automatically based on the current URL.  Routing and <Routes> live inside
+ * the {children} slot rendered by AppShell.Main.
  */
 import {
   AppShell as MantineAppShell,
@@ -22,7 +26,8 @@ import {
   useComputedColorScheme,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { Sun, Moon, LogOut, Package } from "react-feather";
+import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
+import { Sun, Moon, LogOut, Layout, MapPin, Tag } from "react-feather";
 import { client } from "../api/client";
 
 interface AppShellProps {
@@ -30,15 +35,67 @@ interface AppShellProps {
   onLogout: () => void;
 }
 
-/** Sidebar / nav content (placeholder nav item for M0). */
-function NavContent() {
+/**
+ * A single nav item that bridges Mantine's NavLink styling with
+ * react-router-dom's NavLink active detection.
+ *
+ * Mantine's NavLink renders an <a> by default; react-router-dom's NavLink
+ * also renders an <a>.  To avoid nested <a> elements, we render the Mantine
+ * NavLink with component="div" (removes the anchor), and wrap the whole
+ * thing in a react-router-dom NavLink anchor for actual navigation.
+ */
+function NavItem({
+  to,
+  label,
+  icon,
+  onClick,
+}: {
+  to: string;
+  label: string;
+  icon: React.ReactNode;
+  onClick?: () => void;
+}) {
+  const location = useLocation();
+  const isActive =
+    to === "/" ? location.pathname === "/" : location.pathname.startsWith(to);
+
+  return (
+    // The router NavLink provides the <a> and handles keyboard/click navigation.
+    <RouterNavLink to={to} style={{ textDecoration: "none" }} onClick={onClick}>
+      {/* Mantine NavLink renders as a div here — no nested <a>. */}
+      <NavLink
+        component="div"
+        label={label}
+        leftSection={icon}
+        active={isActive}
+        variant="filled"
+        style={{ cursor: "pointer" }}
+      />
+    </RouterNavLink>
+  );
+}
+
+/** Sidebar / nav content — real links to all M1 top-level routes. */
+function NavContent({ onClose }: { onClose?: () => void }) {
   return (
     <Stack gap={4} p="xs">
-      <NavLink
-        label="Inventory"
-        leftSection={<Package size={16} />}
-        active
-        variant="filled"
+      <NavItem
+        to="/"
+        label="Dashboard"
+        icon={<Layout size={16} />}
+        onClick={onClose}
+      />
+      <NavItem
+        to="/locations"
+        label="Locations"
+        icon={<MapPin size={16} />}
+        onClick={onClose}
+      />
+      <NavItem
+        to="/categories"
+        label="Categories"
+        icon={<Tag size={16} />}
+        onClick={onClose}
       />
     </Stack>
   );
@@ -121,7 +178,7 @@ export function AppShell({ children, onLogout }: AppShellProps) {
         hiddenFrom="sm"
         zIndex={1000}
       >
-        <NavContent />
+        <NavContent onClose={closeDrawer} />
       </Drawer>
 
       {/* Mantine AppShell: navbar hidden on mobile (handled by Drawer instead) */}

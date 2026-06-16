@@ -18,7 +18,8 @@
     "openapi-fetch": "^0.13.5",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-feather": "^2.0.10"
+    "react-feather": "^2.0.10",
+    "react-router-dom": "^7.17.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -30,12 +31,12 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.2.0",
+    "jsdom": "^26.1.0",
     "openapi-typescript": "^7.8.0",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.34.0",
     "vite": "^6.3.5",
     "vite-plugin-pwa": "^0.21.1",
-    "jsdom": "^26.1.0",
     "vitest": "^3.2.6"
   }
 }

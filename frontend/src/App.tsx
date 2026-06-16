@@ -1,24 +1,33 @@
 /**
  * App root.
  *
- * Auth-gate approach (lean, no router library for M0):
+ * Auth-gate approach (lean; M0 design preserved):
  *   1. On mount, call GET /api/auth/setup-status.
  *      - setup_required: true  → show Setup page (first-run onboarding).
  *   2. If setup is not required, call GET /api/auth/me.
- *      - 200  → show the authenticated AppShell.
+ *      - 200  → show the authenticated AppShell (with routing inside).
  *      - 401  → show the Login page.
  *   3. Loading state while resolving.
  *
  * After setup success → transition to Login (anon state; user must log in).
  * Session is 100% cookie-based.  Nothing auth-related is stored in
  * localStorage or sessionStorage.
+ *
+ * Routing (added in M1 Step 5):
+ *   - BrowserRouter is mounted INSIDE the authenticated shell — the auth gate
+ *     above is the OUTER shell; routing is INNER (per M1 §2 locked decision).
+ *   - Routes: / (Dashboard), /locations, /categories.
+ *   - Definition/instance routes (/items, /items/:id, /instances/:id) land in Step 6.
  */
 import { useEffect, useState } from "react";
 import { LoadingOverlay, Box } from "@mantine/core";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppShell } from "./shell/AppShell";
 import { Login } from "./pages/Login";
 import { Setup } from "./pages/Setup";
-import { PageShell } from "./components/PageShell";
+import { Dashboard } from "./pages/Dashboard";
+import { Locations } from "./pages/Locations";
+import { Categories } from "./pages/Categories";
 import { client } from "./api/client";
 
 type AuthState = "loading" | "setup" | "authed" | "anon";
@@ -65,10 +74,18 @@ function App() {
     return <Login onSuccess={() => setAuthState("authed")} />;
   }
 
+  // Authenticated: mount BrowserRouter INSIDE the auth gate (§2 locked decision).
   return (
-    <AppShell onLogout={() => setAuthState("anon")}>
-      <PageShell title="Welcome" />
-    </AppShell>
+    <BrowserRouter>
+      <AppShell onLogout={() => setAuthState("anon")}>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/locations" element={<Locations />} />
+          <Route path="/categories" element={<Categories />} />
+          {/* Step 6 will add: /items, /items/:id, /instances/:id */}
+        </Routes>
+      </AppShell>
+    </BrowserRouter>
   );
 }
 
