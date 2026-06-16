@@ -165,6 +165,85 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/locations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Locations
+         * @description Return a flat list of locations, optionally filtered.
+         *
+         *     - ``q``: case-insensitive substring match on the name.
+         *     - ``parent_id``: when provided, return only locations with that parent.
+         */
+        get: operations["list_locations_api_locations_get"];
+        put?: never;
+        /**
+         * Create Location
+         * @description Create a new location.
+         */
+        post: operations["create_location_api_locations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/locations/tree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Tree
+         * @description Return the full location tree as a nested structure.
+         */
+        get: operations["get_tree_api_locations_tree_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/locations/{location_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Location
+         * @description Return a single location by id.
+         */
+        get: operations["get_location_api_locations__location_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Location
+         * @description Delete a location.
+         *
+         *     Returns 409 if the location still has child locations.
+         */
+        delete: operations["delete_location_api_locations__location_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Location
+         * @description Partially update a location.
+         *
+         *     Reparenting (changing ``parent_id``) is cycle-checked in the service layer.
+         */
+        patch: operations["update_location_api_locations__location_id__patch"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -187,6 +266,73 @@ export interface components {
             status: string;
             /** Version */
             version: string;
+        };
+        /**
+         * LocationCreate
+         * @description Body for POST /locations.
+         */
+        LocationCreate: {
+            /** Description */
+            description?: string | null;
+            /** Name */
+            name: string;
+            /** Parent Id */
+            parent_id?: number | null;
+        };
+        /**
+         * LocationResponse
+         * @description Public representation of a Location (flat, no children).
+         */
+        LocationResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Description */
+            description: string | null;
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Parent Id */
+            parent_id: number | null;
+        };
+        /**
+         * LocationTreeNode
+         * @description Recursive tree node for GET /locations/tree.
+         */
+        LocationTreeNode: {
+            /**
+             * Children
+             * @default []
+             */
+            children: components["schemas"]["LocationTreeNode"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Description */
+            description: string | null;
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Parent Id */
+            parent_id: number | null;
+        };
+        /**
+         * LocationUpdate
+         * @description Body for PATCH /locations/{id} — all fields optional.
+         */
+        LocationUpdate: {
+            /** Description */
+            description?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Parent Id */
+            parent_id?: number | null;
         };
         /**
          * LoginRequest
@@ -414,6 +560,188 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    list_locations_api_locations_get: {
+        parameters: {
+            query?: {
+                /** @description Case-insensitive name substring filter. */
+                q?: string | null;
+                /** @description Filter by parent_id (pass 0 to get root locations is NOT supported; omit to get all). */
+                parent_id?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_location_api_locations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LocationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_tree_api_locations_tree_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationTreeNode"][];
+                };
+            };
+        };
+    };
+    get_location_api_locations__location_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                location_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_location_api_locations__location_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                location_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_location_api_locations__location_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                location_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LocationUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

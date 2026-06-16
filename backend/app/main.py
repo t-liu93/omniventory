@@ -172,10 +172,12 @@ def create_app() -> FastAPI:
     # Root API router — all routes live under settings.api_prefix          #
     # ------------------------------------------------------------------ #
     from app.api.routes import auth, health
+    from app.api.routes.locations import router as locations_router
 
     root_router = APIRouter()
     root_router.include_router(health.router)
     root_router.include_router(auth.router)
+    root_router.include_router(locations_router)
 
     app.include_router(root_router, prefix=settings.api_prefix)
 
