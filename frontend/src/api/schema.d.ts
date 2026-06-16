@@ -218,6 +218,66 @@ export interface paths {
         patch: operations["update_category_api_categories__category_id__patch"];
         trace?: never;
     };
+    "/api/definitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Definitions
+         * @description Return a flat list of item definitions, optionally filtered.
+         *
+         *     - ``q``: case-insensitive substring match on the name.
+         *     - ``category_id``: when provided, return only definitions with that category.
+         */
+        get: operations["list_definitions_api_definitions_get"];
+        put?: never;
+        /**
+         * Create Definition
+         * @description Create a new item definition.
+         *
+         *     If ``kind_id`` is omitted, the ``durable`` kind is used automatically.
+         *     Returns 422 if ``kind_id`` is provided but does not exist.
+         */
+        post: operations["create_definition_api_definitions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/definitions/{definition_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Definition
+         * @description Return a single item definition by id.
+         */
+        get: operations["get_definition_api_definitions__definition_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Definition
+         * @description Delete an item definition.
+         */
+        delete: operations["delete_definition_api_definitions__definition_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Definition
+         * @description Partially update an item definition.
+         *
+         *     Returns 422 if ``kind_id`` is provided but does not exist.
+         */
+        patch: operations["update_definition_api_definitions__definition_id__patch"];
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -236,6 +296,28 @@ export interface paths {
          *                     on DB failure (FastAPI returns 500).
          */
         get: operations["health_api_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/kinds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Kinds
+         * @description Return all item kinds (seeded: durable / consumable / perishable).
+         *
+         *     This endpoint is read-only — there are no write endpoints for kinds in M1.
+         */
+        get: operations["list_kinds_api_kinds_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -394,6 +476,71 @@ export interface components {
             /** Parent Id */
             parent_id?: number | null;
         };
+        /**
+         * DefinitionCreate
+         * @description Body for POST /definitions.
+         */
+        DefinitionCreate: {
+            /** Category Id */
+            category_id?: number | null;
+            /** Default Location Id */
+            default_location_id?: number | null;
+            /** Description */
+            description?: string | null;
+            /** Kind Id */
+            kind_id?: number | null;
+            /** Name */
+            name: string;
+            /**
+             * Unit
+             * @default pcs
+             */
+            unit: string;
+        };
+        /**
+         * DefinitionResponse
+         * @description Public representation of an ItemDefinition.
+         */
+        DefinitionResponse: {
+            /** Category Id */
+            category_id: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Default Location Id */
+            default_location_id: number | null;
+            /** Description */
+            description: string | null;
+            /** Id */
+            id: number;
+            kind: components["schemas"]["KindResponse"];
+            /** Kind Id */
+            kind_id: number;
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+        };
+        /**
+         * DefinitionUpdate
+         * @description Body for PATCH /definitions/{id} — all fields optional.
+         */
+        DefinitionUpdate: {
+            /** Category Id */
+            category_id?: number | null;
+            /** Default Location Id */
+            default_location_id?: number | null;
+            /** Description */
+            description?: string | null;
+            /** Kind Id */
+            kind_id?: number | null;
+            /** Name */
+            name?: string | null;
+            /** Unit */
+            unit?: string | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -412,6 +559,25 @@ export interface components {
             status: string;
             /** Version */
             version: string;
+        };
+        /**
+         * KindResponse
+         * @description Public representation of an ItemKind.
+         */
+        KindResponse: {
+            /** Code */
+            code: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: number;
+            /** Is System */
+            is_system: boolean;
+            /** Name */
+            name: string;
         };
         /**
          * LocationCreate
@@ -872,6 +1038,168 @@ export interface operations {
             };
         };
     };
+    list_definitions_api_definitions_get: {
+        parameters: {
+            query?: {
+                /** @description Case-insensitive name substring filter. */
+                q?: string | null;
+                /** @description Filter by category_id. */
+                category_id?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DefinitionResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_definition_api_definitions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DefinitionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DefinitionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_definition_api_definitions__definition_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DefinitionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_definition_api_definitions__definition_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_definition_api_definitions__definition_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DefinitionUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DefinitionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     health_api_health_get: {
         parameters: {
             query?: never;
@@ -888,6 +1216,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    list_kinds_api_kinds_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KindResponse"][];
                 };
             };
         };

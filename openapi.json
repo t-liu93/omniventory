@@ -183,6 +183,217 @@
         "title": "CategoryUpdate",
         "type": "object"
       },
+      "DefinitionCreate": {
+        "description": "Body for POST /definitions.",
+        "properties": {
+          "category_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "default_location_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Location Id"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "kind_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind Id"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "unit": {
+            "default": "pcs",
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "DefinitionCreate",
+        "type": "object"
+      },
+      "DefinitionResponse": {
+        "description": "Public representation of an ItemDefinition.",
+        "properties": {
+          "category_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "default_location_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Location Id"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/KindResponse"
+          },
+          "kind_id": {
+            "title": "Kind Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "category_id",
+          "kind_id",
+          "kind",
+          "unit",
+          "default_location_id",
+          "created_at"
+        ],
+        "title": "DefinitionResponse",
+        "type": "object"
+      },
+      "DefinitionUpdate": {
+        "description": "Body for PATCH /definitions/{id} \u2014 all fields optional.",
+        "properties": {
+          "category_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "default_location_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Location Id"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "kind_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          }
+        },
+        "title": "DefinitionUpdate",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -223,6 +434,41 @@
           "db"
         ],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "KindResponse": {
+        "description": "Public representation of an ItemKind.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_system": {
+            "title": "Is System",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "is_system",
+          "created_at"
+        ],
+        "title": "KindResponse",
         "type": "object"
       },
       "LocationCreate": {
@@ -988,6 +1234,248 @@
         ]
       }
     },
+    "/api/definitions": {
+      "get": {
+        "description": "Return a flat list of item definitions, optionally filtered.\n\n- ``q``: case-insensitive substring match on the name.\n- ``category_id``: when provided, return only definitions with that category.",
+        "operationId": "list_definitions_api_definitions_get",
+        "parameters": [
+          {
+            "description": "Case-insensitive name substring filter.",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Case-insensitive name substring filter.",
+              "title": "Q"
+            }
+          },
+          {
+            "description": "Filter by category_id.",
+            "in": "query",
+            "name": "category_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by category_id.",
+              "title": "Category Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DefinitionResponse"
+                  },
+                  "title": "Response List Definitions Api Definitions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Definitions",
+        "tags": [
+          "definitions"
+        ]
+      },
+      "post": {
+        "description": "Create a new item definition.\n\nIf ``kind_id`` is omitted, the ``durable`` kind is used automatically.\nReturns 422 if ``kind_id`` is provided but does not exist.",
+        "operationId": "create_definition_api_definitions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DefinitionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefinitionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Definition",
+        "tags": [
+          "definitions"
+        ]
+      }
+    },
+    "/api/definitions/{definition_id}": {
+      "delete": {
+        "description": "Delete an item definition.",
+        "operationId": "delete_definition_api_definitions__definition_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "title": "Definition Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Definition",
+        "tags": [
+          "definitions"
+        ]
+      },
+      "get": {
+        "description": "Return a single item definition by id.",
+        "operationId": "get_definition_api_definitions__definition_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "title": "Definition Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefinitionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Definition",
+        "tags": [
+          "definitions"
+        ]
+      },
+      "patch": {
+        "description": "Partially update an item definition.\n\nReturns 422 if ``kind_id`` is provided but does not exist.",
+        "operationId": "update_definition_api_definitions__definition_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "title": "Definition Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DefinitionUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefinitionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Definition",
+        "tags": [
+          "definitions"
+        ]
+      }
+    },
     "/api/health": {
       "get": {
         "description": "Return service health.\n\n``status``      always ``\"ok\"`` while the process is running.\n``version``     application release version.\n``api_version`` integer compatibility number from Settings.\n``db``          ``\"ok\"`` if ``SELECT 1`` succeeds; propagates exception\n                on DB failure (FastAPI returns 500).",
@@ -1005,6 +1493,32 @@
           }
         },
         "summary": "Health"
+      }
+    },
+    "/api/kinds": {
+      "get": {
+        "description": "Return all item kinds (seeded: durable / consumable / perishable).\n\nThis endpoint is read-only \u2014 there are no write endpoints for kinds in M1.",
+        "operationId": "list_kinds_api_kinds_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/KindResponse"
+                  },
+                  "title": "Response List Kinds Api Kinds Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Kinds",
+        "tags": [
+          "kinds"
+        ]
       }
     },
     "/api/locations": {
