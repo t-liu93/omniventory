@@ -1,6 +1,6 @@
 """Service layer for the Location tree.
 
-Holds the easy-to-get-wrong tree logic:
+Holds the easy-to-get-wrong tree logic by delegating to ``TreeServiceMixin``:
 
 1. **Cycle prevention** on reparent: the new parent must not be the node
    itself, nor any of its descendants (roadmap §2.11, M1 §3.1).
@@ -21,10 +21,13 @@ from sqlalchemy.orm import Session
 from app.models.location import Location
 from app.repositories.location import LocationRepository
 from app.schemas.location import LocationCreate, LocationTreeNode, LocationUpdate
+from app.services.tree import TreeServiceMixin
 
 
-class LocationService:
+class LocationService(TreeServiceMixin):
     """Business-logic facade for Location tree operations."""
+
+    _repo: LocationRepository  # narrows the mixin's _TreeRepoProtocol for mypy
 
     def __init__(self, db: Session) -> None:
         self._db = db
@@ -44,47 +47,12 @@ class LocationService:
             )
         return loc
 
-    def _assert_no_cycle(self, node_id: int, proposed_parent_id: int) -> None:
-        """Raise HTTP 409 if the proposed reparenting would create a cycle.
-
-        A cycle would arise if ``proposed_parent_id`` is the node itself, or
-        any of the node's descendants.  We fetch descendants lazily in Python
-        (no recursive SQL — roadmap §2.11).
-        """
-        if proposed_parent_id == node_id:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="A location cannot be its own parent (cycle detected).",
-            )
-        descendants = self._repo.get_descendants(node_id)
-        descendant_ids = {d.id for d in descendants}
-        if proposed_parent_id in descendant_ids:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    f"Reparenting location {node_id} under location "
-                    f"{proposed_parent_id} would create a cycle."
-                ),
-            )
-
     def _assert_parent_exists(self, parent_id: int) -> None:
         """Raise HTTP 404 if the proposed parent does not exist."""
         if self._repo.get(parent_id) is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Parent location {parent_id} not found.",
-            )
-
-    def _assert_deletable(self, loc: Location) -> None:
-        """Raise HTTP 409 if the node has children (delete-guard)."""
-        if self._repo.has_children(loc.id):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    f"Location '{loc.name}' (id={loc.id}) cannot be deleted "
-                    "because it still has child locations. "
-                    "Delete or reparent them first."
-                ),
             )
 
     # ---------------------------------------------------------------------- #
@@ -131,7 +99,7 @@ class LocationService:
 
         if parent_id_changed and new_parent_id is not None:
             self._assert_parent_exists(new_parent_id)
-            self._assert_no_cycle(location_id, new_parent_id)
+            self._assert_no_cycle(location_id, new_parent_id, kind="location")
 
         return self._repo.update(
             loc,
@@ -144,7 +112,7 @@ class LocationService:
     def delete(self, location_id: int) -> None:
         """Delete a location (guarded — 409 if it has children)."""
         loc = self._get_or_404(location_id)
-        self._assert_deletable(loc)
+        self._assert_deletable(location_id, loc.name, kind="location")
         self._repo.delete(loc)
 
     # ---------------------------------------------------------------------- #
