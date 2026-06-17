@@ -7,7 +7,18 @@
  * This is the ONE shell definition for the whole app.  Every later page
  * mounts inside <AppShell> via the {children} slot.
  *
- * Color-scheme toggle and logout action live in the header.
+ * Shell layout (Step 2 — Mantine Navbar / User-info design):
+ *   Navbar top    — Brand area: Package icon in ThemeIcon + "Omniventory" + Divider
+ *   Navbar middle — Nav links: Dashboard / Locations / Categories / Items
+ *   Navbar bottom — UserButton: Avatar + email + Menu (language, dark-mode, logout)
+ *
+ * Header (light): brand on mobile + burger + right-side quick area
+ *   (color-scheme toggle + language switcher also accessible in UserButton menu).
+ *
+ * AppShell.Main background:
+ *   light → var(--mantine-color-gray-0)
+ *   dark  → var(--mantine-color-dark-8)
+ *   Wired via light-dark() so cards/tables float above the page bg.
  *
  * Nav links use react-router-dom's NavLink so they get the active style
  * automatically based on the current URL.  Routing and <Routes> live inside
@@ -22,19 +33,36 @@ import {
   Text,
   Stack,
   NavLink,
+  ThemeIcon,
+  Divider,
   useMantineColorScheme,
   useComputedColorScheme,
+  Box,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
-import { Sun, Moon, LogOut, Layout, MapPin, Tag, Package } from "react-feather";
+import {
+  Sun,
+  Moon,
+  LogOut,
+  Layout,
+  MapPin,
+  Tag,
+  Package,
+} from "react-feather";
 import { useTranslation } from "react-i18next";
 import { client } from "../api/client";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
+import { UserButton } from "../components/UserButton";
+import type { components } from "../api/schema";
+
+type UserData = components["schemas"]["UserResponse"];
 
 interface AppShellProps {
   children: React.ReactNode;
   onLogout: () => void;
+  /** User data passed from App.tsx (from the me call — no extra request). */
+  user?: UserData | null;
 }
 
 /**
@@ -71,9 +99,27 @@ function NavItem({
         leftSection={icon}
         active={isActive}
         variant="filled"
-        style={{ cursor: "pointer" }}
+        style={{ borderRadius: "var(--mantine-radius-md)", cursor: "pointer" }}
       />
     </RouterNavLink>
+  );
+}
+
+/** Brand area at the top of the Navbar. */
+function NavBrand() {
+  const { t } = useTranslation("nav");
+  return (
+    <Box pb="xs">
+      <Group gap="xs" px="xs" py="sm">
+        <ThemeIcon variant="light" color="teal" size="md" radius="md">
+          <Package size={16} />
+        </ThemeIcon>
+        <Text fw={700} size="md">
+          {t("appName")}
+        </Text>
+      </Group>
+      <Divider />
+    </Box>
   );
 }
 
@@ -81,7 +127,7 @@ function NavItem({
 function NavContent({ onClose }: { onClose?: () => void }) {
   const { t } = useTranslation("nav");
   return (
-    <Stack gap={4} p="xs">
+    <Stack gap={2} p="xs">
       <NavItem
         to="/"
         label={t("dashboard")}
@@ -110,7 +156,7 @@ function NavContent({ onClose }: { onClose?: () => void }) {
   );
 }
 
-/** Header content: app name, dark-mode toggle, logout. */
+/** Header content: brand (mobile) + burger + right-side quick area. */
 function HeaderContent({
   burgerOpened,
   onBurgerToggle,
@@ -144,7 +190,7 @@ function HeaderContent({
         </Text>
       </Group>
 
-      {/* Right: language switcher + color-scheme toggle + logout */}
+      {/* Right: language switcher + color-scheme toggle + logout (quick access) */}
       <Group gap="xs">
         <LanguageSwitcher mode="authed" />
         <ActionIcon
@@ -168,7 +214,7 @@ function HeaderContent({
   );
 }
 
-export function AppShell({ children, onLogout }: AppShellProps) {
+export function AppShell({ children, onLogout, user }: AppShellProps) {
   const { t } = useTranslation("nav");
   const [drawerOpened, { toggle: toggleDrawer, close: closeDrawer }] =
     useDisclosure(false);
@@ -211,11 +257,40 @@ export function AppShell({ children, onLogout }: AppShellProps) {
           />
         </MantineAppShell.Header>
 
-        <MantineAppShell.Navbar>
-          <NavContent />
+        <MantineAppShell.Navbar
+          style={{ display: "flex", flexDirection: "column" }}
+        >
+          {/* Brand area: icon + name + divider */}
+          <NavBrand />
+
+          {/* Nav links — fill remaining vertical space */}
+          <Box style={{ flex: 1 }}>
+            <NavContent />
+          </Box>
+
+          {/* UserButton pinned to the bottom */}
+          {user && (
+            <Box
+              p="xs"
+              style={{
+                borderTop:
+                  "1px solid var(--mantine-color-default-border)",
+              }}
+            >
+              <UserButton email={user.email} onLogout={handleLogout} />
+            </Box>
+          )}
         </MantineAppShell.Navbar>
 
-        <MantineAppShell.Main>{children}</MantineAppShell.Main>
+        {/* App background: gray-0 (light) / dark-8 (dark) so cards/tables float */}
+        <MantineAppShell.Main
+          style={{
+            background:
+              "light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))",
+          }}
+        >
+          {children}
+        </MantineAppShell.Main>
       </MantineAppShell>
     </>
   );

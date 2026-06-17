@@ -32,11 +32,14 @@ import { Items, ItemDetail } from "./pages/Items";
 import { InstanceDetail } from "./pages/InstanceDetail";
 import { client } from "./api/client";
 import i18n from "./i18n";
+import type { components } from "./api/schema";
 
 type AuthState = "loading" | "setup" | "authed" | "anon";
+type UserData = components["schemas"]["UserResponse"];
 
 function App() {
   const [authState, setAuthState] = useState<AuthState>("loading");
+  const [user, setUser] = useState<UserData | null>(null);
 
   useEffect(() => {
     async function checkState() {
@@ -68,6 +71,8 @@ function App() {
         await i18n.changeLanguage(preferredLang);
       }
 
+      // Store the user for presentation (shell UserButton) — presentation only.
+      setUser(meData.user);
       setAuthState("authed");
     }
 
@@ -94,7 +99,7 @@ function App() {
   // Authenticated: mount BrowserRouter INSIDE the auth gate (§2 locked decision).
   return (
     <BrowserRouter>
-      <AppShell onLogout={() => setAuthState("anon")}>
+      <AppShell onLogout={() => { setUser(null); setAuthState("anon"); }} user={user}>
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/locations" element={<Locations />} />

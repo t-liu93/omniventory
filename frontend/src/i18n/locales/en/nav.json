@@ -11,5 +11,7 @@
   "appName": "Omniventory",
   "changeLanguage": "Change language",
   "languageEn": "EN",
-  "languageZh": "中文"
+  "languageZh": "中文",
+  "userMenu": "User menu",
+  "language": "Language"
 }
