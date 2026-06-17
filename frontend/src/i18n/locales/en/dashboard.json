@@ -1,0 +1,18 @@
+{
+  "subtitle": "Welcome to Omniventory — your all-in-one inventory system.",
+  "expiryCard": {
+    "title": "Best-before & Expiry Reminders",
+    "description": "Track food, medicine, and consumables with advance alerts before items expire.",
+    "badge": "Coming soon"
+  },
+  "durableCard": {
+    "title": "Durable-goods Ledger",
+    "description": "Record serial numbers, warranties, purchase value, and full lifecycle history for durable assets.",
+    "badge": "Coming soon"
+  },
+  "consumableCard": {
+    "title": "Consumable Stock",
+    "description": "Monitor stock levels with in/out movement logs, minimum thresholds, and low-stock alerts.",
+    "badge": "Coming soon"
+  }
+}

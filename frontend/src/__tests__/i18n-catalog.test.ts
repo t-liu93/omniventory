@@ -22,6 +22,7 @@ import enCategories from "../i18n/locales/en/categories.json";
 import enItems from "../i18n/locales/en/items.json";
 import enInstances from "../i18n/locales/en/instances.json";
 import enErrors from "../i18n/locales/en/errors.json";
+import enDashboard from "../i18n/locales/en/dashboard.json";
 
 import zhCommon from "../i18n/locales/zh/common.json";
 import zhAuth from "../i18n/locales/zh/auth.json";
@@ -31,6 +32,7 @@ import zhCategories from "../i18n/locales/zh/categories.json";
 import zhItems from "../i18n/locales/zh/items.json";
 import zhInstances from "../i18n/locales/zh/instances.json";
 import zhErrors from "../i18n/locales/zh/errors.json";
+import zhDashboard from "../i18n/locales/zh/dashboard.json";
 
 // ── Deep key extraction ───────────────────────────────────────────────────────
 
@@ -63,6 +65,7 @@ const namespacePairs: [string, unknown, unknown][] = [
   ["items", enItems, zhItems],
   ["instances", enInstances, zhInstances],
   ["errors", enErrors, zhErrors],
+  ["dashboard", enDashboard, zhDashboard],
 ];
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

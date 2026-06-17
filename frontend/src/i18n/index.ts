@@ -31,6 +31,7 @@ import enCategories from "./locales/en/categories.json";
 import enItems from "./locales/en/items.json";
 import enInstances from "./locales/en/instances.json";
 import enErrors from "./locales/en/errors.json";
+import enDashboard from "./locales/en/dashboard.json";
 
 // Locale bundles — zh
 import zhCommon from "./locales/zh/common.json";
@@ -41,6 +42,7 @@ import zhCategories from "./locales/zh/categories.json";
 import zhItems from "./locales/zh/items.json";
 import zhInstances from "./locales/zh/instances.json";
 import zhErrors from "./locales/zh/errors.json";
+import zhDashboard from "./locales/zh/dashboard.json";
 
 const NAMESPACES = [
   "common",
@@ -51,6 +53,7 @@ const NAMESPACES = [
   "items",
   "instances",
   "errors",
+  "dashboard",
 ] as const;
 
 i18next
@@ -72,6 +75,7 @@ i18next
         items: enItems,
         instances: enInstances,
         errors: enErrors,
+        dashboard: enDashboard,
       },
       zh: {
         common: zhCommon,
@@ -82,6 +86,7 @@ i18next
         items: zhItems,
         instances: zhInstances,
         errors: zhErrors,
+        dashboard: zhDashboard,
       },
     },
     detection: {

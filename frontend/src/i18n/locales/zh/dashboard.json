@@ -1,0 +1,18 @@
+{
+  "subtitle": "欢迎使用 Omniventory——您的一体化库存系统。",
+  "expiryCard": {
+    "title": "保质期与到期提醒",
+    "description": "追踪食品、药品及消耗品，到期前提前发出预警。",
+    "badge": "即将上线"
+  },
+  "durableCard": {
+    "title": "耐用品台账",
+    "description": "记录序列号、保修信息、购入价值及耐用资产的完整生命周期历史。",
+    "badge": "即将上线"
+  },
+  "consumableCard": {
+    "title": "消耗品库存",
+    "description": "通过出入库记录、最低库存阈值和低库存警报监控库存水平。",
+    "badge": "即将上线"
+  }
+}
