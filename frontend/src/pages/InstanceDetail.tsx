@@ -35,7 +35,7 @@ import {
   InstanceFormModal,
   type InstanceFormState,
 } from "../components/InstanceFormModal";
-import { formatQuantity } from "../utils";
+import { formatDate, formatQuantity } from "../i18n/format";
 
 // ── Schema types ─────────────────────────────────────────────────────────────
 
@@ -286,14 +286,14 @@ export function InstanceDetail() {
           <DetailField label={t("detail.serialField")} value={inst.serial} />
           <DetailField label={t("detail.modelNumberField")} value={inst.model_number} />
           <DetailField label={t("detail.manufacturerField")} value={inst.manufacturer} />
-          <DetailField label={t("detail.warrantyExpiresField")} value={inst.warranty_expires} />
+          <DetailField label={t("detail.warrantyExpiresField")} value={formatDate(inst.warranty_expires)} />
           <DetailField label={t("detail.warrantyDetailsField")} value={inst.warranty_details} />
           <DetailField label={t("detail.purchasePriceField")} value={inst.purchase_price} />
-          <DetailField label={t("detail.purchaseDateField")} value={inst.purchase_date} />
+          <DetailField label={t("detail.purchaseDateField")} value={formatDate(inst.purchase_date)} />
           <DetailField label={t("detail.purchaseSourceField")} value={inst.purchase_source} />
           <DetailField
             label={t("detail.createdField")}
-            value={new Date(inst.created_at).toLocaleDateString()}
+            value={formatDate(inst.created_at)}
           />
         </SimpleGrid>
       </Paper>

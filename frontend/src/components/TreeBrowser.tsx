@@ -45,7 +45,7 @@ import type { components } from "../api/schema";
 import { LoadingState } from "./LoadingState";
 import { ErrorState } from "./ErrorState";
 import { EmptyState } from "./EmptyState";
-import { formatQuantity } from "../utils";
+import { formatQuantity } from "../i18n/format";
 
 // ── Resource-specific types ──────────────────────────────────────────────────
 

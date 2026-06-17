@@ -12,12 +12,13 @@
  *
  * Client mocking: vi.mock the typed client module (M0/Step-5 style).
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { Items, ItemDetail } from "../pages/Items.js";
 import { InstanceDetail } from "../pages/InstanceDetail.js";
+import i18n from "../i18n/index.js";
 
 /** Mock the typed client module. */
 vi.mock("../api/client.js", () => ({
@@ -631,6 +632,72 @@ describe("ItemDetail page — instance list renders", () => {
 
     await waitFor(() => {
       expect(screen.getByText("DeWalt")).toBeDefined();
+    });
+  });
+
+  describe("warranty_expires column — rendered via formatDate (not raw ISO)", () => {
+    afterEach(async () => {
+      await i18n.changeLanguage("en");
+    });
+
+    it("renders warranty_expires in zh locale as YYYY/M/D (not raw ISO 2027-01-01)", async () => {
+      await i18n.changeLanguage("zh");
+      renderItemDetail(42);
+
+      await waitFor(() => {
+        // instanceDrill.warranty_expires = "2027-01-01"
+        // zh formatDate("2027-01-01") → "2027/1/1"
+        expect(screen.getByText("2027/1/1")).toBeDefined();
+        // Raw ISO string must NOT appear in the warranty column
+        expect(screen.queryByText("2027-01-01")).toBeNull();
+      });
+    });
+
+    it("renders null warranty_expires as — (em-dash placeholder)", async () => {
+      // Override the mock to return an instance without warranty_expires
+      vi.mocked(client.GET).mockImplementation(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        async (path: any) => {
+          if (path === "/api/definitions/{definition_id}") {
+            return { data: defDrill, response: new Response(null, { status: 200 }) };
+          }
+          if (path === "/api/instances") {
+            return {
+              data: [{ ...instanceDrill, warranty_expires: null }],
+              response: new Response(null, { status: 200 }),
+            };
+          }
+          if (path === "/api/kinds") {
+            return { data: [kindDurable, kindConsumable], response: new Response(null, { status: 200 }) };
+          }
+          if (path === "/api/categories") {
+            return { data: [categoryTools], response: new Response(null, { status: 200 }) };
+          }
+          if (path === "/api/locations") {
+            return { data: [locationGarage], response: new Response(null, { status: 200 }) };
+          }
+          if (path === "/api/definitions") {
+            return { data: [defDrill], response: new Response(null, { status: 200 }) };
+          }
+          return { data: null, error: { detail: "Not found" }, response: new Response(null, { status: 404 }) };
+        },
+      );
+
+      render(
+        <MemoryRouter initialEntries={["/items/42"]}>
+          <MantineProvider>
+            <Routes>
+              <Route path="/items/:id" element={<ItemDetail />} />
+            </Routes>
+          </MantineProvider>
+        </MemoryRouter>,
+      );
+
+      await waitFor(() => {
+        // The — placeholder must appear in the warranty column
+        const dashes = screen.getAllByText("—");
+        expect(dashes.length).toBeGreaterThan(0);
+      });
     });
   });
 });

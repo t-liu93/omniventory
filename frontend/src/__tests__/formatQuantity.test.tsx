@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
-import { formatQuantity } from "../utils.js";
+import { formatQuantity } from "../i18n/format.js";
 import { ItemDetail } from "../pages/Items.js";
 import { InstanceDetail } from "../pages/InstanceDetail.js";
 

@@ -45,7 +45,7 @@ import {
   InstanceFormModal,
   type InstanceFormState,
 } from "../components/InstanceFormModal";
-import { formatQuantity } from "../utils";
+import { formatDate, formatQuantity } from "../i18n/format";
 
 // ── Schema types ─────────────────────────────────────────────────────────────
 
@@ -1029,7 +1029,7 @@ export function ItemDetail() {
                     <Text size="sm">{inst.manufacturer ?? "—"}</Text>
                   </Table.Td>
                   <Table.Td>
-                    <Text size="sm">{inst.warranty_expires ?? "—"}</Text>
+                    <Text size="sm">{inst.warranty_expires ? formatDate(inst.warranty_expires) : "—"}</Text>
                   </Table.Td>
                   <Table.Td>
                     <Group gap={4} justify="flex-end" wrap="nowrap">
