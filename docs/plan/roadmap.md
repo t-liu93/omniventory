@@ -80,7 +80,7 @@ Legend: ⬜ planned · 🟡 active · 🟢 done. **Active milestone = the single
 |---|---|---|---|
 | **M0** | Foundations & scaffolding | running skeleton | 🟢 |
 | **M1** | Unified core model & durable-goods registry | ② (registry) | 🟢 |
-| **M1.5** | Internationalization (i18n) foundation | all (ZH + EN) | ⬜ |
+| **M1.5** | Internationalization (i18n) foundation | all (ZH + EN) | 🟡 |
 | **M2** | Stock ledger & consumables | ③ (in/out + low-stock) | ⬜ |
 | **M3** | Best-before / expiry & perishables | ① (data + listings) | ⬜ |
 | **M4** | Unified reminder & notification engine | ①②③ proactive alerts | ⬜ |
@@ -122,7 +122,7 @@ Legend: ⬜ planned · 🟡 active · 🟢 done. **Active milestone = the single
 - Backend: per-user `preferred_language` field + a read/update endpoint. Because API messages use **stable error codes**, the backend does *no* localization itself — it returns codes and the frontend maps them to localized text (decided here so the wire/display split is in place from the start).
 - 🟢 Switch language at runtime (ZH ⇄ EN) and the whole UI follows; the choice persists with the account across sessions/devices; the login screen renders in the resolved language before auth; a backend error shows up localized via its code.
 
-> Locked: **react-i18next**, ZH + EN, backend error-codes. The detailed design doc (`docs/plan/milestones/M1.5.md`) is written after the M1 walkthrough; the language-persistence specifics (account-bound + pre-login fallback) and the default language are finalized there.
+> Locked: **react-i18next**, ZH + EN, backend error-codes. The detailed design doc (`docs/plan/milestones/M1.5.md`) is now written; it finalizes the language-persistence specifics (account-bound `preferred_language`, nullable = inherit client resolution; pre-login fallback localStorage → browser → **EN**), folds the backend error-codes into a **full uniform error-envelope refactor** (flat `{code, message, params}`), and scopes in locale-aware date/number formatting.
 
 ### M2 — Stock ledger & consumables (③)
 **Goal:** track consumable stock by in/out flows with low-stock detection.
