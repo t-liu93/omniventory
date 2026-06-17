@@ -61,17 +61,5 @@
     "instancesTableDefinition": "Definition",
     "instancesTableSerial": "Serial",
     "instancesTableQty": "Qty"
-  },
-  "errors": {
-    "createFailed": "Failed to create location.",
-    "renameFailed": "Failed to rename location.",
-    "reparentFailed": "Failed to reparent location.",
-    "deleteFailed": "Failed to delete location.",
-    "deleteGuard": "Cannot delete: location is not empty.",
-    "moveFailed": "Failed to move instance.",
-    "deleteInstanceFailed": "Failed to delete instance.",
-    "linkFailed": "Failed to link container asset.",
-    "linkConflict": "This instance is already linked to another location.",
-    "unlinkFailed": "Failed to unlink container asset."
   }
 }

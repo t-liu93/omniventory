@@ -20,6 +20,7 @@ import {
 import { AlertCircle } from "react-feather";
 import { useTranslation } from "react-i18next";
 import { client } from "../api/client";
+import { mapApiError } from "../i18n/errors";
 
 interface LoginProps {
   onSuccess: () => void;
@@ -44,7 +45,7 @@ export function Login({ onSuccess }: LoginProps) {
     setLoading(false);
 
     if (apiError) {
-      setError(t("login.errorInvalidCredentials"));
+      setError(mapApiError(apiError));
       return;
     }
 

@@ -1,10 +1,10 @@
 /**
- * M1.5 Step 4 — i18n catalog tests.
+ * M1.5 Step 4+5 — i18n catalog tests.
  *
  * Covers:
  * 1. Key-parity: en and zh have exactly the same set of keys for every
  *    content namespace (common, auth, nav, locations, categories, items,
- *    instances). Fails on any missing or extra key.
+ *    instances, errors). Fails on any missing or extra key.
  * 2. zh translation rendering: switching to 'zh' renders translated copy
  *    on a sample surface (Login page), confirming non-English strings appear.
  */
@@ -21,6 +21,7 @@ import enLocations from "../i18n/locales/en/locations.json";
 import enCategories from "../i18n/locales/en/categories.json";
 import enItems from "../i18n/locales/en/items.json";
 import enInstances from "../i18n/locales/en/instances.json";
+import enErrors from "../i18n/locales/en/errors.json";
 
 import zhCommon from "../i18n/locales/zh/common.json";
 import zhAuth from "../i18n/locales/zh/auth.json";
@@ -29,6 +30,7 @@ import zhLocations from "../i18n/locales/zh/locations.json";
 import zhCategories from "../i18n/locales/zh/categories.json";
 import zhItems from "../i18n/locales/zh/items.json";
 import zhInstances from "../i18n/locales/zh/instances.json";
+import zhErrors from "../i18n/locales/zh/errors.json";
 
 // ── Deep key extraction ───────────────────────────────────────────────────────
 
@@ -60,6 +62,7 @@ const namespacePairs: [string, unknown, unknown][] = [
   ["categories", enCategories, zhCategories],
   ["items", enItems, zhItems],
   ["instances", enInstances, zhInstances],
+  ["errors", enErrors, zhErrors],
 ];
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

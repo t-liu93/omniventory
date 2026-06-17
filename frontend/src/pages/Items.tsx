@@ -35,6 +35,7 @@ import {
 import { Plus, Edit2, Trash2, AlertCircle, ArrowLeft, Search } from "react-feather";
 import { useTranslation, Trans } from "react-i18next";
 import { client } from "../api/client";
+import { mapApiError } from "../i18n/errors";
 import type { components } from "../api/schema";
 import { PageShell } from "../components/PageShell";
 import { LoadingState } from "../components/LoadingState";
@@ -53,27 +54,6 @@ type InstanceResponse = components["schemas"]["InstanceResponse"];
 type KindResponse = components["schemas"]["KindResponse"];
 type CategoryResponse = components["schemas"]["CategoryResponse"];
 type LocationResponse = components["schemas"]["LocationResponse"];
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function extractDetail(error: unknown): string {
-  if (error && typeof error === "object" && "detail" in error) {
-    const detail = (error as { detail: unknown }).detail;
-    if (typeof detail === "string") return detail;
-    if (Array.isArray(detail)) {
-      return detail
-        .map((e: unknown) => {
-          if (e && typeof e === "object" && "msg" in e) {
-            return String((e as { msg: unknown }).msg);
-          }
-          return String(e);
-        })
-        .join("; ");
-    }
-    return String(detail);
-  }
-  return "An unexpected error occurred.";
-}
 
 // ── Definition form state ────────────────────────────────────────────────────
 
@@ -357,7 +337,7 @@ export function Items() {
         },
       });
       if (error) {
-        setDefError(extractDetail(error));
+        setDefError(mapApiError(error));
         return;
       }
       closeDefModal();
@@ -390,7 +370,7 @@ export function Items() {
         },
       );
       if (error) {
-        setDefError(extractDetail(error));
+        setDefError(mapApiError(error));
         return;
       }
       closeDefModal();
@@ -412,7 +392,7 @@ export function Items() {
         },
       );
       if (error) {
-        setDefError(extractDetail(error));
+        setDefError(mapApiError(error));
         return;
       }
       closeDefModal();
@@ -737,7 +717,7 @@ export function ItemDetail() {
         },
       );
       if (error) {
-        setDefError(extractDetail(error));
+        setDefError(mapApiError(error));
         return;
       }
       closeDefModal();
@@ -759,7 +739,7 @@ export function ItemDetail() {
         },
       );
       if (error) {
-        setDefError(extractDetail(error));
+        setDefError(mapApiError(error));
         return;
       }
       navigate("/items");
@@ -826,7 +806,7 @@ export function ItemDetail() {
         },
       });
       if (error) {
-        setInstError(extractDetail(error));
+        setInstError(mapApiError(error));
         return;
       }
       closeInstModal();
@@ -862,7 +842,7 @@ export function ItemDetail() {
         },
       );
       if (error) {
-        setInstError(extractDetail(error));
+        setInstError(mapApiError(error));
         return;
       }
       closeInstModal();
@@ -884,7 +864,7 @@ export function ItemDetail() {
         },
       );
       if (error) {
-        setInstError(extractDetail(error));
+        setInstError(mapApiError(error));
         return;
       }
       closeInstModal();

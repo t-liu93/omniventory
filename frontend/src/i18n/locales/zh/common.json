@@ -14,5 +14,9 @@
     "nothingHere": "暂无内容。",
     "somethingWentWrong": "出现错误。",
     "error": "错误"
+  },
+  "entities": {
+    "location": "位置",
+    "category": "分类"
   }
 }

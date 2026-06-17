@@ -1,3 +1,53 @@
 {
-  "_ns": "errors"
+  "generic": "操作失败，请重试。",
+  "auth": {
+    "not_authenticated": "请先登录后继续操作。",
+    "session_invalid": "登录会话已过期，请重新登录。",
+    "account_inactive": "该账户已停用。",
+    "invalid_credentials": "邮箱或密码不正确。",
+    "account_disabled": "该账户已被禁用。",
+    "setup_already_complete": "初始化已完成，管理员账户已存在。"
+  },
+  "validation": {
+    "invalid_input": "提交的数据无效，请检查表单后重试。",
+    "unsupported_language": "不支持语言「{{value}}」，支持的语言：{{supported}}。"
+  },
+  "tree": {
+    "cycle": "此操作将在{{kind}}树中造成循环引用。",
+    "delete_has_children": "无法删除：该{{kind}}下仍有子项，请先将其移除。"
+  },
+  "location": {
+    "not_found": "未找到位置 #{{id}}。",
+    "parent_not_found": "未找到父位置 #{{id}}。",
+    "delete_in_use": "位置 #{{id}} 仍在使用中，无法删除。",
+    "container_link_conflict": "位置 #{{id}} 已与另一个库存实例绑定。"
+  },
+  "category": {
+    "not_found": "未找到分类 #{{id}}。",
+    "parent_not_found": "未找到父分类 #{{id}}。"
+  },
+  "item_kind": {
+    "not_found": "未找到物品类型 #{{id}}。"
+  },
+  "item_definition": {
+    "not_found": "未找到物品定义 #{{id}}。",
+    "has_instances": "该物品定义下仍有已登记的实例，无法删除。"
+  },
+  "stock_instance": {
+    "not_found": "未找到库存实例 #{{id}}。",
+    "serial_requires_qty_one": "设置序列号时，数量必须为 1。",
+    "serial_duplicate": "序列号「{{serial}}」已在该物品定义下被使用。"
+  },
+  "internal": {
+    "error": "服务器内部错误，请稍后重试。"
+  },
+  "http": {
+    "400": "请求无效。",
+    "401": "需要身份验证。",
+    "403": "您没有执行此操作的权限。",
+    "404": "所请求的资源不存在。",
+    "409": "此操作与当前状态冲突。",
+    "422": "提交的数据无效。",
+    "500": "服务器内部错误。"
+  }
 }

@@ -1,3 +1,53 @@
 {
-  "_ns": "errors"
+  "generic": "Something went wrong. Please try again.",
+  "auth": {
+    "not_authenticated": "Please sign in to continue.",
+    "session_invalid": "Your session has expired. Please sign in again.",
+    "account_inactive": "This account is inactive.",
+    "invalid_credentials": "Invalid email or password.",
+    "account_disabled": "This account has been disabled.",
+    "setup_already_complete": "Setup is already complete. An admin account already exists."
+  },
+  "validation": {
+    "invalid_input": "The submitted data is invalid. Please check the form and try again.",
+    "unsupported_language": "Language \"{{value}}\" is not supported. Supported languages: {{supported}}."
+  },
+  "tree": {
+    "cycle": "This change would create a circular reference in the {{kind}} tree.",
+    "delete_has_children": "Cannot delete: this {{kind}} still has children. Remove them first."
+  },
+  "location": {
+    "not_found": "Location #{{id}} was not found.",
+    "parent_not_found": "Parent location #{{id}} was not found.",
+    "delete_in_use": "Location #{{id}} cannot be deleted because it is still in use.",
+    "container_link_conflict": "Location #{{id}} is already linked to another stock instance."
+  },
+  "category": {
+    "not_found": "Category #{{id}} was not found.",
+    "parent_not_found": "Parent category #{{id}} was not found."
+  },
+  "item_kind": {
+    "not_found": "Item kind #{{id}} was not found."
+  },
+  "item_definition": {
+    "not_found": "Item definition #{{id}} was not found.",
+    "has_instances": "This item definition cannot be deleted because it still has registered instances."
+  },
+  "stock_instance": {
+    "not_found": "Stock instance #{{id}} was not found.",
+    "serial_requires_qty_one": "When a serial number is set, quantity must be exactly 1.",
+    "serial_duplicate": "Serial number \"{{serial}}\" is already registered for this item definition."
+  },
+  "internal": {
+    "error": "An internal error occurred. Please try again later."
+  },
+  "http": {
+    "400": "Bad request.",
+    "401": "Authentication required.",
+    "403": "You do not have permission to perform this action.",
+    "404": "The requested resource was not found.",
+    "409": "This operation conflicts with the current state.",
+    "422": "The submitted data is invalid.",
+    "500": "An internal server error occurred."
+  }
 }

@@ -23,6 +23,7 @@ import {
 import { AlertCircle } from "react-feather";
 import { useTranslation } from "react-i18next";
 import { client } from "../api/client";
+import { mapApiError } from "../i18n/errors";
 
 interface SetupProps {
   /** Called after the first admin is created; parent transitions to Login. */
@@ -48,13 +49,7 @@ export function Setup({ onSuccess }: SetupProps) {
     setLoading(false);
 
     if (apiError) {
-      // Step 5 will rewire this to use mapApiError(apiError).
-      // For now, preserve the existing behaviour: read detail if present,
-      // else show the static fallback.
-      const detail =
-        (apiError as { detail?: string }).detail ??
-        t("setup.fallbackError");
-      setError(detail);
+      setError(mapApiError(apiError));
       return;
     }
 

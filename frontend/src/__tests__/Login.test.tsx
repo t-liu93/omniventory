@@ -84,18 +84,23 @@ describe("Login — happy path", () => {
 describe("Login — error path", () => {
   beforeEach(() => {
     vi.mocked(client.POST).mockResolvedValue({
-      error: { detail: "Invalid credentials" },
+      error: {
+        code: "auth.invalid_credentials",
+        message: "Invalid credentials.",
+      },
       response: new Response(null, { status: 401 }),
     });
   });
 
-  it("shows an error message and does not call onSuccess on 401", async () => {
+  it("shows a localized error message and does not call onSuccess on 401", async () => {
     const onSuccess = vi.fn();
     renderLogin(onSuccess);
     await submitForm("admin@example.com", "wrong");
     await waitFor(() => {
       expect(screen.getByRole("alert")).toBeDefined();
     });
+    // The localized EN message for auth.invalid_credentials
+    expect(screen.getByText("Invalid email or password.")).toBeDefined();
     expect(onSuccess).not.toHaveBeenCalled();
   });
 });

@@ -31,12 +31,5 @@
   "detail": {
     "reparentBtn": "移动",
     "deleteBtn": "删除"
-  },
-  "errors": {
-    "createFailed": "创建分类失败。",
-    "renameFailed": "重命名分类失败。",
-    "deleteFailed": "删除分类失败。",
-    "deleteGuard": "无法删除：分类不为空。",
-    "reparentFailed": "移动分类失败。"
   }
 }

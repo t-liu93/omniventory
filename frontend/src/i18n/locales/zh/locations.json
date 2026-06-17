@@ -61,17 +61,5 @@
     "instancesTableDefinition": "定义",
     "instancesTableSerial": "序列号",
     "instancesTableQty": "数量"
-  },
-  "errors": {
-    "createFailed": "创建位置失败。",
-    "renameFailed": "重命名位置失败。",
-    "reparentFailed": "移动位置失败。",
-    "deleteFailed": "删除位置失败。",
-    "deleteGuard": "无法删除：位置不为空。",
-    "moveFailed": "移动实例失败。",
-    "deleteInstanceFailed": "删除实例失败。",
-    "linkFailed": "关联容器资产失败。",
-    "linkConflict": "此实例已关联至其他位置。",
-    "unlinkFailed": "取消关联容器资产失败。"
   }
 }

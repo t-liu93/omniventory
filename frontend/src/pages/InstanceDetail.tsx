@@ -27,6 +27,7 @@ import {
 import { Edit2, Trash2, AlertCircle, ArrowLeft } from "react-feather";
 import { useTranslation, Trans } from "react-i18next";
 import { client } from "../api/client";
+import { mapApiError } from "../i18n/errors";
 import type { components } from "../api/schema";
 import { LoadingState } from "../components/LoadingState";
 import { ErrorState } from "../components/ErrorState";
@@ -41,27 +42,6 @@ import { formatQuantity } from "../utils";
 type InstanceResponse = components["schemas"]["InstanceResponse"];
 type DefinitionResponse = components["schemas"]["DefinitionResponse"];
 type LocationResponse = components["schemas"]["LocationResponse"];
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function extractDetail(error: unknown): string {
-  if (error && typeof error === "object" && "detail" in error) {
-    const detail = (error as { detail: unknown }).detail;
-    if (typeof detail === "string") return detail;
-    if (Array.isArray(detail)) {
-      return detail
-        .map((e: unknown) => {
-          if (e && typeof e === "object" && "msg" in e) {
-            return String((e as { msg: unknown }).msg);
-          }
-          return String(e);
-        })
-        .join("; ");
-    }
-    return String(detail);
-  }
-  return "An unexpected error occurred.";
-}
 
 function instToForm(inst: InstanceResponse): InstanceFormState {
   return {
@@ -195,7 +175,7 @@ export function InstanceDetail() {
         },
       });
       if (error) {
-        setActionError(extractDetail(error));
+        setActionError(mapApiError(error));
         return;
       }
       setEditOpen(false);
@@ -213,7 +193,7 @@ export function InstanceDetail() {
         params: { path: { instance_id: instId } },
       });
       if (error) {
-        setActionError(extractDetail(error));
+        setActionError(mapApiError(error));
         return;
       }
       if (inst) {

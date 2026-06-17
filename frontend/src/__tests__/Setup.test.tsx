@@ -85,19 +85,24 @@ describe("Setup — error path", () => {
   beforeEach(() => {
     vi.mocked(client.POST).mockResolvedValue({
       error: {
-        detail: "Setup already complete: an admin user already exists.",
+        code: "auth.setup_already_complete",
+        message: "Setup already complete.",
       },
       response: new Response(null, { status: 409 }),
     });
   });
 
-  it("shows an error message and does not call onSuccess on 409", async () => {
+  it("shows a localized error message and does not call onSuccess on 409", async () => {
     const onSuccess = vi.fn();
     renderSetup(onSuccess);
     await submitForm("intruder@example.com", "intruderpass!");
     await waitFor(() => {
       expect(screen.getByRole("alert")).toBeDefined();
     });
+    // The localized EN message for auth.setup_already_complete
+    expect(
+      screen.getByText("Setup is already complete. An admin account already exists."),
+    ).toBeDefined();
     expect(onSuccess).not.toHaveBeenCalled();
   });
 });

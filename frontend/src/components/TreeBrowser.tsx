@@ -40,6 +40,7 @@ import type { TreeNodeData } from "@mantine/core";
 import { Plus, Edit2, Trash2, AlertCircle, Move } from "react-feather";
 import { useTranslation, Trans } from "react-i18next";
 import { client } from "../api/client";
+import { mapApiError } from "../i18n/errors";
 import type { components } from "../api/schema";
 import { LoadingState } from "./LoadingState";
 import { ErrorState } from "./ErrorState";
@@ -358,7 +359,7 @@ export function TreeBrowser({ resource }: TreeBrowserProps) {
           body: { name: formName.trim(), parent_id: parentId },
         });
         if (error) {
-          setActionError(t("errors.createFailed"));
+          setActionError(mapApiError(error));
           return;
         }
       } else {
@@ -366,7 +367,7 @@ export function TreeBrowser({ resource }: TreeBrowserProps) {
           body: { name: formName.trim(), parent_id: parentId },
         });
         if (error) {
-          setActionError(t("errors.createFailed"));
+          setActionError(mapApiError(error));
           return;
         }
       }
@@ -388,7 +389,7 @@ export function TreeBrowser({ resource }: TreeBrowserProps) {
           body: { name: formName.trim() },
         });
         if (error) {
-          setActionError(t("errors.renameFailed"));
+          setActionError(mapApiError(error));
           return;
         }
       } else {
@@ -400,7 +401,7 @@ export function TreeBrowser({ resource }: TreeBrowserProps) {
           },
         );
         if (error) {
-          setActionError(t("errors.renameFailed"));
+          setActionError(mapApiError(error));
           return;
         }
       }
@@ -423,13 +424,7 @@ export function TreeBrowser({ resource }: TreeBrowserProps) {
           body: { parent_id: newParentId },
         });
         if (error) {
-          // Step 5 will rewire this to use mapApiError. For now preserve
-          // the existing behaviour: read detail if present, else static fallback.
-          const msg =
-            typeof error === "object" && error !== null && "detail" in error
-              ? String((error as { detail: unknown }).detail)
-              : t("errors.reparentFailed");
-          setActionError(msg);
+          setActionError(mapApiError(error));
           return;
         }
       } else {
@@ -441,11 +436,7 @@ export function TreeBrowser({ resource }: TreeBrowserProps) {
           },
         );
         if (error) {
-          const msg =
-            typeof error === "object" && error !== null && "detail" in error
-              ? String((error as { detail: unknown }).detail)
-              : t("errors.reparentFailed");
-          setActionError(msg);
+          setActionError(mapApiError(error));
           return;
         }
       }
@@ -461,42 +452,25 @@ export function TreeBrowser({ resource }: TreeBrowserProps) {
     setActionError(null);
     try {
       if (resource === "locations") {
-        const { error, response } = await client.DELETE(
+        const { error } = await client.DELETE(
           "/api/locations/{location_id}",
           {
             params: { path: { location_id: nodeId } },
           },
         );
         if (error) {
-          if (response.status === 409) {
-            // Step 5 will rewire this to use mapApiError.
-            const msg =
-              typeof error === "object" && error !== null && "detail" in error
-                ? String((error as { detail: unknown }).detail)
-                : t("errors.deleteGuard");
-            setActionError(msg);
-          } else {
-            setActionError(t("errors.deleteFailed"));
-          }
+          setActionError(mapApiError(error));
           return;
         }
       } else {
-        const { error, response } = await client.DELETE(
+        const { error } = await client.DELETE(
           "/api/categories/{category_id}",
           {
             params: { path: { category_id: nodeId } },
           },
         );
         if (error) {
-          if (response.status === 409) {
-            const msg =
-              typeof error === "object" && error !== null && "detail" in error
-                ? String((error as { detail: unknown }).detail)
-                : t("errors.deleteGuard");
-            setActionError(msg);
-          } else {
-            setActionError(t("errors.deleteFailed"));
-          }
+          setActionError(mapApiError(error));
           return;
         }
       }
@@ -520,12 +494,7 @@ export function TreeBrowser({ resource }: TreeBrowserProps) {
         body: { location_id: newLocationId },
       });
       if (error) {
-        // Step 5 will rewire this to use mapApiError.
-        const msg =
-          typeof error === "object" && error !== null && "detail" in error
-            ? String((error as { detail: unknown }).detail)
-            : t("errors.moveFailed");
-        setActionError(msg);
+        setActionError(mapApiError(error));
         return;
       }
       closeModal();
@@ -544,7 +513,7 @@ export function TreeBrowser({ resource }: TreeBrowserProps) {
         params: { path: { instance_id: instance.id } },
       });
       if (error) {
-        setActionError(t("errors.deleteInstanceFailed"));
+        setActionError(mapApiError(error));
         return;
       }
       closeModal();
@@ -561,7 +530,7 @@ export function TreeBrowser({ resource }: TreeBrowserProps) {
     setBusy(true);
     setActionError(null);
     try {
-      const { error, response } = await client.PATCH(
+      const { error } = await client.PATCH(
         "/api/locations/{location_id}",
         {
           params: { path: { location_id: locationId } },
@@ -569,16 +538,7 @@ export function TreeBrowser({ resource }: TreeBrowserProps) {
         },
       );
       if (error) {
-        if (response.status === 409) {
-          // Step 5 will rewire this to use mapApiError.
-          const msg =
-            typeof error === "object" && error !== null && "detail" in error
-              ? String((error as { detail: unknown }).detail)
-              : t("errors.linkConflict");
-          setActionError(msg);
-        } else {
-          setActionError(t("errors.linkFailed"));
-        }
+        setActionError(mapApiError(error));
         return;
       }
       closeModal();
@@ -597,7 +557,7 @@ export function TreeBrowser({ resource }: TreeBrowserProps) {
         body: { item_instance_id: null },
       });
       if (error) {
-        setActionError(t("errors.unlinkFailed"));
+        setActionError(mapApiError(error));
         return;
       }
       closeModal();

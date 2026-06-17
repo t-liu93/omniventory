@@ -31,12 +31,5 @@
   "detail": {
     "reparentBtn": "Reparent",
     "deleteBtn": "Delete"
-  },
-  "errors": {
-    "createFailed": "Failed to create category.",
-    "renameFailed": "Failed to rename category.",
-    "deleteFailed": "Failed to delete category.",
-    "deleteGuard": "Cannot delete: category is not empty.",
-    "reparentFailed": "Failed to reparent category."
   }
 }

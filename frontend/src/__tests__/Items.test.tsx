@@ -164,7 +164,7 @@ function mockItemsListLoad(defs: object[] = [defDrill, defLaptop]) {
           response: new Response(null, { status: 200 }),
         };
       }
-      return { data: null, error: { detail: "Not found" }, response: new Response(null, { status: 404 }) };
+      return { data: null, error: { code: "http.404", message: "Not found" }, response: new Response(null, { status: 404 }) };
     },
   );
 }
@@ -454,7 +454,7 @@ describe("InstanceFormModal — serial ⇒ qty=1 client rule", () => {
       if (path === "/api/definitions") {
         return { data: [defDrill], response: new Response(null, { status: 200 }) };
       }
-      return { data: null, error: { detail: "Not found" }, response: new Response(null, { status: 404 }) };
+      return { data: null, error: { code: "http.404", message: "Not found" }, response: new Response(null, { status: 404 }) };
     });
   });
 
@@ -536,20 +536,21 @@ describe("InstanceFormModal — server 422 surfaced", () => {
       if (path === "/api/definitions") {
         return { data: [defDrill], response: new Response(null, { status: 200 }) };
       }
-      return { data: null, error: { detail: "Not found" }, response: new Response(null, { status: 404 }) };
+      return { data: null, error: { code: "http.404", message: "Not found" }, response: new Response(null, { status: 404 }) };
     });
 
-    // POST returns 422 with serial/quantity conflict detail
+    // POST returns 422 with the new error envelope shape
     vi.mocked(client.POST).mockResolvedValue({
       data: null,
       error: {
-        detail: "serial is set but quantity is not 1",
+        code: "stock_instance.serial_requires_qty_one",
+        message: "When a serial number is provided, quantity must be exactly 1.",
       },
       response: new Response(null, { status: 422 }),
     } as AnyResult);
   });
 
-  it("surfaces the server 422 error detail in the modal", async () => {
+  it("surfaces the localized server 422 error in the modal", async () => {
     renderItemDetail(42);
 
     await waitFor(() => {
@@ -566,13 +567,13 @@ describe("InstanceFormModal — server 422 surfaced", () => {
     const saveBtn = screen.getByTestId("inst-submit-btn");
     fireEvent.click(saveBtn);
 
-    // 422 error message should appear
+    // Localized EN message for stock_instance.serial_requires_qty_one
     await waitFor(() => {
       expect(
         screen.getByTestId("instance-error-alert"),
       ).toBeDefined();
       expect(
-        screen.getByText(/serial is set but quantity is not 1/i),
+        screen.getByText(/when a serial number is set, quantity must be exactly 1/i),
       ).toBeDefined();
     });
   });

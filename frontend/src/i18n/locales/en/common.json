@@ -14,5 +14,9 @@
     "nothingHere": "Nothing here yet.",
     "somethingWentWrong": "Something went wrong.",
     "error": "Error"
+  },
+  "entities": {
+    "location": "location",
+    "category": "category"
   }
 }

@@ -321,12 +321,16 @@ describe("TreeBrowser — delete-guard 409 surfaced", () => {
   beforeEach(() => {
     makeSuccessGetLocations();
     vi.mocked(client.DELETE).mockResolvedValue({
-      error: { detail: "Cannot delete: location still has child locations." },
+      error: {
+        code: "tree.delete_has_children",
+        message: "Cannot delete a node that still has children.",
+        params: { kind: "location" },
+      },
       response: new Response(null, { status: 409 }),
     } as AnyClientResult);
   });
 
-  it("shows the 409 guard message inside the delete modal", async () => {
+  it("shows the localized 409 guard message inside the delete modal", async () => {
     renderLocations();
     await waitFor(() => screen.getByText("Home"));
 
@@ -337,10 +341,14 @@ describe("TreeBrowser — delete-guard 409 surfaced", () => {
     const confirmBtn = await screen.findByTestId("confirm-delete-btn");
     fireEvent.click(confirmBtn);
 
-    // The 409 error detail should appear in the modal
+    // The localized EN message for tree.delete_has_children should appear
     await waitFor(() => {
       expect(
-        screen.getByText(/cannot delete.*location still has child/i),
+        screen.getByTestId("delete-error"),
+      ).toBeDefined();
+      // "Cannot delete: this location still has children. Remove them first."
+      expect(
+        screen.getByText(/cannot delete.*still has children/i),
       ).toBeDefined();
     });
   });
@@ -570,12 +578,16 @@ describe("TreeBrowser — reparent backend error is surfaced in modal", () => {
   beforeEach(() => {
     makeSuccessGetLocations();
     vi.mocked(client.PATCH).mockResolvedValue({
-      error: { detail: "Cannot reparent: would create a cycle." },
-      response: new Response(null, { status: 400 }),
+      error: {
+        code: "tree.cycle",
+        message: "Operation would create a cycle in the tree.",
+        params: { kind: "location" },
+      },
+      response: new Response(null, { status: 409 }),
     } as AnyClientResult);
   });
 
-  it("shows the server error detail in the reparent modal", async () => {
+  it("shows the localized cycle error in the reparent modal", async () => {
     renderLocations();
     await waitFor(() => screen.getByText("Garage"));
 
@@ -589,8 +601,9 @@ describe("TreeBrowser — reparent backend error is surfaced in modal", () => {
     const moveBtn = screen.getByRole("button", { name: /^move$/i });
     fireEvent.click(moveBtn);
 
+    // Localized EN message for tree.cycle
     await waitFor(() => {
-      expect(screen.getByText(/cannot reparent.*would create a cycle/i)).toBeDefined();
+      expect(screen.getByText(/would create a circular reference/i)).toBeDefined();
     });
   });
 });
@@ -1201,12 +1214,16 @@ describe("TreeBrowser — link container asset 409 (already linked elsewhere)", 
   beforeEach(() => {
     makeFullGetMock();
     vi.mocked(client.PATCH).mockResolvedValue({
-      error: { detail: "Instance 42 is already linked to location 5." },
+      error: {
+        code: "location.container_link_conflict",
+        message: "Stock instance is already linked to another location.",
+        params: { id: 2 },
+      },
       response: new Response(null, { status: 409 }),
     } as AnyClientResult);
   });
 
-  it("shows the 409 error message inside the link modal", async () => {
+  it("shows the localized 409 conflict error inside the link modal", async () => {
     renderLocations();
     await waitFor(() => screen.getByText("Garage"));
 
@@ -1232,7 +1249,10 @@ describe("TreeBrowser — link container asset 409 (already linked elsewhere)", 
 
     await waitFor(() => {
       expect(screen.getByTestId("link-container-error")).toBeDefined();
-      expect(screen.getByText(/instance 42 is already linked/i)).toBeDefined();
+      // Localized EN message for location.container_link_conflict
+      expect(
+        screen.getByText(/location.*already linked.*another stock instance/i),
+      ).toBeDefined();
     });
   });
 });
