@@ -30,6 +30,7 @@ import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
 import { Sun, Moon, LogOut, Layout, MapPin, Tag, Package } from "react-feather";
 import { useTranslation } from "react-i18next";
 import { client } from "../api/client";
+import { LanguageSwitcher } from "../components/LanguageSwitcher";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -143,8 +144,9 @@ function HeaderContent({
         </Text>
       </Group>
 
-      {/* Right: color-scheme toggle + logout */}
+      {/* Right: language switcher + color-scheme toggle + logout */}
       <Group gap="xs">
+        <LanguageSwitcher mode="authed" />
         <ActionIcon
           variant="default"
           size="lg"

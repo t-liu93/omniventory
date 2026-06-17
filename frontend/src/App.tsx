@@ -31,6 +31,7 @@ import { Categories } from "./pages/Categories";
 import { Items, ItemDetail } from "./pages/Items";
 import { InstanceDetail } from "./pages/InstanceDetail";
 import { client } from "./api/client";
+import i18n from "./i18n";
 
 type AuthState = "loading" | "setup" | "authed" | "anon";
 
@@ -52,8 +53,22 @@ function App() {
       }
 
       // Step 2: check if user is already authenticated.
-      const { error: meError } = await client.GET("/api/auth/me");
-      setAuthState(meError ? "anon" : "authed");
+      const { data: meData, error: meError } = await client.GET("/api/auth/me");
+      if (meError || !meData) {
+        setAuthState("anon");
+        return;
+      }
+
+      // Gate wiring (§7.3): apply the account's preferred_language when set.
+      // Writing to localStorage ensures a reload before me re-resolves shows
+      // the right language (the detector reads it before the me call completes).
+      const preferredLang = meData.user.preferred_language;
+      if (preferredLang) {
+        localStorage.setItem("omniventory_lang", preferredLang);
+        await i18n.changeLanguage(preferredLang);
+      }
+
+      setAuthState("authed");
     }
 
     checkState().catch(() => setAuthState("anon"));

@@ -21,6 +21,7 @@ import { AlertCircle } from "react-feather";
 import { useTranslation } from "react-i18next";
 import { client } from "../api/client";
 import { mapApiError } from "../i18n/errors";
+import { LanguageSwitcher } from "../components/LanguageSwitcher";
 
 interface LoginProps {
   onSuccess: () => void;
@@ -64,6 +65,7 @@ export function Login({ onSuccess }: LoginProps) {
       >
         <form onSubmit={handleSubmit}>
           <Stack gap="lg">
+            <LanguageSwitcher mode="pre-login" />
             <Stack gap={4}>
               <Title order={2} ta="center">
                 {t("login.title")}

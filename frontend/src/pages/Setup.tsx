@@ -24,6 +24,7 @@ import { AlertCircle } from "react-feather";
 import { useTranslation } from "react-i18next";
 import { client } from "../api/client";
 import { mapApiError } from "../i18n/errors";
+import { LanguageSwitcher } from "../components/LanguageSwitcher";
 
 interface SetupProps {
   /** Called after the first admin is created; parent transitions to Login. */
@@ -61,6 +62,7 @@ export function Setup({ onSuccess }: SetupProps) {
       <Paper w="100%" maw={400} p="xl" radius="md" withBorder shadow="sm">
         <form onSubmit={handleSubmit}>
           <Stack gap="lg">
+            <LanguageSwitcher mode="pre-login" />
             <Stack gap={4}>
               <Title order={2} ta="center">
                 {t("setup.title")}

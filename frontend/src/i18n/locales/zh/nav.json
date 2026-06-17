@@ -8,5 +8,8 @@
   "toggleNavigation": "切换导航",
   "toggleColorScheme": "切换配色方案",
   "logout": "退出登录",
-  "appName": "Omniventory"
+  "appName": "Omniventory",
+  "changeLanguage": "切换语言",
+  "languageEn": "EN",
+  "languageZh": "中文"
 }

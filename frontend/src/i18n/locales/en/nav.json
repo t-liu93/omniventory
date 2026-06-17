@@ -8,5 +8,8 @@
   "toggleNavigation": "Toggle navigation",
   "toggleColorScheme": "Toggle color scheme",
   "logout": "Logout",
-  "appName": "Omniventory"
+  "appName": "Omniventory",
+  "changeLanguage": "Change language",
+  "languageEn": "EN",
+  "languageZh": "中文"
 }
