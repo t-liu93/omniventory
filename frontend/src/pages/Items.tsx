@@ -31,6 +31,8 @@ import {
   Anchor,
   Divider,
   ActionIcon,
+  Card,
+  SimpleGrid,
 } from "@mantine/core";
 import { Plus, Edit2, Trash2, AlertCircle, ArrowLeft, Search } from "react-feather";
 import { useTranslation, Trans } from "react-i18next";
@@ -446,66 +448,68 @@ export function Items() {
         {definitions.length === 0 ? (
           <EmptyState message={t("list.empty")} />
         ) : (
-          <Table highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>{t("list.colName")}</Table.Th>
-                <Table.Th>{t("list.colKind")}</Table.Th>
-                <Table.Th>{t("list.colUnit")}</Table.Th>
-                <Table.Th>{t("list.colCategory")}</Table.Th>
-                <Table.Th />
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {definitions.map((def) => (
-                <Table.Tr key={def.id} data-testid={`def-row-${def.id}`}>
-                  <Table.Td>
-                    <Anchor component={Link} to={`/items/${def.id}`} size="sm">
-                      {def.name}
-                    </Anchor>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge size="xs" variant="light">
-                      {t(`kinds.${def.kind.code}`, { defaultValue: def.kind.name })}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">{def.unit}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm" c="dimmed">
-                      {def.category_id != null
-                        ? (categories.find((c) => c.id === def.category_id)?.name ?? "—")
-                        : "—"}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Group gap={4} justify="flex-end" wrap="nowrap">
-                      <ActionIcon
-                        size="xs"
-                        variant="subtle"
-                        aria-label={t("list.editAriaLabel", { name: def.name })}
-                        onClick={() => openEditDef(def)}
-                        data-testid={`edit-def-${def.id}`}
-                      >
-                        <Edit2 size={12} />
-                      </ActionIcon>
-                      <ActionIcon
-                        size="xs"
-                        variant="subtle"
-                        color="red"
-                        aria-label={t("list.deleteAriaLabel", { name: def.name })}
-                        onClick={() => openDeleteDef(def)}
-                        data-testid={`delete-def-${def.id}`}
-                      >
-                        <Trash2 size={12} />
-                      </ActionIcon>
-                    </Group>
-                  </Table.Td>
+          <Table.ScrollContainer minWidth={480}>
+            <Table highlightOnHover verticalSpacing="sm">
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>{t("list.colName")}</Table.Th>
+                  <Table.Th>{t("list.colKind")}</Table.Th>
+                  <Table.Th>{t("list.colUnit")}</Table.Th>
+                  <Table.Th>{t("list.colCategory")}</Table.Th>
+                  <Table.Th />
                 </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
+              </Table.Thead>
+              <Table.Tbody>
+                {definitions.map((def) => (
+                  <Table.Tr key={def.id} data-testid={`def-row-${def.id}`}>
+                    <Table.Td>
+                      <Anchor component={Link} to={`/items/${def.id}`} size="sm" fw={500}>
+                        {def.name}
+                      </Anchor>
+                    </Table.Td>
+                    <Table.Td>
+                      <Badge size="sm" variant="light">
+                        {t(`kinds.${def.kind.code}`, { defaultValue: def.kind.name })}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm">{def.unit}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm" c="dimmed">
+                        {def.category_id != null
+                          ? (categories.find((c) => c.id === def.category_id)?.name ?? "—")
+                          : "—"}
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Group gap={4} justify="flex-end" wrap="nowrap">
+                        <ActionIcon
+                          size="sm"
+                          variant="subtle"
+                          aria-label={t("list.editAriaLabel", { name: def.name })}
+                          onClick={() => openEditDef(def)}
+                          data-testid={`edit-def-${def.id}`}
+                        >
+                          <Edit2 size={14} />
+                        </ActionIcon>
+                        <ActionIcon
+                          size="sm"
+                          variant="subtle"
+                          color="red"
+                          aria-label={t("list.deleteAriaLabel", { name: def.name })}
+                          onClick={() => openDeleteDef(def)}
+                          data-testid={`delete-def-${def.id}`}
+                        >
+                          <Trash2 size={14} />
+                        </ActionIcon>
+                      </Group>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
         )}
       </Stack>
 
@@ -901,7 +905,7 @@ export function ItemDetail() {
         </Anchor>
       </Group>
 
-      {/* Definition header */}
+      {/* Definition header + actions */}
       <Group justify="space-between" wrap="nowrap">
         <Title order={2}>{def.name}</Title>
         <Group gap={8}>
@@ -930,34 +934,44 @@ export function ItemDetail() {
         </Group>
       </Group>
 
-      {/* Definition metadata */}
-      <Stack gap={4}>
-        {def.description && (
-          <Text size="sm" c="dimmed">
-            {def.description}
-          </Text>
-        )}
-        <Group gap="lg" wrap="wrap">
-          <Group gap={4} wrap="nowrap" component="span">
-            <Text size="sm" span fw={500}>{t("detail.kindLabel")}</Text>
-            <Badge size="xs" variant="light">
-              {t(`kinds.${def.kind.code}`, { defaultValue: def.kind.name })}
-            </Badge>
-          </Group>
-          <Text size="sm">
-            <Text span fw={500}>{t("detail.unitLabel")}</Text>
-            {def.unit}
-          </Text>
-          <Text size="sm">
-            <Text span fw={500}>{t("detail.categoryLabel")}</Text>
-            {catName}
-          </Text>
-          <Text size="sm">
-            <Text span fw={500}>{t("detail.defaultLocationLabel")}</Text>
-            {locName}
-          </Text>
-        </Group>
-      </Stack>
+      {/* Definition metadata card */}
+      <Card>
+        <Stack gap="sm">
+          {def.description && (
+            <Text size="sm" c="dimmed">
+              {def.description}
+            </Text>
+          )}
+          <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="sm">
+            <Stack gap={2}>
+              <Text size="xs" c="dimmed" fw={500} tt="uppercase">
+                {t("detail.kindLabel")}
+              </Text>
+              <Badge size="sm" variant="light" style={{ alignSelf: "flex-start" }}>
+                {t(`kinds.${def.kind.code}`, { defaultValue: def.kind.name })}
+              </Badge>
+            </Stack>
+            <Stack gap={2}>
+              <Text size="xs" c="dimmed" fw={500} tt="uppercase">
+                {t("detail.unitLabel")}
+              </Text>
+              <Text size="sm">{def.unit}</Text>
+            </Stack>
+            <Stack gap={2}>
+              <Text size="xs" c="dimmed" fw={500} tt="uppercase">
+                {t("detail.categoryLabel")}
+              </Text>
+              <Text size="sm">{catName}</Text>
+            </Stack>
+            <Stack gap={2}>
+              <Text size="xs" c="dimmed" fw={500} tt="uppercase">
+                {t("detail.defaultLocationLabel")}
+              </Text>
+              <Text size="sm">{locName}</Text>
+            </Stack>
+          </SimpleGrid>
+        </Stack>
+      </Card>
 
       <Divider />
 
@@ -987,77 +1001,80 @@ export function ItemDetail() {
         {instances.length === 0 ? (
           <EmptyState message={t("detail.instancesEmpty")} />
         ) : (
-          <Table highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>{t("detail.colSerial")}</Table.Th>
-                <Table.Th>{t("detail.colQty")}</Table.Th>
-                <Table.Th>{t("detail.colLocation")}</Table.Th>
-                <Table.Th>{t("detail.colManufacturer")}</Table.Th>
-                <Table.Th>{t("detail.colWarranty")}</Table.Th>
-                <Table.Th />
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {instances.map((inst) => (
-                <Table.Tr key={inst.id} data-testid={`inst-row-${inst.id}`}>
-                  <Table.Td>
-                    <Anchor
-                      component={Link}
-                      to={`/instances/${inst.id}`}
-                      size="sm"
-                    >
-                      {inst.serial ?? (
-                        <Text span c="dimmed" size="sm">
-                          —
-                        </Text>
-                      )}
-                    </Anchor>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">{formatQuantity(inst.quantity)}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm" c="dimmed">
-                      {inst.location_id != null
-                        ? (locations.find((l) => l.id === inst.location_id)
-                            ?.name ?? inst.location_id)
-                        : "—"}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">{inst.manufacturer ?? "—"}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">{inst.warranty_expires ? formatDate(inst.warranty_expires) : "—"}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Group gap={4} justify="flex-end" wrap="nowrap">
-                      <ActionIcon
-                        size="xs"
-                        variant="subtle"
-                        aria-label={t("detail.editInstanceAriaLabel", { id: inst.id })}
-                        onClick={() => openEditInst(inst)}
-                        data-testid={`edit-inst-${inst.id}`}
-                      >
-                        <Edit2 size={12} />
-                      </ActionIcon>
-                      <ActionIcon
-                        size="xs"
-                        variant="subtle"
-                        color="red"
-                        aria-label={t("detail.deleteInstanceAriaLabel", { id: inst.id })}
-                        onClick={() => openDeleteInst(inst)}
-                        data-testid={`delete-inst-${inst.id}`}
-                      >
-                        <Trash2 size={12} />
-                      </ActionIcon>
-                    </Group>
-                  </Table.Td>
+          <Table.ScrollContainer minWidth={560}>
+            <Table highlightOnHover verticalSpacing="sm">
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>{t("detail.colSerial")}</Table.Th>
+                  <Table.Th>{t("detail.colQty")}</Table.Th>
+                  <Table.Th>{t("detail.colLocation")}</Table.Th>
+                  <Table.Th>{t("detail.colManufacturer")}</Table.Th>
+                  <Table.Th>{t("detail.colWarranty")}</Table.Th>
+                  <Table.Th />
                 </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
+              </Table.Thead>
+              <Table.Tbody>
+                {instances.map((inst) => (
+                  <Table.Tr key={inst.id} data-testid={`inst-row-${inst.id}`}>
+                    <Table.Td>
+                      <Anchor
+                        component={Link}
+                        to={`/instances/${inst.id}`}
+                        size="sm"
+                        fw={500}
+                      >
+                        {inst.serial ?? (
+                          <Text span c="dimmed" size="sm">
+                            —
+                          </Text>
+                        )}
+                      </Anchor>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm">{formatQuantity(inst.quantity)}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm" c="dimmed">
+                        {inst.location_id != null
+                          ? (locations.find((l) => l.id === inst.location_id)
+                              ?.name ?? inst.location_id)
+                          : "—"}
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm">{inst.manufacturer ?? "—"}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm">{inst.warranty_expires ? formatDate(inst.warranty_expires) : "—"}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Group gap={4} justify="flex-end" wrap="nowrap">
+                        <ActionIcon
+                          size="sm"
+                          variant="subtle"
+                          aria-label={t("detail.editInstanceAriaLabel", { id: inst.id })}
+                          onClick={() => openEditInst(inst)}
+                          data-testid={`edit-inst-${inst.id}`}
+                        >
+                          <Edit2 size={14} />
+                        </ActionIcon>
+                        <ActionIcon
+                          size="sm"
+                          variant="subtle"
+                          color="red"
+                          aria-label={t("detail.deleteInstanceAriaLabel", { id: inst.id })}
+                          onClick={() => openDeleteInst(inst)}
+                          data-testid={`delete-inst-${inst.id}`}
+                        >
+                          <Trash2 size={14} />
+                        </ActionIcon>
+                      </Group>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
         )}
       </Stack>
 
