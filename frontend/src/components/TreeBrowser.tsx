@@ -577,10 +577,15 @@ export function TreeBrowser({ resource, label, labelPlural }: TreeBrowserProps) 
         </Button>
       </Group>
 
-      {/* Tree */}
+      {/* Tree — clicking blank space (not a node row or its buttons) clears selection */}
       {treeData.length === 0 ? (
         <EmptyState message={`No ${plural.toLowerCase()} yet. Create one above.`} />
       ) : (
+        <div
+          data-testid="tree-region"
+          onClick={() => setSelectedId(null)}
+          style={{ cursor: "default", minHeight: "200px", width: "100%" }}
+        >
         <Tree
           data={mantineTreeData}
           tree={tree}
@@ -610,6 +615,7 @@ export function TreeBrowser({ resource, label, labelPlural }: TreeBrowserProps) 
                     : undefined,
                 }}
                 onClick={(e) => {
+                  e.stopPropagation();
                   elementProps.onClick?.(e);
                   setSelectedId(isSelected ? null : nodeId);
                 }}
@@ -674,6 +680,7 @@ export function TreeBrowser({ resource, label, labelPlural }: TreeBrowserProps) 
             );
           }}
         />
+        </div>
       )}
 
       {/* Selected node detail panel */}

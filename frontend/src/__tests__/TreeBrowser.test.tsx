@@ -907,3 +907,146 @@ describe("TreeBrowser — delete instance happy path", () => {
     });
   });
 });
+
+// ── Blank-space deselect ──────────────────────────────────────────────────────
+
+describe("TreeBrowser — clicking blank space in the tree region clears selection", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    makeSuccessGetLocations();
+  });
+
+  /**
+   * Structural / non-vacuous guard:
+   * jsdom has no layout engine, so pixel geometry cannot be tested. Instead we
+   * verify that the tree-region wrapper carries a `min-height` style — which is
+   * the fix that gives it real estate in a real browser so blank-space clicks
+   * below the node rows actually land inside the element and reach its onClick.
+   * Without this property the div collapses to zero extra space and the handler
+   * is unreachable (the regression that commit 04a7f65 silently had).
+   */
+  it("tree-region wrapper has a min-height style so blank space is genuinely clickable in a real browser", async () => {
+    renderLocations();
+    await waitFor(() => screen.getByText("Home"));
+
+    const region = screen.getByTestId("tree-region");
+    // The element must declare a min-height (any non-zero / non-empty value).
+    // This is the structural guarantee that blank area below tree rows is inside
+    // the div in a real browser — purely behavioural jsdom clicks cannot catch
+    // the absence of this property.
+    const minHeight = region.style.minHeight;
+    expect(minHeight).toBeTruthy();
+    expect(minHeight).not.toBe("0");
+    expect(minHeight).not.toBe("0px");
+  });
+
+  it("select a node then click the tree region background → selection cleared (locations)", async () => {
+    renderLocations();
+    await waitFor(() => screen.getByText("Home"));
+
+    // Select "Garage"
+    fireEvent.click(screen.getByText("Garage"));
+
+    // Detail panel and top button reading "Add child location" should appear
+    // (use testid to avoid collision with inline action icons)
+    await waitFor(() => {
+      const createBtn = screen.getByTestId("create-root-btn");
+      expect(createBtn.textContent).toMatch(/add child location/i);
+    });
+
+    // Click the blank tree-region wrapper (not on any node)
+    fireEvent.click(screen.getByTestId("tree-region"));
+
+    // Selection cleared: top button reverts to "Add location", detail panel gone
+    await waitFor(() => {
+      const createBtn = screen.getByTestId("create-root-btn");
+      expect(createBtn.textContent).toMatch(/^add location$/i);
+      // The "Reparent" button inside the detail panel should no longer be visible
+      expect(screen.queryByRole("button", { name: /reparent/i })).toBeNull();
+    });
+  });
+
+  it("select a node then click the tree region background → selection cleared (categories)", async () => {
+    makeSuccessGetCategories();
+    renderCategories();
+    await waitFor(() => screen.getByText("Tools"));
+
+    // Select "Tools"
+    fireEvent.click(screen.getByText("Tools"));
+
+    // Detail panel should appear (Reparent button)
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /reparent/i })).toBeDefined();
+    });
+
+    // Click blank tree region
+    fireEvent.click(screen.getByTestId("tree-region"));
+
+    // Selection cleared: detail panel gone
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /reparent/i })).toBeNull();
+      // Top button back to "Add category"
+      const createBtn = screen.getByTestId("create-root-btn");
+      expect(createBtn.textContent).toMatch(/^add category$/i);
+    });
+  });
+
+  it("clicking a node does NOT trigger the blank-space handler (selection stays set)", async () => {
+    renderLocations();
+    await waitFor(() => screen.getByText("Home"));
+
+    // Click node — must select and NOT immediately clear via bubble
+    fireEvent.click(screen.getByText("Garage"));
+
+    await waitFor(() => {
+      // Top toolbar "create-root-btn" should read "Add child location" (node IS selected)
+      const createBtn = screen.getByTestId("create-root-btn");
+      expect(createBtn.textContent).toMatch(/add child location/i);
+    });
+  });
+
+  it("clicking a node action button (rename/delete) does NOT clear selection via bubble", async () => {
+    renderLocations();
+    await waitFor(() => screen.getByText("Home"));
+
+    // First select a node
+    fireEvent.click(screen.getByText("Garage"));
+    await waitFor(() => {
+      const createBtn = screen.getByTestId("create-root-btn");
+      expect(createBtn.textContent).toMatch(/add child location/i);
+    });
+
+    // Click the rename icon for "Garage" — should open rename modal, not clear selection
+    const renameBtn = screen.getByRole("button", { name: /rename garage/i });
+    fireEvent.click(renameBtn);
+
+    // Rename modal should open (not blank-space handler)
+    await waitFor(() => {
+      expect(screen.getByTestId("rename-input")).toBeDefined();
+    });
+  });
+
+  it("a blank-space click does NOT call POST/PATCH/DELETE (no spurious action)", async () => {
+    renderLocations();
+    await waitFor(() => screen.getByText("Home"));
+
+    fireEvent.click(screen.getByText("Home"));
+    await waitFor(() => {
+      const createBtn = screen.getByTestId("create-root-btn");
+      expect(createBtn.textContent).toMatch(/add child location/i);
+    });
+
+    // Click the blank tree region
+    fireEvent.click(screen.getByTestId("tree-region"));
+
+    // Wait a tick for any spurious effects
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /reparent/i })).toBeNull();
+    });
+
+    // No mutating API calls should have been triggered
+    expect(client.POST).not.toHaveBeenCalled();
+    expect(client.PATCH).not.toHaveBeenCalled();
+    expect(client.DELETE).not.toHaveBeenCalled();
+  });
+});
