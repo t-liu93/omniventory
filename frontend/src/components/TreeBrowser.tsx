@@ -35,6 +35,7 @@ import {
   useTree,
   Divider,
   Table,
+  Card,
 } from "@mantine/core";
 import type { TreeNodeData } from "@mantine/core";
 import { Plus, Edit2, Trash2, AlertCircle, Move } from "react-feather";
@@ -747,11 +748,22 @@ export function TreeBrowser({ resource }: TreeBrowserProps) {
                 wrap="nowrap"
                 style={{
                   cursor: "pointer",
-                  borderRadius: 4,
-                  padding: "2px 4px",
+                  borderRadius: "var(--mantine-radius-sm)",
+                  padding: "6px 8px",
                   background: isSelected
                     ? "var(--mantine-color-teal-light)"
                     : undefined,
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSelected) {
+                    (e.currentTarget as HTMLElement).style.background =
+                      "var(--mantine-color-default-hover)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected) {
+                    (e.currentTarget as HTMLElement).style.background = "";
+                  }
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -760,17 +772,17 @@ export function TreeBrowser({ resource }: TreeBrowserProps) {
                 }}
               >
                 {/* Expand caret */}
-                <Text size="xs" c="dimmed" w={12} ta="center">
+                <Text size="sm" c="dimmed" w={16} ta="center">
                   {hasChildren ? (expanded ? "▾" : "▸") : "·"}
                 </Text>
                 {/* Node label */}
-                <Text size="sm" style={{ flex: 1 }}>
+                <Text size="md" fw={500} style={{ flex: 1 }}>
                   {node.label as string}
                 </Text>
                 {/* Container-as-item badge for locations */}
                 {isContainerAsItem && (
                   <Badge
-                    size="xs"
+                    size="sm"
                     color="teal"
                     variant="light"
                     data-testid={`container-badge-${nodeId}`}
@@ -780,9 +792,9 @@ export function TreeBrowser({ resource }: TreeBrowserProps) {
                   </Badge>
                 )}
                 {/* Action icons (show on hover or selection) */}
-                <Group gap={2} wrap="nowrap">
+                <Group gap={4} wrap="nowrap">
                   <ActionIcon
-                    size="xs"
+                    size="sm"
                     variant="subtle"
                     aria-label={t("tree.addChildUnder", { name: node.label as string })}
                     onClick={(e) => {
@@ -790,10 +802,10 @@ export function TreeBrowser({ resource }: TreeBrowserProps) {
                       openCreate(nodeId);
                     }}
                   >
-                    <Plus size={12} />
+                    <Plus size={16} />
                   </ActionIcon>
                   <ActionIcon
-                    size="xs"
+                    size="sm"
                     variant="subtle"
                     aria-label={t("tree.rename", { name: node.label as string })}
                     onClick={(e) => {
@@ -801,10 +813,10 @@ export function TreeBrowser({ resource }: TreeBrowserProps) {
                       openRename(nodeId, node.label as string);
                     }}
                   >
-                    <Edit2 size={12} />
+                    <Edit2 size={16} />
                   </ActionIcon>
                   <ActionIcon
-                    size="xs"
+                    size="sm"
                     variant="subtle"
                     color="red"
                     aria-label={t("tree.delete", { name: node.label as string })}
@@ -813,7 +825,7 @@ export function TreeBrowser({ resource }: TreeBrowserProps) {
                       openDelete(nodeId, node.label as string);
                     }}
                   >
-                    <Trash2 size={12} />
+                    <Trash2 size={16} />
                   </ActionIcon>
                 </Group>
               </Group>
@@ -825,9 +837,10 @@ export function TreeBrowser({ resource }: TreeBrowserProps) {
 
       {/* Selected node detail panel */}
       {selectedNode && (
-        <Stack gap="xs" p="sm" style={{ border: "1px solid var(--mantine-color-default-border)", borderRadius: 8 }}>
+        <Card padding="md">
+        <Stack gap="xs">
           <Group justify="space-between">
-            <Text fw={600} size="sm">
+            <Text fw={600} size="md">
               {selectedNode.name}
             </Text>
             <Group gap={4}>
@@ -851,7 +864,7 @@ export function TreeBrowser({ resource }: TreeBrowserProps) {
             </Group>
           </Group>
           {selectedNode.description && (
-            <Text size="xs" c="dimmed">
+            <Text size="sm" c="dimmed">
               {selectedNode.description}
             </Text>
           )}
@@ -969,6 +982,7 @@ export function TreeBrowser({ resource }: TreeBrowserProps) {
             </>
           )}
         </Stack>
+        </Card>
       )}
 
       {/* ── Modals ─────────────────────────────────────────────────────────── */}

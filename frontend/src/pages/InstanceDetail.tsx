@@ -22,7 +22,7 @@ import {
   Alert,
   Divider,
   SimpleGrid,
-  Paper,
+  Card,
 } from "@mantine/core";
 import { Edit2, Trash2, AlertCircle, ArrowLeft } from "react-feather";
 import { useTranslation, Trans } from "react-i18next";
@@ -279,7 +279,7 @@ export function InstanceDetail() {
       <Divider />
 
       {/* Detail fields */}
-      <Paper p="md" withBorder>
+      <Card>
         <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
           <DetailField label={t("detail.quantityField")} value={formatQuantity(inst.quantity)} />
           <DetailField label={t("detail.locationField")} value={locName} />
@@ -296,7 +296,7 @@ export function InstanceDetail() {
             value={formatDate(inst.created_at)}
           />
         </SimpleGrid>
-      </Paper>
+      </Card>
 
       {/* Edit modal */}
       <InstanceFormModal
