@@ -10,7 +10,9 @@
   },
   "validation": {
     "invalid_input": "提交的数据无效，请检查表单后重试。",
-    "unsupported_language": "不支持语言「{{value}}」，支持的语言：{{supported}}。"
+    "unsupported_language": "不支持语言「{{value}}」，支持的语言：{{supported}}。",
+    "unsupported_tracking_mode": "不支持库存追踪模式「{{value}}」，支持的模式：{{supported}}。",
+    "unsupported_stock_level": "不支持库存水位「{{value}}」，支持的水位：{{supported}}。"
   },
   "tree": {
     "cycle": "此操作将在{{kind}}树中造成循环引用。",
@@ -31,12 +33,25 @@
   },
   "item_definition": {
     "not_found": "未找到物品定义 #{{id}}。",
-    "has_instances": "该物品定义下仍有已登记的实例，无法删除。"
+    "has_instances": "该物品定义下仍有已登记的实例，无法删除。",
+    "tracking_mode_change_conflict": "该物品定义下仍有已登记的库存批次，无法更改追踪模式。"
   },
   "stock_instance": {
     "not_found": "未找到库存实例 #{{id}}。",
     "serial_requires_qty_one": "设置序列号时，数量必须为 1。",
     "serial_duplicate": "序列号「{{serial}}」已在该物品定义下被使用。"
+  },
+  "instance": {
+    "field_mode_mismatch": "所填字段与该物品定义的库存追踪模式不匹配。"
+  },
+  "stock": {
+    "insufficient": "库存不足：请求 {{requested}}，可用 {{available}}。",
+    "negative_quantity": "此操作将导致批次 #{{id}} 数量变为负数。",
+    "movement_not_applicable": "该物品定义的追踪模式（{{mode}}）不支持库存移动操作。",
+    "movement_not_found": "未找到库存移动记录 #{{id}}。",
+    "movement_already_reversed": "库存移动记录 #{{id}} 已被撤销。",
+    "cannot_reverse_reversal": "无法撤销库存移动记录 #{{id}}，因为它本身是一条撤销记录。",
+    "reverse_would_go_negative": "撤销库存移动记录 #{{id}} 将导致批次数量变为负数。"
   },
   "internal": {
     "error": "服务器内部错误，请稍后重试。"

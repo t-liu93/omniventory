@@ -1,0 +1,20 @@
+{
+  "trackingMode": {
+    "exact": "Exact (ledger)",
+    "level": "Level (high/medium/low)",
+    "none": "None (presence only)"
+  },
+  "stockLevel": {
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  },
+  "movementType": {
+    "intake": "Intake",
+    "consume": "Consume",
+    "move": "Move",
+    "adjust": "Adjust",
+    "discard": "Discard",
+    "correction": "Correction"
+  }
+}

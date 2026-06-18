@@ -1,0 +1,20 @@
+{
+  "trackingMode": {
+    "exact": "精确（台账）",
+    "level": "水位（高/中/低）",
+    "none": "仅登记（无库存）"
+  },
+  "stockLevel": {
+    "high": "高",
+    "medium": "中",
+    "low": "低"
+  },
+  "movementType": {
+    "intake": "入库",
+    "consume": "消耗",
+    "move": "移位",
+    "adjust": "盘点调整",
+    "discard": "报废",
+    "correction": "更正"
+  }
+}

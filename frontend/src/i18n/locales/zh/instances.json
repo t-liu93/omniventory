@@ -5,6 +5,8 @@
     "serialLabel": "序列号",
     "quantityLabel": "数量",
     "quantitySerialHint": "已设置序列号——数量强制为 1",
+    "quantityEditHint": "数量由库存台账管理——请通过入库/盘点/报废操作修改。",
+    "stockLevelLabel": "库存水位",
     "modelNumberLabel": "型号",
     "manufacturerLabel": "制造商",
     "warrantyExpiresLabel": "保修到期",

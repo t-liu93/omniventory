@@ -27,6 +27,8 @@
     "unitLabel": "Unit: ",
     "categoryLabel": "Category: ",
     "defaultLocationLabel": "Default location: ",
+    "trackingModeLabel": "Tracking mode: ",
+    "minStockLabel": "Min stock: ",
     "instancesTitle": "Instances",
     "registerInstanceBtn": "Register instance",
     "instanceSearchPlaceholder": "Search by serial, model, manufacturer…",
@@ -55,6 +57,9 @@
     "unitLabel": "Unit",
     "unitPlaceholder": "pcs",
     "defaultLocationLabel": "Default Location",
+    "trackingModeLabel": "Stock tracking mode",
+    "minStockLabel": "Min stock (reorder point)",
+    "minStockPlaceholder": "e.g. 4",
     "noneOption": "— None —"
   },
   "deleteDefModal": {

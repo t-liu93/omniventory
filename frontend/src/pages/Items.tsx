@@ -23,6 +23,7 @@ import {
   Button,
   TextInput,
   Textarea,
+  NumberInput,
   Select,
   Modal,
   Alert,
@@ -67,6 +68,8 @@ interface DefinitionFormState {
   kind_id: string;
   unit: string;
   default_location_id: string;
+  stock_tracking_mode: string; // "exact" | "level" | "none"
+  min_stock: string; // numeric string or "" when not set
 }
 
 const emptyDefForm = (): DefinitionFormState => ({
@@ -76,12 +79,15 @@ const emptyDefForm = (): DefinitionFormState => ({
   kind_id: "",
   unit: "pcs",
   default_location_id: "",
+  stock_tracking_mode: "exact",
+  min_stock: "",
 });
 
 const emptyInstanceForm = (definitionId?: number): InstanceFormState => ({
   definition_id: definitionId != null ? String(definitionId) : "",
   location_id: "",
   quantity: "1",
+  stock_level: "",
   serial: "",
   model_number: "",
   manufacturer: "",
@@ -136,6 +142,7 @@ function DefinitionFormModal({
   locations,
 }: DefinitionFormModalProps) {
   const { t } = useTranslation("items");
+  const { t: tStock } = useTranslation("stock");
   const kindOptions = kinds.map((k) => ({
     value: String(k.id),
     label: t(`kinds.${k.code}`, { defaultValue: k.name }),
@@ -150,6 +157,11 @@ function DefinitionFormModal({
       const assetSuffix = l.container_asset_label ? ` — ${l.container_asset_label}` : "";
       return { value: String(l.id), label: `${l.name}${assetSuffix}` };
     }),
+  ];
+  const trackingModeOptions = [
+    { value: "exact", label: tStock("trackingMode.exact") },
+    { value: "level", label: tStock("trackingMode.level") },
+    { value: "none", label: tStock("trackingMode.none") },
   ];
 
   return (
@@ -213,6 +225,24 @@ function DefinitionFormModal({
           onChange={(v) => setForm((f) => ({ ...f, default_location_id: v ?? "" }))}
           clearable
         />
+        <Select
+          label={t("defForm.trackingModeLabel")}
+          data={trackingModeOptions}
+          value={form.stock_tracking_mode}
+          onChange={(v) => setForm((f) => ({ ...f, stock_tracking_mode: v ?? "exact", min_stock: "" }))}
+          data-testid="def-tracking-mode-select"
+        />
+        {form.stock_tracking_mode === "exact" && (
+          <NumberInput
+            label={t("defForm.minStockLabel")}
+            placeholder={t("defForm.minStockPlaceholder")}
+            value={form.min_stock === "" ? "" : Number(form.min_stock)}
+            onChange={(v) => setForm((f) => ({ ...f, min_stock: v === "" ? "" : String(v) }))}
+            min={0}
+            allowDecimal
+            data-testid="def-min-stock-input"
+          />
+        )}
         <Group justify="flex-end">
           <Button variant="default" onClick={onClose} disabled={busy}>
             {t("common:actions.cancel", "Cancel")}
@@ -314,6 +344,8 @@ export function Items() {
       unit: def.unit,
       default_location_id:
         def.default_location_id != null ? String(def.default_location_id) : "",
+      stock_tracking_mode: def.stock_tracking_mode ?? "exact",
+      min_stock: def.min_stock != null ? String(def.min_stock) : "",
     });
     setDefError(null);
     setDefModal({ kind: "edit", def });
@@ -344,7 +376,11 @@ export function Items() {
           default_location_id: defForm.default_location_id
             ? Number(defForm.default_location_id)
             : null,
-          stock_tracking_mode: "exact",
+          stock_tracking_mode: defForm.stock_tracking_mode,
+          min_stock:
+            defForm.stock_tracking_mode === "exact" && defForm.min_stock !== ""
+              ? defForm.min_stock
+              : null,
         },
       });
       if (error) {
@@ -378,6 +414,11 @@ export function Items() {
             default_location_id: defForm.default_location_id
               ? Number(defForm.default_location_id)
               : null,
+            stock_tracking_mode: defForm.stock_tracking_mode || null,
+            min_stock:
+              defForm.stock_tracking_mode === "exact" && defForm.min_stock !== ""
+                ? defForm.min_stock
+                : null,
           },
         },
       );
@@ -603,6 +644,7 @@ export function Items() {
 
 export function ItemDetail() {
   const { t } = useTranslation("items");
+  const { t: tStock } = useTranslation("stock");
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const defId = Number(id);
@@ -700,6 +742,8 @@ export function ItemDetail() {
       unit: def.unit,
       default_location_id:
         def.default_location_id != null ? String(def.default_location_id) : "",
+      stock_tracking_mode: def.stock_tracking_mode ?? "exact",
+      min_stock: def.min_stock != null ? String(def.min_stock) : "",
     });
     setDefError(null);
     setDefModal({ kind: "edit", def });
@@ -729,6 +773,11 @@ export function ItemDetail() {
             default_location_id: defForm.default_location_id
               ? Number(defForm.default_location_id)
               : null,
+            stock_tracking_mode: defForm.stock_tracking_mode || null,
+            min_stock:
+              defForm.stock_tracking_mode === "exact" && defForm.min_stock !== ""
+                ? defForm.min_stock
+                : null,
           },
         },
       );
@@ -779,6 +828,7 @@ export function ItemDetail() {
       definition_id: String(inst.definition_id),
       location_id: inst.location_id != null ? String(inst.location_id) : "",
       quantity: inst.quantity ?? "1",
+      stock_level: inst.stock_level ?? "",
       serial: inst.serial ?? "",
       model_number: inst.model_number ?? "",
       manufacturer: inst.manufacturer ?? "",
@@ -807,12 +857,17 @@ export function ItemDetail() {
     setInstError(null);
     try {
       const serial = instForm.serial.trim() || null;
-      const qty = serial != null ? "1" : instForm.quantity;
+      const mode = def?.stock_tracking_mode ?? "exact";
+      // For exact mode: use quantity (forced to 1 when serial is set).
+      // For level/none mode: no quantity sent.
+      const qty = mode === "exact" ? (serial != null ? "1" : instForm.quantity) : undefined;
+      const stockLevel = mode === "level" ? (instForm.stock_level || null) : undefined;
       const { error } = await client.POST("/api/instances", {
         body: {
           definition_id: Number(instForm.definition_id),
           location_id: instForm.location_id ? Number(instForm.location_id) : null,
           quantity: qty,
+          stock_level: stockLevel,
           serial,
           model_number: instForm.model_number.trim() || null,
           manufacturer: instForm.manufacturer.trim() || null,
@@ -841,6 +896,8 @@ export function ItemDetail() {
     setInstError(null);
     try {
       const serial = instForm.serial.trim() || null;
+      const mode = def?.stock_tracking_mode ?? "exact";
+      const stockLevel = mode === "level" ? (instForm.stock_level || null) : undefined;
       const { error } = await client.PATCH(
         "/api/instances/{instance_id}",
         {
@@ -849,6 +906,7 @@ export function ItemDetail() {
             location_id: instForm.location_id ? Number(instForm.location_id) : null,
             // quantity is intentionally absent (M2 §2): quantity changes only
             // through the movement ledger (intake / discard / adjust / consume).
+            stock_level: stockLevel,
             serial,
             model_number: instForm.model_number.trim() || null,
             manufacturer: instForm.manufacturer.trim() || null,
@@ -986,6 +1044,32 @@ export function ItemDetail() {
               </Text>
               <Text size="sm">{locName}</Text>
             </Stack>
+            <Stack gap={2}>
+              <Text size="xs" c="dimmed" fw={500} tt="uppercase">
+                {t("detail.trackingModeLabel")}
+              </Text>
+              <Badge
+                size="sm"
+                variant="outline"
+                color={def.stock_tracking_mode === "exact" ? "blue" : def.stock_tracking_mode === "level" ? "teal" : "gray"}
+                style={{ alignSelf: "flex-start" }}
+                data-testid="def-tracking-mode-badge"
+              >
+                {tStock(`trackingMode.${def.stock_tracking_mode}`, {
+                  defaultValue: def.stock_tracking_mode,
+                })}
+              </Badge>
+            </Stack>
+            {def.stock_tracking_mode === "exact" && def.min_stock != null && (
+              <Stack gap={2}>
+                <Text size="xs" c="dimmed" fw={500} tt="uppercase">
+                  {t("detail.minStockLabel")}
+                </Text>
+                <Text size="sm" data-testid="def-min-stock-value">
+                  {def.min_stock}
+                </Text>
+              </Stack>
+            )}
           </SimpleGrid>
         </Stack>
       </Card>
@@ -1164,6 +1248,8 @@ export function ItemDetail() {
         definitions={allDefs}
         locations={locations}
         lockDefinition
+        trackingMode={def?.stock_tracking_mode ?? "exact"}
+        isEdit={false}
       />
 
       {/* Edit instance modal */}
@@ -1179,6 +1265,8 @@ export function ItemDetail() {
         definitions={allDefs}
         locations={locations}
         lockDefinition
+        trackingMode={def?.stock_tracking_mode ?? "exact"}
+        isEdit={true}
       />
 
       {/* Delete instance modal */}

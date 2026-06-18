@@ -27,6 +27,8 @@
     "unitLabel": "单位：",
     "categoryLabel": "分类：",
     "defaultLocationLabel": "默认位置：",
+    "trackingModeLabel": "追踪模式：",
+    "minStockLabel": "最低库存：",
     "instancesTitle": "实例",
     "registerInstanceBtn": "登记实例",
     "instanceSearchPlaceholder": "按序列号、型号、制造商搜索……",
@@ -55,6 +57,9 @@
     "unitLabel": "单位",
     "unitPlaceholder": "个",
     "defaultLocationLabel": "默认位置",
+    "trackingModeLabel": "库存追踪模式",
+    "minStockLabel": "最低库存（补货点）",
+    "minStockPlaceholder": "例如 4",
     "noneOption": "— 无 —"
   },
   "deleteDefModal": {

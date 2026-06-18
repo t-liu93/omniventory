@@ -5,6 +5,8 @@
     "serialLabel": "Serial",
     "quantityLabel": "Quantity",
     "quantitySerialHint": "Serial is set — quantity forced to 1",
+    "quantityEditHint": "Quantity is managed by the stock ledger — use intake/adjust/discard to change it.",
+    "stockLevelLabel": "Stock level",
     "modelNumberLabel": "Model Number",
     "manufacturerLabel": "Manufacturer",
     "warrantyExpiresLabel": "Warranty Expires",

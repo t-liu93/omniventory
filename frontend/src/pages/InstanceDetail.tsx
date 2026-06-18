@@ -49,6 +49,7 @@ function instToForm(inst: InstanceResponse): InstanceFormState {
     definition_id: String(inst.definition_id),
     location_id: inst.location_id != null ? String(inst.location_id) : "",
     quantity: inst.quantity ?? "1",
+    stock_level: inst.stock_level ?? "",
     serial: inst.serial ?? "",
     model_number: inst.model_number ?? "",
     manufacturer: inst.manufacturer ?? "",
@@ -64,6 +65,7 @@ const emptyForm: InstanceFormState = {
   definition_id: "",
   location_id: "",
   quantity: "1",
+  stock_level: "",
   serial: "",
   model_number: "",
   manufacturer: "",
@@ -159,11 +161,14 @@ export function InstanceDetail() {
     setActionError(null);
     try {
       const serial = form.serial.trim() || null;
+      const mode = def?.stock_tracking_mode ?? "exact";
+      const stockLevel = mode === "level" ? (form.stock_level || null) : undefined;
       const { error } = await client.PATCH("/api/instances/{instance_id}", {
         params: { path: { instance_id: instId } },
         body: {
           location_id: form.location_id ? Number(form.location_id) : null,
           // quantity intentionally absent (M2 §2): changes only via ledger.
+          stock_level: stockLevel,
           serial,
           model_number: form.model_number.trim() || null,
           manufacturer: form.manufacturer.trim() || null,
@@ -316,6 +321,8 @@ export function InstanceDetail() {
         definitions={allDefs}
         locations={locations}
         lockDefinition
+        trackingMode={def?.stock_tracking_mode ?? "exact"}
+        isEdit={true}
       />
 
       {/* Delete confirmation modal */}

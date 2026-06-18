@@ -1,9 +1,14 @@
 /**
  * InstanceFormModal — shared modal for creating/editing a stock instance.
  *
- * Enforces the client-side serial ⇒ quantity = 1 rule (M1 §7.3):
+ * Enforces the client-side serial ⇒ quantity = 1 rule (M1 §7.3) for exact mode:
  *   - When serial is non-empty, quantity is forced to "1" and disabled.
  *   - The server's 422 is surfaced via the `error` prop.
+ *
+ * M2 extension (§7.2): branches by the parent definition's `stock_tracking_mode`:
+ *   - exact: shows `quantity` field (locked on edit; serial⇒qty=1 still applies).
+ *   - level: shows `stock_level` Select (high/medium/low); no quantity.
+ *   - none:  neither quantity nor stock_level — just identity/location/durable fields.
  *
  * Used by both the Items (definition detail) page and the InstanceDetail page.
  */
@@ -31,6 +36,7 @@ export interface InstanceFormState {
   definition_id: string;
   location_id: string;
   quantity: string;
+  stock_level: string;
   serial: string;
   model_number: string;
   manufacturer: string;
@@ -56,6 +62,17 @@ export interface InstanceFormModalProps {
   locations: LocationResponse[];
   /** When true, definition picker is locked (pre-filled from context). */
   lockDefinition?: boolean;
+  /**
+   * The parent definition's stock_tracking_mode.
+   * Drives which quantity/level controls are shown.
+   * Defaults to "exact" when not provided (backward compat).
+   */
+  trackingMode?: string;
+  /**
+   * When true, this is an edit (not create) operation.
+   * In exact mode: quantity is locked/disabled (changes go through ledger).
+   */
+  isEdit?: boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -72,10 +89,13 @@ export function InstanceFormModal({
   definitions,
   locations,
   lockDefinition,
+  trackingMode = "exact",
+  isEdit = false,
 }: InstanceFormModalProps) {
   const { t } = useTranslation("instances");
+  const { t: tStock } = useTranslation("stock");
 
-  // Client-side serial ⇒ quantity = 1 rule (§7.3):
+  // Client-side serial ⇒ quantity = 1 rule (§7.3, exact mode only):
   // When serial is non-empty, force quantity to "1" and disable the field.
   const serialPresent = form.serial.trim().length > 0;
 
@@ -83,7 +103,7 @@ export function InstanceFormModal({
     setForm((f) => ({
       ...f,
       serial: value,
-      // auto-set quantity to 1 when a serial is entered
+      // auto-set quantity to 1 when a serial is entered (exact mode only)
       quantity: value.trim().length > 0 ? "1" : f.quantity,
     }));
   }
@@ -98,6 +118,14 @@ export function InstanceFormModal({
       const assetSuffix = l.container_asset_label ? ` — ${l.container_asset_label}` : "";
       return { value: String(l.id), label: `${l.name}${assetSuffix}` };
     }),
+  ];
+
+  // Stock-level options for "level" mode
+  const stockLevelOptions = [
+    { value: "", label: t("form.noneOption") },
+    { value: "high", label: tStock("stockLevel.high") },
+    { value: "medium", label: tStock("stockLevel.medium") },
+    { value: "low", label: tStock("stockLevel.low") },
   ];
 
   return (
@@ -136,18 +164,50 @@ export function InstanceFormModal({
           onChange={(e) => handleSerialChange(e.currentTarget.value)}
           data-testid="inst-serial-input"
         />
-        <NumberInput
-          label={t("form.quantityLabel")}
-          value={form.quantity}
-          onChange={(v) => setForm((f) => ({ ...f, quantity: String(v) }))}
-          min={0}
-          allowDecimal
-          disabled={serialPresent}
-          description={
-            serialPresent ? t("form.quantitySerialHint") : undefined
-          }
-          data-testid="inst-quantity-input"
-        />
+
+        {/* ── Mode-branching: quantity / stock_level / neither ── */}
+
+        {trackingMode === "exact" && !isEdit && (
+          <NumberInput
+            label={t("form.quantityLabel")}
+            value={form.quantity}
+            onChange={(v) => setForm((f) => ({ ...f, quantity: String(v) }))}
+            min={0}
+            allowDecimal
+            disabled={serialPresent}
+            description={
+              serialPresent ? t("form.quantitySerialHint") : undefined
+            }
+            data-testid="inst-quantity-input"
+          />
+        )}
+
+        {trackingMode === "exact" && isEdit && (
+          <NumberInput
+            label={t("form.quantityLabel")}
+            value={form.quantity}
+            onChange={() => {/* no-op: locked on edit */}}
+            min={0}
+            allowDecimal
+            disabled
+            description={t("form.quantityEditHint")}
+            data-testid="inst-quantity-input"
+          />
+        )}
+
+        {trackingMode === "level" && (
+          <Select
+            label={t("form.stockLevelLabel")}
+            data={stockLevelOptions}
+            value={form.stock_level}
+            onChange={(v) => setForm((f) => ({ ...f, stock_level: v ?? "" }))}
+            clearable
+            data-testid="inst-stock-level-select"
+          />
+        )}
+
+        {/* trackingMode === "none": neither quantity nor stock_level shown */}
+
         <TextInput
           label={t("form.modelNumberLabel")}
           value={form.model_number}

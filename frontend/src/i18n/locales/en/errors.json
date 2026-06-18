@@ -10,7 +10,9 @@
   },
   "validation": {
     "invalid_input": "The submitted data is invalid. Please check the form and try again.",
-    "unsupported_language": "Language \"{{value}}\" is not supported. Supported languages: {{supported}}."
+    "unsupported_language": "Language \"{{value}}\" is not supported. Supported languages: {{supported}}.",
+    "unsupported_tracking_mode": "Stock tracking mode \"{{value}}\" is not supported. Supported modes: {{supported}}.",
+    "unsupported_stock_level": "Stock level \"{{value}}\" is not supported. Supported levels: {{supported}}."
   },
   "tree": {
     "cycle": "This change would create a circular reference in the {{kind}} tree.",
@@ -31,12 +33,25 @@
   },
   "item_definition": {
     "not_found": "Item definition #{{id}} was not found.",
-    "has_instances": "This item definition cannot be deleted because it still has registered instances."
+    "has_instances": "This item definition cannot be deleted because it still has registered instances.",
+    "tracking_mode_change_conflict": "Cannot change the tracking mode while this definition still has registered stock lots."
   },
   "stock_instance": {
     "not_found": "Stock instance #{{id}} was not found.",
     "serial_requires_qty_one": "When a serial number is set, quantity must be exactly 1.",
     "serial_duplicate": "Serial number \"{{serial}}\" is already registered for this item definition."
+  },
+  "instance": {
+    "field_mode_mismatch": "The field provided does not match this definition's stock tracking mode."
+  },
+  "stock": {
+    "insufficient": "Insufficient stock: requested {{requested}}, available {{available}}.",
+    "negative_quantity": "This operation would result in a negative quantity for lot #{{id}}.",
+    "movement_not_applicable": "Stock movements are not applicable to this definition's tracking mode (mode: {{mode}}).",
+    "movement_not_found": "Stock movement #{{id}} was not found.",
+    "movement_already_reversed": "Movement #{{id}} has already been reversed.",
+    "cannot_reverse_reversal": "Cannot reverse movement #{{id}} because it is itself a reversal.",
+    "reverse_would_go_negative": "Reversing movement #{{id}} would drive the lot quantity below zero."
   },
   "internal": {
     "error": "An internal error occurred. Please try again later."
