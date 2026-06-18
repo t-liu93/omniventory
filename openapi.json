@@ -519,7 +519,7 @@
         "type": "object"
       },
       "InstanceCreate": {
-        "description": "Body for POST /instances.",
+        "description": "Body for POST /instances.\n\n``quantity`` \u2014 optional initial intake for ``exact``-mode lots (service\ndefaults to Decimal(\"1\") when omitted for exact mode).  Must be NULL / not\nprovided for ``level`` and ``none`` modes.\n\n``stock_level`` \u2014 required for ``level``-mode lots; must be one of\nSTOCK_LEVELS (validated by the service, not here).  Must not be provided\nfor ``exact`` and ``none`` modes.",
         "properties": {
           "definition_id": {
             "title": "Definition Id",
@@ -621,6 +621,17 @@
               }
             ],
             "title": "Serial"
+          },
+          "stock_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stock Level"
           },
           "warranty_details": {
             "anyOf": [
@@ -737,9 +748,28 @@
             "title": "Purchase Source"
           },
           "quantity": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-            "title": "Quantity",
-            "type": "string"
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "received_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Received At"
           },
           "serial": {
             "anyOf": [
@@ -751,6 +781,17 @@
               }
             ],
             "title": "Serial"
+          },
+          "stock_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stock Level"
           },
           "warranty_details": {
             "anyOf": [
@@ -781,6 +822,8 @@
           "definition_id",
           "location_id",
           "quantity",
+          "stock_level",
+          "received_at",
           "serial",
           "model_number",
           "manufacturer",
@@ -795,7 +838,7 @@
         "type": "object"
       },
       "InstanceUpdate": {
-        "description": "Body for PATCH /instances/{id} \u2014 all fields optional.",
+        "description": "Body for PATCH /instances/{id} \u2014 all fields optional.\n\n``quantity`` is intentionally absent (M2 \u00a72 \"Create vs. movement\"):\nonce an ``exact`` lot is created its quantity changes only through\nmovement endpoints (intake / discard / adjust / consume / reverse).\n\n``stock_level`` may be updated for ``level``-mode lots.",
         "properties": {
           "location_id": {
             "anyOf": [
@@ -868,21 +911,6 @@
             ],
             "title": "Purchase Source"
           },
-          "quantity": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Quantity"
-          },
           "serial": {
             "anyOf": [
               {
@@ -893,6 +921,17 @@
               }
             ],
             "title": "Serial"
+          },
+          "stock_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stock Level"
           },
           "warranty_details": {
             "anyOf": [

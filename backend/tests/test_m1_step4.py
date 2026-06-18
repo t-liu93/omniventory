@@ -57,6 +57,7 @@ def _make_fresh_session() -> Session:
     import app.models.location as loc_mod
     import app.models.session as sess_mod
     import app.models.stock_instance as stock_instance_mod
+    import app.models.stock_movement as stock_movement_mod
     import app.models.user as user_mod
 
     importlib.reload(db_base_mod)
@@ -68,6 +69,7 @@ def _make_fresh_session() -> Session:
     importlib.reload(ikind_mod)
     importlib.reload(idef_mod)
     importlib.reload(stock_instance_mod)
+    importlib.reload(stock_movement_mod)
     importlib.reload(loc_mod)
 
     from app.db.base import Base as _Base
@@ -182,6 +184,7 @@ def test_client(temp_db: Path) -> Generator[TestClient]:  # noqa: ARG001
     import app.models.location as loc_mod
     import app.models.session as sess_mod
     import app.models.stock_instance as stock_instance_mod
+    import app.models.stock_movement as stock_movement_mod
     import app.models.user as user_mod
 
     importlib.reload(db_base_mod)
@@ -193,6 +196,7 @@ def test_client(temp_db: Path) -> Generator[TestClient]:  # noqa: ARG001
     importlib.reload(ikind_mod)
     importlib.reload(idef_mod)
     importlib.reload(stock_instance_mod)
+    importlib.reload(stock_movement_mod)
     importlib.reload(loc_mod)
 
     from app.db.base import Base, get_engine
@@ -351,13 +355,20 @@ class TestInstanceCRUD:
         assert resp.status_code == 200
         assert resp.json() == []
 
-    def test_update_quantity(self, test_client: TestClient) -> None:
-        """PATCH /instances/{id} can update quantity (when no serial)."""
+    def test_update_quantity_ignored_via_patch(self, test_client: TestClient) -> None:
+        """PATCH /instances/{id} ignores 'quantity' in body (M2: quantity is ledger-derived).
+
+        Quantity can no longer be changed via PATCH — it is derived from the
+        movement ledger.  Sending 'quantity' in the PATCH body is silently
+        ignored; the instance's quantity remains at the ledger-derived value.
+        """
         defn = _create_definition(test_client, "Nails")
         created = _create_instance(test_client, defn["id"])
+        original_qty = created["quantity"]
         resp = test_client.patch(f"/api/instances/{created['id']}", json={"quantity": "100.000000"})
         assert resp.status_code == 200
-        assert Decimal(resp.json()["quantity"]) == Decimal("100")
+        # quantity stays at the original ledger-derived value (initial intake = 1 by default)
+        assert resp.json()["quantity"] == original_qty
 
     def test_update_manufacturer(self, test_client: TestClient) -> None:
         """PATCH /instances/{id} can update manufacturer."""
@@ -389,7 +400,7 @@ class TestInstanceCRUD:
         assert resp.status_code == 404
 
     def test_response_has_all_fields(self, test_client: TestClient) -> None:
-        """InstanceResponse includes all expected fields."""
+        """InstanceResponse includes all expected fields (M2: includes stock_level, received_at)."""
         defn = _create_definition(test_client, "Widget")
         data = _create_instance(test_client, defn["id"])
         for field in [
@@ -397,6 +408,8 @@ class TestInstanceCRUD:
             "definition_id",
             "location_id",
             "quantity",
+            "stock_level",
+            "received_at",
             "serial",
             "model_number",
             "manufacturer",
@@ -440,12 +453,23 @@ class TestSerialQtyConstraint:
         )
         assert resp.status_code == 422
 
-    def test_update_qty_gt_1_on_serial_instance_rejected_422(self, test_client: TestClient) -> None:
-        """PATCH /instances/{id} qty > 1 on an instance with a serial → 422."""
+    def test_update_qty_via_patch_ignored_for_serial_instance(
+        self, test_client: TestClient
+    ) -> None:
+        """PATCH /instances/{id} with 'quantity' is silently ignored (M2 contract).
+
+        In M2, quantity is ledger-derived and cannot be changed via PATCH.
+        Sending 'quantity' in the PATCH body is a no-op; the serialized lot's
+        quantity remains at 1 (from the initial intake movement).
+        """
         defn = _create_definition(test_client, "Saw")
         inst = _create_instance(test_client, defn["id"], serial="SN-SAW-001")
+        # Sending quantity=5 in PATCH body is silently ignored
         resp = test_client.patch(f"/api/instances/{inst['id']}", json={"quantity": "5"})
-        assert resp.status_code == 422
+        # Should succeed (body field is ignored)
+        assert resp.status_code == 200
+        # Quantity stays at 1 (the ledger-derived value)
+        assert Decimal(resp.json()["quantity"]) == Decimal("1")
 
     def test_update_serial_on_qty_gt_1_instance_rejected_422(self, test_client: TestClient) -> None:
         """PATCH /instances/{id}: adding serial to an instance with qty > 1 → 422."""
@@ -975,6 +999,7 @@ class TestInstancesRequireAuth:
         import app.models.location as loc_mod
         import app.models.session as sess_mod
         import app.models.stock_instance as stock_instance_mod
+        import app.models.stock_movement as stock_movement_mod
         import app.models.user as user_mod
 
         importlib.reload(db_base_mod)
@@ -986,6 +1011,7 @@ class TestInstancesRequireAuth:
         importlib.reload(ikind_mod)
         importlib.reload(idef_mod)
         importlib.reload(stock_instance_mod)
+        importlib.reload(stock_movement_mod)
         importlib.reload(loc_mod)
 
         from app.db.base import Base, get_engine

@@ -1,7 +1,7 @@
 """Repository for the StockInstance table.
 
 Pure data access — no business rules here.  Business logic (serial⇒qty=1
-enforcement, default-location resolution) lives in
+enforcement, mode validation, default-location resolution) lives in
 ``app.services.stock_instance``.
 
 Public methods
@@ -14,6 +14,8 @@ update(instance, ...)                Apply partial field updates.
 delete(instance)                     Delete a StockInstance row.
 has_instances_at_location(location_id)
                                      True if any instance is assigned to that location.
+has_instances_for_definition(definition_id)
+                                     True if any instance references that definition.
 """
 
 from __future__ import annotations
@@ -100,7 +102,8 @@ class StockInstanceRepository:
         *,
         definition_id: int,
         location_id: int | None = None,
-        quantity: Decimal = Decimal("1"),
+        quantity: Decimal | None = None,
+        stock_level: str | None = None,
         serial: str | None = None,
         model_number: str | None = None,
         manufacturer: str | None = None,
@@ -110,11 +113,18 @@ class StockInstanceRepository:
         purchase_date: date | None = None,
         purchase_source: str | None = None,
     ) -> StockInstance:
-        """Insert a new StockInstance and flush to get its PK."""
+        """Insert a new StockInstance and flush to get its PK.
+
+        ``quantity`` is nullable: pass ``None`` for level/none-mode lots or when
+        the service will set it via ledger recompute (exact-mode).
+        ``stock_level`` is nullable: pass the validated level string for
+        level-mode lots; None otherwise.
+        """
         instance = StockInstance(
             definition_id=definition_id,
             location_id=location_id,
             quantity=quantity,
+            stock_level=stock_level,
             serial=serial,
             model_number=model_number,
             manufacturer=manufacturer,
@@ -134,7 +144,8 @@ class StockInstanceRepository:
         *,
         set_location_id: bool = False,
         location_id: int | None = None,
-        quantity: Decimal | None = None,
+        set_stock_level: bool = False,
+        stock_level: str | None = None,
         set_serial: bool = False,
         serial: str | None = None,
         set_model_number: bool = False,
@@ -156,11 +167,15 @@ class StockInstanceRepository:
 
         Nullable fields use an explicit ``set_*`` flag to distinguish
         "don't change" from "explicitly set to NULL".
+
+        Note: ``quantity`` is intentionally absent from this method (M2 §2).
+        An ``exact`` lot's quantity is changed only through the movement
+        ledger (``StockMovementService``, Step 4).
         """
         if set_location_id:
             instance.location_id = location_id
-        if quantity is not None:
-            instance.quantity = quantity
+        if set_stock_level:
+            instance.stock_level = stock_level
         if set_serial:
             instance.serial = serial
         if set_model_number:

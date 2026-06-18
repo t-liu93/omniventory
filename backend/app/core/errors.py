@@ -57,6 +57,7 @@ class ErrorCode:
     INVALID_INPUT = "validation.invalid_input"
     UNSUPPORTED_LANGUAGE = "validation.unsupported_language"  # Step 2
     UNSUPPORTED_TRACKING_MODE = "validation.unsupported_tracking_mode"  # M2 Step 1
+    UNSUPPORTED_STOCK_LEVEL = "validation.unsupported_stock_level"  # M2 Step 3
 
     # --- Tree (shared) ---
     TREE_CYCLE = "tree.cycle"
@@ -83,6 +84,7 @@ class ErrorCode:
     STOCK_INSTANCE_NOT_FOUND = "stock_instance.not_found"
     STOCK_INSTANCE_SERIAL_REQUIRES_QTY_ONE = "stock_instance.serial_requires_qty_one"
     STOCK_INSTANCE_SERIAL_DUPLICATE = "stock_instance.serial_duplicate"
+    INSTANCE_FIELD_MODE_MISMATCH = "instance.field_mode_mismatch"  # M2 Step 3
 
     # --- Internal / catch-all ---
     INTERNAL_ERROR = "internal.error"
@@ -99,6 +101,7 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     ErrorCode.INVALID_INPUT: "Request validation failed.",
     ErrorCode.UNSUPPORTED_LANGUAGE: "Unsupported language code.",
     ErrorCode.UNSUPPORTED_TRACKING_MODE: "Unsupported stock tracking mode.",
+    ErrorCode.UNSUPPORTED_STOCK_LEVEL: "Unsupported stock level value.",
     ErrorCode.TREE_CYCLE: "Operation would create a cycle in the tree.",
     ErrorCode.TREE_DELETE_HAS_CHILDREN: "Cannot delete a node that still has children.",
     ErrorCode.LOCATION_NOT_FOUND: "Location not found.",
@@ -113,6 +116,7 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     ErrorCode.STOCK_INSTANCE_NOT_FOUND: "Stock instance not found.",
     ErrorCode.STOCK_INSTANCE_SERIAL_REQUIRES_QTY_ONE: "When a serial number is provided, quantity must be exactly 1.",
     ErrorCode.STOCK_INSTANCE_SERIAL_DUPLICATE: "Serial number is already registered for this definition.",
+    ErrorCode.INSTANCE_FIELD_MODE_MISMATCH: "Field does not match the definition's stock tracking mode.",
     ErrorCode.INTERNAL_ERROR: "An internal error occurred.",
 }
 

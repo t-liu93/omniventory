@@ -673,6 +673,14 @@ export interface components {
         /**
          * InstanceCreate
          * @description Body for POST /instances.
+         *
+         *     ``quantity`` — optional initial intake for ``exact``-mode lots (service
+         *     defaults to Decimal("1") when omitted for exact mode).  Must be NULL / not
+         *     provided for ``level`` and ``none`` modes.
+         *
+         *     ``stock_level`` — required for ``level``-mode lots; must be one of
+         *     STOCK_LEVELS (validated by the service, not here).  Must not be provided
+         *     for ``exact`` and ``none`` modes.
          */
         InstanceCreate: {
             /** Definition Id */
@@ -693,6 +701,8 @@ export interface components {
             quantity?: number | string | null;
             /** Serial */
             serial?: string | null;
+            /** Stock Level */
+            stock_level?: string | null;
             /** Warranty Details */
             warranty_details?: string | null;
             /** Warranty Expires */
@@ -725,9 +735,13 @@ export interface components {
             /** Purchase Source */
             purchase_source: string | null;
             /** Quantity */
-            quantity: string;
+            quantity: string | null;
+            /** Received At */
+            received_at: string | null;
             /** Serial */
             serial: string | null;
+            /** Stock Level */
+            stock_level: string | null;
             /** Warranty Details */
             warranty_details: string | null;
             /** Warranty Expires */
@@ -736,6 +750,12 @@ export interface components {
         /**
          * InstanceUpdate
          * @description Body for PATCH /instances/{id} — all fields optional.
+         *
+         *     ``quantity`` is intentionally absent (M2 §2 "Create vs. movement"):
+         *     once an ``exact`` lot is created its quantity changes only through
+         *     movement endpoints (intake / discard / adjust / consume / reverse).
+         *
+         *     ``stock_level`` may be updated for ``level``-mode lots.
          */
         InstanceUpdate: {
             /** Location Id */
@@ -750,10 +770,10 @@ export interface components {
             purchase_price?: number | string | null;
             /** Purchase Source */
             purchase_source?: string | null;
-            /** Quantity */
-            quantity?: number | string | null;
             /** Serial */
             serial?: string | null;
+            /** Stock Level */
+            stock_level?: string | null;
             /** Warranty Details */
             warranty_details?: string | null;
             /** Warranty Expires */

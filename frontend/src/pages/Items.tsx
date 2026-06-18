@@ -778,7 +778,7 @@ export function ItemDetail() {
     setInstForm({
       definition_id: String(inst.definition_id),
       location_id: inst.location_id != null ? String(inst.location_id) : "",
-      quantity: inst.quantity,
+      quantity: inst.quantity ?? "1",
       serial: inst.serial ?? "",
       model_number: inst.model_number ?? "",
       manufacturer: inst.manufacturer ?? "",
@@ -841,14 +841,14 @@ export function ItemDetail() {
     setInstError(null);
     try {
       const serial = instForm.serial.trim() || null;
-      const qty = serial != null ? "1" : instForm.quantity;
       const { error } = await client.PATCH(
         "/api/instances/{instance_id}",
         {
           params: { path: { instance_id: instModal.inst.id } },
           body: {
             location_id: instForm.location_id ? Number(instForm.location_id) : null,
-            quantity: qty,
+            // quantity is intentionally absent (M2 §2): quantity changes only
+            // through the movement ledger (intake / discard / adjust / consume).
             serial,
             model_number: instForm.model_number.trim() || null,
             manufacturer: instForm.manufacturer.trim() || null,

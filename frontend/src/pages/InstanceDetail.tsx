@@ -48,7 +48,7 @@ function instToForm(inst: InstanceResponse): InstanceFormState {
   return {
     definition_id: String(inst.definition_id),
     location_id: inst.location_id != null ? String(inst.location_id) : "",
-    quantity: inst.quantity,
+    quantity: inst.quantity ?? "1",
     serial: inst.serial ?? "",
     model_number: inst.model_number ?? "",
     manufacturer: inst.manufacturer ?? "",
@@ -159,12 +159,11 @@ export function InstanceDetail() {
     setActionError(null);
     try {
       const serial = form.serial.trim() || null;
-      const qty = serial != null ? "1" : form.quantity;
       const { error } = await client.PATCH("/api/instances/{instance_id}", {
         params: { path: { instance_id: instId } },
         body: {
           location_id: form.location_id ? Number(form.location_id) : null,
-          quantity: qty,
+          // quantity intentionally absent (M2 §2): changes only via ledger.
           serial,
           model_number: form.model_number.trim() || null,
           manufacturer: form.manufacturer.trim() || null,

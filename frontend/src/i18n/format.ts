@@ -109,10 +109,12 @@ export function formatNumber(value: number): string {
  *   ""          → ""
  *   "bad"       → "bad"
  *
- * @param value - The raw Decimal quantity value from the API (string or number).
+ * @param value - The raw Decimal quantity value from the API (string, number, or null).
+ *   When null (level / none mode lots), returns "—".
  * @returns A human-readable, locale-formatted string with trailing zeros stripped.
  */
-export function formatQuantity(value: string | number): string {
+export function formatQuantity(value: string | number | null): string {
+  if (value === null) return "—";
   const str = String(value);
 
   // If there is no decimal point, nothing to strip — apply grouping only.

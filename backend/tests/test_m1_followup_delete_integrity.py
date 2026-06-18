@@ -87,6 +87,7 @@ def test_client(temp_db: Path) -> Generator[TestClient]:  # noqa: ARG001
     import app.models.location as loc_mod
     import app.models.session as sess_mod
     import app.models.stock_instance as stock_instance_mod
+    import app.models.stock_movement as stock_movement_mod
     import app.models.user as user_mod
 
     importlib.reload(db_base_mod)
@@ -98,6 +99,7 @@ def test_client(temp_db: Path) -> Generator[TestClient]:  # noqa: ARG001
     importlib.reload(ikind_mod)
     importlib.reload(idef_mod)
     importlib.reload(stock_instance_mod)
+    importlib.reload(stock_movement_mod)
     importlib.reload(loc_mod)
 
     from app.db.base import Base, get_engine
@@ -155,6 +157,7 @@ def db_session() -> Generator[Session]:
     import app.models.location as loc_mod
     import app.models.session as sess_mod
     import app.models.stock_instance as stock_instance_mod
+    import app.models.stock_movement as stock_movement_mod
     import app.models.user as user_mod
 
     importlib.reload(db_base_mod)
@@ -166,6 +169,7 @@ def db_session() -> Generator[Session]:
     importlib.reload(ikind_mod)
     importlib.reload(idef_mod)
     importlib.reload(stock_instance_mod)
+    importlib.reload(stock_movement_mod)
     importlib.reload(loc_mod)
 
     # Use the app's engine factory (which now enables FK enforcement).

@@ -2,18 +2,27 @@
 
 A ``stock_instance`` is the "this specific lot / unit" record — it captures a
 specific physical unit or bulk lot of an item (quantity, location, serial,
-warranty, purchase value).
+warranty, purchase value, stock level).
 
 Design notes
 ------------
 - ``definition_id`` is a non-nullable FK → ``item_definitions.id`` (required).
 - ``location_id`` is a nullable FK → ``locations.id`` (where it physically sits).
-- ``quantity`` is ``Numeric(18,6)`` — never float (roadmap §2.9).
+- ``quantity`` is ``Numeric(18,6)`` **nullable** (M2 Step 3) — never float
+  (roadmap §2.9).  ``exact``-mode lots carry a ledger-derived Decimal; ``level``
+  and ``none`` mode lots carry NULL.
+- ``stock_level`` is nullable String(16) — for ``level``-mode lots only
+  (``high`` / ``medium`` / ``low``); validated app-layer against STOCK_LEVELS.
+- ``received_at`` is nullable DateTime(tz) with server_default=now() — the FIFO
+  ordering key and physical-receipt timestamp.  Distinct from ``created_at`` so
+  back-dated intake orders correctly (M2 §2).
 - ``purchase_price`` is ``Numeric(18,2)`` — never float (roadmap §2.9).
-- ``serial`` is nullable; when set, ``quantity`` MUST be 1 (see DB CHECK below
-  and ``StockInstanceService`` for the service-layer enforcement).
+- ``serial`` is nullable; when set and the lot is ``exact``-mode, ``quantity``
+  MUST be 1 (see rewritten DB CHECK below and service-layer enforcement).
 - DB constraints (permitted per roadmap §2.11):
-    - ``CHECK (serial IS NULL OR quantity = 1)`` — the serial constraint.
+    - ``CHECK (serial IS NULL OR quantity IS NULL OR quantity = 1)`` — the
+      rewritten serial constraint (M2 §3.2 / §10 Step 3).  Allows NULL quantity
+      for non-exact lots while still blocking serial+qty>1.
     - Partial unique index on ``(definition_id, serial) WHERE serial IS NOT NULL``
       — the same physical serial cannot be registered twice for the same product.
       Two NULLs are allowed (bulk lots without serials — roadmap §3.5).
@@ -51,7 +60,11 @@ class StockInstance(Base):
     id               Auto-increment surrogate PK.
     definition_id    FK → item_definitions.id; NOT NULL.
     location_id      FK → locations.id; nullable (where it physically sits).
-    quantity         Numeric(18,6) default 1; directly stored in M1.
+    quantity         Numeric(18,6) nullable; ledger-derived for exact-mode lots,
+                     NULL for level/none-mode lots.
+    stock_level      String(16) nullable; 'high'/'medium'/'low' for level-mode lots.
+    received_at      DateTime(tz) nullable, server_default=now(); FIFO key and
+                     physical-receipt timestamp (backdatable on intake).
     serial           Optional serial number; triggers qty=1 constraint.
     model_number     Durable identity field.
     manufacturer     Durable identity field.
@@ -66,10 +79,12 @@ class StockInstance(Base):
     __tablename__ = "stock_instances"
 
     __table_args__ = (
-        # DB-level serial constraint: when serial is set, quantity must be 1.
+        # DB-level serial constraint (rewritten in migration 0012):
+        # When serial is set, quantity must be 1 OR NULL.
+        # NULL quantity is allowed for non-exact-mode lots (level/none).
         # The service layer also enforces this (422 before hitting the DB).
         CheckConstraint(
-            "serial IS NULL OR quantity = 1",
+            "serial IS NULL OR quantity IS NULL OR quantity = 1",
             name="ck_stock_instances_serial_qty_1",
         ),
         # Partial unique index: same (definition_id, serial) pair is rejected;
@@ -103,10 +118,16 @@ class StockInstance(Base):
         nullable=True,
         default=None,
     )
-    quantity: Mapped[Decimal] = mapped_column(
+    quantity: Mapped[Decimal | None] = mapped_column(
         Numeric(18, 6),
-        nullable=False,
-        server_default="1",
+        nullable=True,
+        default=None,
+    )
+    stock_level: Mapped[str | None] = mapped_column(String(16), nullable=True, default=None)
+    received_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        server_default=func.now(),
     )
     serial: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
     model_number: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)

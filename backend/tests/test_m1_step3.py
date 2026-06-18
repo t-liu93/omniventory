@@ -54,6 +54,7 @@ def _make_fresh_session() -> Session:
     import app.models.location as loc_mod
     import app.models.session as sess_mod
     import app.models.stock_instance as stock_instance_mod
+    import app.models.stock_movement as stock_movement_mod
     import app.models.user as user_mod
 
     importlib.reload(db_base_mod)
@@ -62,6 +63,7 @@ def _make_fresh_session() -> Session:
     importlib.reload(sess_mod)
     importlib.reload(app_config_mod)
     importlib.reload(stock_instance_mod)
+    importlib.reload(stock_movement_mod)
     importlib.reload(loc_mod)
     importlib.reload(cat_mod)
     importlib.reload(ikind_mod)
@@ -160,6 +162,7 @@ def test_client(temp_db: Path) -> Generator[TestClient]:  # noqa: ARG001
     import app.models.location as loc_mod
     import app.models.session as sess_mod
     import app.models.stock_instance as stock_instance_mod
+    import app.models.stock_movement as stock_movement_mod
     import app.models.user as user_mod
 
     importlib.reload(db_base_mod)
@@ -168,6 +171,7 @@ def test_client(temp_db: Path) -> Generator[TestClient]:  # noqa: ARG001
     importlib.reload(sess_mod)
     importlib.reload(app_config_mod)
     importlib.reload(stock_instance_mod)
+    importlib.reload(stock_movement_mod)
     importlib.reload(loc_mod)
     importlib.reload(cat_mod)
     importlib.reload(ikind_mod)
@@ -314,6 +318,7 @@ class TestKindsEndpoint:
         import app.models.location as loc_mod
         import app.models.session as sess_mod
         import app.models.stock_instance as stock_instance_mod
+        import app.models.stock_movement as stock_movement_mod
         import app.models.user as user_mod
 
         importlib.reload(db_base_mod)
@@ -322,6 +327,7 @@ class TestKindsEndpoint:
         importlib.reload(sess_mod)
         importlib.reload(app_config_mod)
         importlib.reload(stock_instance_mod)
+        importlib.reload(stock_movement_mod)
         importlib.reload(loc_mod)
         importlib.reload(cat_mod)
         importlib.reload(ikind_mod)
@@ -467,6 +473,7 @@ class TestDefinitionCRUD:
         import app.models.location as loc_mod
         import app.models.session as sess_mod
         import app.models.stock_instance as stock_instance_mod
+        import app.models.stock_movement as stock_movement_mod
         import app.models.user as user_mod
 
         importlib.reload(db_base_mod)
@@ -475,6 +482,7 @@ class TestDefinitionCRUD:
         importlib.reload(sess_mod)
         importlib.reload(app_config_mod)
         importlib.reload(stock_instance_mod)
+        importlib.reload(stock_movement_mod)
         importlib.reload(loc_mod)
         importlib.reload(cat_mod)
         importlib.reload(ikind_mod)
