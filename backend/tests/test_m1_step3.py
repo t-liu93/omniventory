@@ -246,8 +246,16 @@ def _create_definition(
     return resp.json()  # type: ignore[return-value]
 
 
-def _create_category(client: TestClient, name: str) -> dict:  # type: ignore[type-arg]
-    resp = client.post("/api/categories", json={"name": name})
+def _create_category(
+    client: TestClient,
+    name: str,
+    *,
+    parent_id: int | None = None,
+) -> dict:  # type: ignore[type-arg]
+    payload: dict = {"name": name}  # type: ignore[type-arg]
+    if parent_id is not None:
+        payload["parent_id"] = parent_id
+    resp = client.post("/api/categories", json=payload)
     assert resp.status_code == 201
     return resp.json()  # type: ignore[return-value]
 
@@ -689,6 +697,99 @@ class TestDefinitionCategoryFilter:
         resp = test_client.get(f"/api/definitions?category_id={empty_cat['id']}")
         assert resp.status_code == 200
         assert resp.json() == []
+
+    def test_filter_parent_includes_child_category(self, test_client: TestClient) -> None:
+        """Filtering by a parent category also returns definitions from child categories.
+
+        Structure:
+          Tools (root)
+          └── Power Tools (child of Tools)
+          Electronics (unrelated root)
+
+        Definitions:
+          "Bosch Hammer" → Power Tools
+          "Hand Saw"     → Tools
+          "Smart TV"     → Electronics
+
+        ?category_id=Tools  → Bosch Hammer + Hand Saw (not Smart TV)
+        ?category_id=Power Tools → Bosch Hammer only
+        """
+        tools = _create_category(test_client, "Tools")
+        power_tools = _create_category(test_client, "Power Tools", parent_id=tools["id"])
+        electronics = _create_category(test_client, "Electronics")
+
+        _create_definition(test_client, "Bosch Hammer", category_id=power_tools["id"])
+        _create_definition(test_client, "Hand Saw", category_id=tools["id"])
+        _create_definition(test_client, "Smart TV", category_id=electronics["id"])
+
+        # Filtering by parent Tools must include both Tools and Power Tools definitions.
+        resp = test_client.get(f"/api/definitions?category_id={tools['id']}")
+        assert resp.status_code == 200
+        names = {r["name"] for r in resp.json()}
+        assert names == {"Bosch Hammer", "Hand Saw"}, (
+            f"Expected {{Bosch Hammer, Hand Saw}}, got {names}"
+        )
+
+        # Filtering by child Power Tools must return only that child's definitions.
+        resp2 = test_client.get(f"/api/definitions?category_id={power_tools['id']}")
+        assert resp2.status_code == 200
+        names2 = {r["name"] for r in resp2.json()}
+        assert names2 == {"Bosch Hammer"}, f"Expected {{Bosch Hammer}}, got {names2}"
+
+    def test_filter_parent_includes_grandchild_category(self, test_client: TestClient) -> None:
+        """Filtering by an ancestor returns definitions from all descendant levels.
+
+        Structure:
+          Tools → Power Tools → Cordless  (three-level hierarchy)
+
+        A definition at the grandchild level (Cordless) must appear when
+        filtering by the root (Tools), proving multi-level recursion.
+        """
+        tools = _create_category(test_client, "Tools2")
+        power_tools = _create_category(test_client, "Power Tools2", parent_id=tools["id"])
+        cordless = _create_category(test_client, "Cordless", parent_id=power_tools["id"])
+
+        _create_definition(test_client, "Cordless Drill", category_id=cordless["id"])
+
+        resp = test_client.get(f"/api/definitions?category_id={tools['id']}")
+        assert resp.status_code == 200
+        names = {r["name"] for r in resp.json()}
+        assert "Cordless Drill" in names, (
+            f"Grandchild definition missing when filtering by root; got {names}"
+        )
+
+    def test_filter_unrelated_category_not_included(self, test_client: TestClient) -> None:
+        """Uncategorised definitions are never included in a category subtree filter."""
+        tools = _create_category(test_client, "ToolsOnly")
+        _create_definition(test_client, "In Tools", category_id=tools["id"])
+        _create_definition(test_client, "No Category")  # category_id=None
+
+        resp = test_client.get(f"/api/definitions?category_id={tools['id']}")
+        assert resp.status_code == 200
+        names = {r["name"] for r in resp.json()}
+        assert names == {"In Tools"}, (
+            f"Uncategorised definition must not appear in subtree filter; got {names}"
+        )
+
+    def test_filter_q_and_category_id_combined(self, test_client: TestClient) -> None:
+        """q= and category_id= filters are ANDed and category uses the subtree."""
+        tools = _create_category(test_client, "ToolsCombined")
+        sub = _create_category(test_client, "SubCombined", parent_id=tools["id"])
+
+        _create_definition(test_client, "Power Drill", category_id=sub["id"])
+        _create_definition(test_client, "Power Saw", category_id=sub["id"])
+        _create_definition(test_client, "Hammer", category_id=tools["id"])
+        _create_definition(test_client, "Power Bank")  # unrelated category
+
+        resp = test_client.get(f"/api/definitions?q=power&category_id={tools['id']}")
+        assert resp.status_code == 200
+        names = {r["name"] for r in resp.json()}
+        # "Power Drill" and "Power Saw" are in subtree and match q=power
+        # "Hammer" matches category but not q
+        # "Power Bank" matches q but not category
+        assert names == {"Power Drill", "Power Saw"}, (
+            f"Expected {{Power Drill, Power Saw}}, got {names}"
+        )
 
 
 # ---------------------------------------------------------------------------

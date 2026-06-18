@@ -6,13 +6,15 @@ resolution, FK validation) lives in ``app.services.item_definition``.
 Public methods
 --------------
 get(id)                         Return an ItemDefinition by PK, or None.
-list_all(q, category_id)        Filtered flat list (case-insensitive name search + category filter).
+list_all(q, category_ids)       Filtered flat list (case-insensitive name search + category subtree filter).
 create(name, ...)               Insert and flush a new ItemDefinition.
 update(defn, ...)               Apply partial field updates.
 delete(defn)                    Delete an ItemDefinition row.
 """
 
 from __future__ import annotations
+
+from collections.abc import Sequence
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -38,7 +40,7 @@ class ItemDefinitionRepository:
         self,
         *,
         q: str | None = None,
-        category_id: int | None = None,
+        category_ids: Sequence[int] | None = None,
     ) -> list[ItemDefinition]:
         """Return a filtered flat list of item definitions.
 
@@ -46,16 +48,18 @@ class ItemDefinitionRepository:
         ----------
         q
             Case-insensitive substring match against ``name``.
-        category_id
-            When provided, filter to only definitions with this category_id.
+        category_ids
+            When provided (and non-empty), filter to only definitions whose
+            ``category_id`` is in this collection.  Pass the selected category
+            together with all its descendants to implement subtree filtering.
         """
         stmt = select(ItemDefinition)
 
         if q is not None:
             stmt = stmt.where(func.lower(ItemDefinition.name).contains(func.lower(q)))
 
-        if category_id is not None:
-            stmt = stmt.where(ItemDefinition.category_id == category_id)
+        if category_ids is not None and len(category_ids) > 0:
+            stmt = stmt.where(ItemDefinition.category_id.in_(category_ids))
 
         stmt = stmt.order_by(ItemDefinition.id)
         return list(self._db.scalars(stmt).all())

@@ -148,8 +148,17 @@ class ItemDefinitionService:
         q: str | None = None,
         category_id: int | None = None,
     ) -> list[ItemDefinition]:
-        """Return a filtered flat list of item definitions."""
-        return self._repo.list_all(q=q, category_id=category_id)
+        """Return a filtered flat list of item definitions.
+
+        When ``category_id`` is provided, results include definitions from that
+        category **and all its descendants** (subtree filter).  The public
+        signature is unchanged — callers still pass a single ``category_id``.
+        """
+        category_ids: list[int] | None = None
+        if category_id is not None:
+            descendants = self._cat_repo.get_descendants(category_id)
+            category_ids = [category_id, *(c.id for c in descendants)]
+        return self._repo.list_all(q=q, category_ids=category_ids)
 
     def update(self, definition_id: int, data: DefinitionUpdate) -> ItemDefinition:
         """Apply a partial update to an item definition.
