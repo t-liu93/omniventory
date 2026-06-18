@@ -298,6 +298,32 @@ export interface paths {
         patch: operations["update_definition_api_definitions__definition_id__patch"];
         trace?: never;
     };
+    "/api/definitions/{definition_id}/consume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Consume
+         * @description Consume stock from a definition's lots in FIFO order (oldest first).
+         *
+         *     Returns the list of lots that were touched (with updated quantities).
+         *
+         *     Returns 404 if the definition does not exist.
+         *     Returns 409 if the definition is not in 'exact' mode.
+         *     Returns 422 if quantity <= 0, or total available stock is insufficient.
+         */
+        post: operations["consume_api_definitions__definition_id__consume_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -379,6 +405,126 @@ export interface paths {
          *     Returns 422 if the update would result in a serial with quantity != 1.
          */
         patch: operations["update_instance_api_instances__instance_id__patch"];
+        trace?: never;
+    };
+    "/api/instances/{instance_id}/adjust": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Adjust
+         * @description Adjust a lot's quantity to an absolute counted value (stock-take).
+         *
+         *     Returns 404 if the instance does not exist.
+         *     Returns 409 if the definition is not in 'exact' mode.
+         *     Returns 422 if quantity < 0.
+         */
+        post: operations["adjust_api_instances__instance_id__adjust_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/instances/{instance_id}/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Discard
+         * @description Write off stock from a lot.
+         *
+         *     Returns 404 if the instance does not exist.
+         *     Returns 409 if the definition is not in 'exact' mode.
+         *     Returns 422 if quantity <= 0, or the operation would drive the lot below 0.
+         */
+        post: operations["discard_api_instances__instance_id__discard_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/instances/{instance_id}/intake": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Intake
+         * @description Add stock to a lot.
+         *
+         *     Returns 404 if the instance does not exist.
+         *     Returns 409 if the definition is not in 'exact' mode.
+         *     Returns 422 if quantity <= 0, or the operation would violate the
+         *     serial⇒qty=1 constraint.
+         */
+        post: operations["intake_api_instances__instance_id__intake_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/instances/{instance_id}/move": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move
+         * @description Relocate a lot to a new location (whole-lot move).
+         *
+         *     Records a move movement with delta = 0; updates location_id.
+         *
+         *     Returns 404 if the instance or to_location_id does not exist.
+         *     Returns 409 if the definition is not in 'exact' mode.
+         */
+        post: operations["move_api_instances__instance_id__move_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/instances/{instance_id}/movements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Movements
+         * @description Return the ledger history for a stock instance (newest-first).
+         *
+         *     Returns 404 if the instance does not exist.
+         */
+        get: operations["list_movements_api_instances__instance_id__movements_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/kinds": {
@@ -485,10 +631,53 @@ export interface paths {
         patch: operations["update_location_api_locations__location_id__patch"];
         trace?: never;
     };
+    "/api/movements/{movement_id}/reverse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reverse
+         * @description Append a compensating correction movement to undo the specified movement.
+         *
+         *     The original movement is NOT mutated — the ledger is append-only.
+         *     A ``correction`` entry with ``delta = −original.delta`` is appended and
+         *     the lot's quantity is recomputed.
+         *
+         *     Returns 404 if the movement does not exist.
+         *     Returns 409 if the movement is itself a reversal, has already been reversed,
+         *     or the reversal would drive the lot's quantity below 0.
+         */
+        post: operations["reverse_api_movements__movement_id__reverse_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AdjustRequest
+         * @description Body for POST /instances/{id}/adjust.
+         *
+         *     Sets the lot's quantity to the given absolute ``quantity`` (stock-take).
+         *     The signed delta is computed by the service: ``delta = quantity − current``.
+         */
+        AdjustRequest: {
+            /** Note */
+            note?: string | null;
+            /** Occurred At */
+            occurred_at?: string | null;
+            /** Quantity */
+            quantity: number | string;
+        };
         /**
          * CategoryCreate
          * @description Body for POST /categories.
@@ -555,6 +744,21 @@ export interface components {
             name?: string | null;
             /** Parent Id */
             parent_id?: number | null;
+        };
+        /**
+         * ConsumeRequest
+         * @description Body for POST /definitions/{id}/consume.
+         *
+         *     Consumes ``quantity`` units from the definition's lots in FIFO order
+         *     (oldest received_at first).
+         */
+        ConsumeRequest: {
+            /** Note */
+            note?: string | null;
+            /** Occurred At */
+            occurred_at?: string | null;
+            /** Quantity */
+            quantity: number | string;
         };
         /**
          * DefinitionCreate
@@ -635,6 +839,20 @@ export interface components {
             stock_tracking_mode?: string | null;
             /** Unit */
             unit?: string | null;
+        };
+        /**
+         * DiscardRequest
+         * @description Body for POST /instances/{id}/discard.
+         *
+         *     Removes ``quantity`` units from the lot's ledger (write-off / disposal).
+         */
+        DiscardRequest: {
+            /** Note */
+            note?: string | null;
+            /** Occurred At */
+            occurred_at?: string | null;
+            /** Quantity */
+            quantity: number | string;
         };
         /**
          * ErrorResponse
@@ -780,6 +998,20 @@ export interface components {
             warranty_expires?: string | null;
         };
         /**
+         * IntakeRequest
+         * @description Body for POST /instances/{id}/intake.
+         *
+         *     Adds ``quantity`` units to the lot's ledger.
+         */
+        IntakeRequest: {
+            /** Note */
+            note?: string | null;
+            /** Occurred At */
+            occurred_at?: string | null;
+            /** Quantity */
+            quantity: number | string;
+        };
+        /**
          * KindResponse
          * @description Public representation of an ItemKind.
          */
@@ -905,6 +1137,67 @@ export interface components {
         MessageResponse: {
             /** Message */
             message: string;
+        };
+        /**
+         * MoveRequest
+         * @description Body for POST /instances/{id}/move.
+         *
+         *     Moves the whole lot to ``to_location_id``.  Records a ``move`` movement
+         *     with ``delta = 0`` and updates the lot's ``location_id``.
+         */
+        MoveRequest: {
+            /** Note */
+            note?: string | null;
+            /** Occurred At */
+            occurred_at?: string | null;
+            /** To Location Id */
+            to_location_id: number;
+        };
+        /**
+         * MovementResponse
+         * @description Public representation of a stock_movements ledger row (M2 §4.8).
+         */
+        MovementResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** From Location Id */
+            from_location_id: number | null;
+            /** Id */
+            id: number;
+            /** Instance Id */
+            instance_id: number;
+            /** Note */
+            note: string | null;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Quantity Delta */
+            quantity_delta: string;
+            /** Reverses Movement Id */
+            reverses_movement_id: number | null;
+            /** To Location Id */
+            to_location_id: number | null;
+            /** Type */
+            type: string;
+            /** User Id */
+            user_id: number | null;
+        };
+        /**
+         * ReverseRequest
+         * @description Body for POST /movements/{id}/reverse.
+         *
+         *     Appends a compensating ``correction`` movement that undoes the target.
+         *     ``note`` is optional; no other field is needed (the delta is derived
+         *     from the target movement).
+         */
+        ReverseRequest: {
+            /** Note */
+            note?: string | null;
         };
         /**
          * SetupRequest
@@ -1986,6 +2279,68 @@ export interface operations {
             };
         };
     };
+    consume_api_definitions__definition_id__consume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsumeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstanceResponse"][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     health_api_health_get: {
         parameters: {
             query?: never;
@@ -2265,6 +2620,312 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InstanceResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    adjust_api_instances__instance_id__adjust_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjustRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstanceResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    discard_api_instances__instance_id__discard_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DiscardRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstanceResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    intake_api_instances__instance_id__intake_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IntakeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstanceResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    move_api_instances__instance_id__move_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MoveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstanceResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_movements_api_instances__instance_id__movements_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MovementResponse"][];
                 };
             };
             /** @description Unauthorized */
@@ -2674,6 +3335,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LocationResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reverse_api_movements__movement_id__reverse_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                movement_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReverseRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstanceResponse"];
                 };
             };
             /** @description Unauthorized */

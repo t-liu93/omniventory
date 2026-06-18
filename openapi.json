@@ -1,6 +1,51 @@
 {
   "components": {
     "schemas": {
+      "AdjustRequest": {
+        "description": "Body for POST /instances/{id}/adjust.\n\nSets the lot's quantity to the given absolute ``quantity`` (stock-take).\nThe signed delta is computed by the service: ``delta = quantity \u2212 current``.",
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurred At"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Quantity"
+          }
+        },
+        "required": [
+          "quantity"
+        ],
+        "title": "AdjustRequest",
+        "type": "object"
+      },
       "CategoryCreate": {
         "description": "Body for POST /categories.",
         "properties": {
@@ -181,6 +226,51 @@
           }
         },
         "title": "CategoryUpdate",
+        "type": "object"
+      },
+      "ConsumeRequest": {
+        "description": "Body for POST /definitions/{id}/consume.\n\nConsumes ``quantity`` units from the definition's lots in FIFO order\n(oldest received_at first).",
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurred At"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Quantity"
+          }
+        },
+        "required": [
+          "quantity"
+        ],
+        "title": "ConsumeRequest",
         "type": "object"
       },
       "DefinitionCreate": {
@@ -456,6 +546,51 @@
           }
         },
         "title": "DefinitionUpdate",
+        "type": "object"
+      },
+      "DiscardRequest": {
+        "description": "Body for POST /instances/{id}/discard.\n\nRemoves ``quantity`` units from the lot's ledger (write-off / disposal).",
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurred At"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Quantity"
+          }
+        },
+        "required": [
+          "quantity"
+        ],
+        "title": "DiscardRequest",
         "type": "object"
       },
       "ErrorResponse": {
@@ -960,6 +1095,51 @@
         "title": "InstanceUpdate",
         "type": "object"
       },
+      "IntakeRequest": {
+        "description": "Body for POST /instances/{id}/intake.\n\nAdds ``quantity`` units to the lot's ledger.",
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurred At"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Quantity"
+          }
+        },
+        "required": [
+          "quantity"
+        ],
+        "title": "IntakeRequest",
+        "type": "object"
+      },
       "KindResponse": {
         "description": "Public representation of an ItemKind.",
         "properties": {
@@ -1278,6 +1458,163 @@
           "message"
         ],
         "title": "MessageResponse",
+        "type": "object"
+      },
+      "MoveRequest": {
+        "description": "Body for POST /instances/{id}/move.\n\nMoves the whole lot to ``to_location_id``.  Records a ``move`` movement\nwith ``delta = 0`` and updates the lot's ``location_id``.",
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurred At"
+          },
+          "to_location_id": {
+            "title": "To Location Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "to_location_id"
+        ],
+        "title": "MoveRequest",
+        "type": "object"
+      },
+      "MovementResponse": {
+        "description": "Public representation of a stock_movements ledger row (M2 \u00a74.8).",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "from_location_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Location Id"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "instance_id": {
+            "title": "Instance Id",
+            "type": "integer"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "quantity_delta": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Quantity Delta",
+            "type": "string"
+          },
+          "reverses_movement_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reverses Movement Id"
+          },
+          "to_location_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Location Id"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          }
+        },
+        "required": [
+          "id",
+          "instance_id",
+          "type",
+          "quantity_delta",
+          "from_location_id",
+          "to_location_id",
+          "occurred_at",
+          "note",
+          "reverses_movement_id",
+          "user_id",
+          "created_at"
+        ],
+        "title": "MovementResponse",
+        "type": "object"
+      },
+      "ReverseRequest": {
+        "description": "Body for POST /movements/{id}/reverse.\n\nAppends a compensating ``correction`` movement that undoes the target.\n``note`` is optional; no other field is needed (the delta is derived\nfrom the target movement).",
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "title": "ReverseRequest",
         "type": "object"
       },
       "SetupRequest": {
@@ -2641,6 +2978,93 @@
         ]
       }
     },
+    "/api/definitions/{definition_id}/consume": {
+      "post": {
+        "description": "Consume stock from a definition's lots in FIFO order (oldest first).\n\nReturns the list of lots that were touched (with updated quantities).\n\nReturns 404 if the definition does not exist.\nReturns 409 if the definition is not in 'exact' mode.\nReturns 422 if quantity <= 0, or total available stock is insufficient.",
+        "operationId": "consume_api_definitions__definition_id__consume_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "title": "Definition Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsumeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/InstanceResponse"
+                  },
+                  "title": "Response Consume Api Definitions  Definition Id  Consume Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Consume",
+        "tags": [
+          "definitions"
+        ]
+      }
+    },
     "/api/health": {
       "get": {
         "description": "Return service health.\n\n``status``      always ``\"ok\"`` while the process is running.\n``version``     application release version.\n``api_version`` integer compatibility number from Settings.\n``db``          ``\"ok\"`` if ``SELECT 1`` succeeds; propagates exception\n                on DB failure (FastAPI returns 500).",
@@ -3065,6 +3489,415 @@
           }
         },
         "summary": "Update Instance",
+        "tags": [
+          "instances"
+        ]
+      }
+    },
+    "/api/instances/{instance_id}/adjust": {
+      "post": {
+        "description": "Adjust a lot's quantity to an absolute counted value (stock-take).\n\nReturns 404 if the instance does not exist.\nReturns 409 if the definition is not in 'exact' mode.\nReturns 422 if quantity < 0.",
+        "operationId": "adjust_api_instances__instance_id__adjust_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "instance_id",
+            "required": true,
+            "schema": {
+              "title": "Instance Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjustRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstanceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Adjust",
+        "tags": [
+          "instances"
+        ]
+      }
+    },
+    "/api/instances/{instance_id}/discard": {
+      "post": {
+        "description": "Write off stock from a lot.\n\nReturns 404 if the instance does not exist.\nReturns 409 if the definition is not in 'exact' mode.\nReturns 422 if quantity <= 0, or the operation would drive the lot below 0.",
+        "operationId": "discard_api_instances__instance_id__discard_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "instance_id",
+            "required": true,
+            "schema": {
+              "title": "Instance Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiscardRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstanceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Discard",
+        "tags": [
+          "instances"
+        ]
+      }
+    },
+    "/api/instances/{instance_id}/intake": {
+      "post": {
+        "description": "Add stock to a lot.\n\nReturns 404 if the instance does not exist.\nReturns 409 if the definition is not in 'exact' mode.\nReturns 422 if quantity <= 0, or the operation would violate the\nserial\u21d2qty=1 constraint.",
+        "operationId": "intake_api_instances__instance_id__intake_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "instance_id",
+            "required": true,
+            "schema": {
+              "title": "Instance Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IntakeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstanceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Intake",
+        "tags": [
+          "instances"
+        ]
+      }
+    },
+    "/api/instances/{instance_id}/move": {
+      "post": {
+        "description": "Relocate a lot to a new location (whole-lot move).\n\nRecords a move movement with delta = 0; updates location_id.\n\nReturns 404 if the instance or to_location_id does not exist.\nReturns 409 if the definition is not in 'exact' mode.",
+        "operationId": "move_api_instances__instance_id__move_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "instance_id",
+            "required": true,
+            "schema": {
+              "title": "Instance Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstanceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Move",
+        "tags": [
+          "instances"
+        ]
+      }
+    },
+    "/api/instances/{instance_id}/movements": {
+      "get": {
+        "description": "Return the ledger history for a stock instance (newest-first).\n\nReturns 404 if the instance does not exist.",
+        "operationId": "list_movements_api_instances__instance_id__movements_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "instance_id",
+            "required": true,
+            "schema": {
+              "title": "Instance Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MovementResponse"
+                  },
+                  "title": "Response List Movements Api Instances  Instance Id  Movements Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "List Movements",
         "tags": [
           "instances"
         ]
@@ -3591,6 +4424,89 @@
         "summary": "Update Location",
         "tags": [
           "locations"
+        ]
+      }
+    },
+    "/api/movements/{movement_id}/reverse": {
+      "post": {
+        "description": "Append a compensating correction movement to undo the specified movement.\n\nThe original movement is NOT mutated \u2014 the ledger is append-only.\nA ``correction`` entry with ``delta = \u2212original.delta`` is appended and\nthe lot's quantity is recomputed.\n\nReturns 404 if the movement does not exist.\nReturns 409 if the movement is itself a reversal, has already been reversed,\nor the reversal would drive the lot's quantity below 0.",
+        "operationId": "reverse_api_movements__movement_id__reverse_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "movement_id",
+            "required": true,
+            "schema": {
+              "title": "Movement Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReverseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstanceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Reverse",
+        "tags": [
+          "movements"
         ]
       }
     }

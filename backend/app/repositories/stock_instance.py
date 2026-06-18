@@ -83,6 +83,27 @@ class StockInstanceRepository:
         stmt = stmt.order_by(StockInstance.id)
         return list(self._db.scalars(stmt).all())
 
+    def list_active_lots_for_definition(self, definition_id: int) -> list[StockInstance]:
+        """Return lots for a definition with quantity > 0, ordered by (received_at, id).
+
+        This is the FIFO ordering key used by consume_fifo (M2 §4.3):
+        oldest received_at first, with id as the tie-breaker.
+
+        Only lots with quantity > 0 are returned — zero-quantity lots are
+        retained in the DB (M2 §2 "empty lots are kept") but skipped by FIFO.
+
+        Pure data access — no business rules here.
+        """
+        stmt = (
+            select(StockInstance)
+            .where(
+                StockInstance.definition_id == definition_id,
+                StockInstance.quantity > 0,
+            )
+            .order_by(StockInstance.received_at, StockInstance.id)
+        )
+        return list(self._db.scalars(stmt).all())
+
     def has_instances_at_location(self, location_id: int) -> bool:
         """Return True if any stock instance is assigned to the given location."""
         stmt = select(StockInstance.id).where(StockInstance.location_id == location_id).limit(1)

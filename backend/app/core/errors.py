@@ -79,12 +79,24 @@ class ErrorCode:
     # --- Item definition ---
     ITEM_DEFINITION_NOT_FOUND = "item_definition.not_found"
     ITEM_DEFINITION_HAS_INSTANCES = "item_definition.has_instances"
+    ITEM_DEFINITION_TRACKING_MODE_CHANGE_CONFLICT = (
+        "item_definition.tracking_mode_change_conflict"  # M2 Step 4
+    )
 
     # --- Stock instance ---
     STOCK_INSTANCE_NOT_FOUND = "stock_instance.not_found"
     STOCK_INSTANCE_SERIAL_REQUIRES_QTY_ONE = "stock_instance.serial_requires_qty_one"
     STOCK_INSTANCE_SERIAL_DUPLICATE = "stock_instance.serial_duplicate"
     INSTANCE_FIELD_MODE_MISMATCH = "instance.field_mode_mismatch"  # M2 Step 3
+
+    # --- Stock movements (M2 Step 4) ---
+    STOCK_INSUFFICIENT = "stock.insufficient"
+    STOCK_NEGATIVE_QUANTITY = "stock.negative_quantity"
+    STOCK_MOVEMENT_NOT_APPLICABLE = "stock.movement_not_applicable"
+    STOCK_MOVEMENT_NOT_FOUND = "stock.movement_not_found"
+    STOCK_MOVEMENT_ALREADY_REVERSED = "stock.movement_already_reversed"
+    STOCK_CANNOT_REVERSE_REVERSAL = "stock.cannot_reverse_reversal"
+    STOCK_REVERSE_WOULD_GO_NEGATIVE = "stock.reverse_would_go_negative"
 
     # --- Internal / catch-all ---
     INTERNAL_ERROR = "internal.error"
@@ -117,6 +129,14 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     ErrorCode.STOCK_INSTANCE_SERIAL_REQUIRES_QTY_ONE: "When a serial number is provided, quantity must be exactly 1.",
     ErrorCode.STOCK_INSTANCE_SERIAL_DUPLICATE: "Serial number is already registered for this definition.",
     ErrorCode.INSTANCE_FIELD_MODE_MISMATCH: "Field does not match the definition's stock tracking mode.",
+    ErrorCode.ITEM_DEFINITION_TRACKING_MODE_CHANGE_CONFLICT: "Cannot change tracking mode when the definition already has stock instances.",
+    ErrorCode.STOCK_INSUFFICIENT: "Insufficient stock to fulfil the requested quantity.",
+    ErrorCode.STOCK_NEGATIVE_QUANTITY: "Operation would result in a negative quantity.",
+    ErrorCode.STOCK_MOVEMENT_NOT_APPLICABLE: "Stock movements are not applicable to this definition's tracking mode.",
+    ErrorCode.STOCK_MOVEMENT_NOT_FOUND: "Stock movement not found.",
+    ErrorCode.STOCK_MOVEMENT_ALREADY_REVERSED: "This movement has already been reversed.",
+    ErrorCode.STOCK_CANNOT_REVERSE_REVERSAL: "Cannot reverse a movement that is itself a reversal.",
+    ErrorCode.STOCK_REVERSE_WOULD_GO_NEGATIVE: "Reversing this movement would drive the lot quantity below zero.",
     ErrorCode.INTERNAL_ERROR: "An internal error occurred.",
 }
 

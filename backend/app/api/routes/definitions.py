@@ -1,4 +1,4 @@
-"""Item definition CRUD endpoints.
+"""Item definition CRUD and consume endpoints.
 
 All endpoints require a valid session (via ``get_authenticated_context``).
 
@@ -8,10 +8,12 @@ Routes (all under the api_prefix, e.g. /api):
     GET    /definitions/{id}                 Get a single definition.
     PATCH  /definitions/{id}                 Partial update.
     DELETE /definitions/{id}                 Delete.
+    POST   /definitions/{id}/consume         FIFO consume across definition's lots.
 
 Error contract:
     404  Definition not found / category not found / location not found.
-    422  Invalid kind_id (does not exist in item_kinds).
+    409  Mode conflict (tracking_mode_change_conflict).
+    422  Invalid kind_id; insufficient stock; negative quantity.
     401  No/invalid session.
 """
 
@@ -24,7 +26,10 @@ from app.core.context import RequestContext, get_authenticated_context
 from app.core.errors import ErrorResponse
 from app.db.session import get_db
 from app.schemas.item_definition import DefinitionCreate, DefinitionResponse, DefinitionUpdate
+from app.schemas.stock_instance import InstanceResponse
+from app.schemas.stock_movement_ops import ConsumeRequest
 from app.services.item_definition import ItemDefinitionService
+from app.services.stock_movement import StockMovementService
 
 _ERROR_RESPONSES: dict[int | str, dict[str, object]] = {
     401: {"model": ErrorResponse},
@@ -39,6 +44,14 @@ router = APIRouter(prefix="/definitions", tags=["definitions"], responses=_ERROR
 def _get_service(db: Session = Depends(get_db)) -> ItemDefinitionService:
     """Dependency: build and return an ItemDefinitionService."""
     return ItemDefinitionService(db)
+
+
+def _get_movement_service(
+    ctx: Annotated[RequestContext, Depends(get_authenticated_context)],
+    db: Session = Depends(get_db),
+) -> StockMovementService:
+    """Dependency: build and return a StockMovementService."""
+    return StockMovementService(db, ctx)
 
 
 @router.get("", response_model=list[DefinitionResponse])
@@ -117,3 +130,35 @@ def delete_definition(
     """Delete an item definition."""
     service.delete(definition_id)
     db.commit()
+
+
+# --------------------------------------------------------------------------- #
+# FIFO consume                                                                 #
+# --------------------------------------------------------------------------- #
+
+
+@router.post("/{definition_id}/consume", response_model=list[InstanceResponse])
+def consume(
+    definition_id: int,
+    body: ConsumeRequest,
+    _ctx: Annotated[RequestContext, Depends(get_authenticated_context)],
+    def_service: Annotated[ItemDefinitionService, Depends(_get_service)],
+    movement_svc: Annotated[StockMovementService, Depends(_get_movement_service)],
+    db: Session = Depends(get_db),
+) -> list[InstanceResponse]:
+    """Consume stock from a definition's lots in FIFO order (oldest first).
+
+    Returns the list of lots that were touched (with updated quantities).
+
+    Returns 404 if the definition does not exist.
+    Returns 409 if the definition is not in 'exact' mode.
+    Returns 422 if quantity <= 0, or total available stock is insufficient.
+    """
+    defn = def_service.get(definition_id)
+    touched = movement_svc.consume_fifo(
+        defn, body.quantity, occurred_at=body.occurred_at, note=body.note
+    )
+    db.commit()
+    for inst in touched:
+        db.refresh(inst)
+    return [InstanceResponse.model_validate(inst) for inst in touched]

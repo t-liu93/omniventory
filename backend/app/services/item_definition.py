@@ -191,6 +191,8 @@ class ItemDefinitionService:
         - Validates ``kind_id`` if changed.
         - Validates ``category_id`` and ``default_location_id`` if changed.
         - Validates ``stock_tracking_mode`` if provided (M2).
+        - Rejects a tracking-mode change when the definition already has lots
+          (M2 Step 4 — ``item_definition.tracking_mode_change_conflict``, 409).
         """
         defn = self._get_or_404(definition_id)
 
@@ -211,6 +213,28 @@ class ItemDefinitionService:
 
         if data.stock_tracking_mode is not None:
             self._validate_tracking_mode(data.stock_tracking_mode)
+
+            # Mode-change guard (M2 Step 4): if the mode is actually changing
+            # and the definition already has lots, reject the change.
+            if (
+                data.stock_tracking_mode != defn.stock_tracking_mode
+                and self._inst_repo.has_instances_for_definition(definition_id)
+            ):
+                raise AppError(
+                    ErrorCode.ITEM_DEFINITION_TRACKING_MODE_CHANGE_CONFLICT,
+                    status_code=409,
+                    params={
+                        "id": definition_id,
+                        "from": defn.stock_tracking_mode,
+                        "to": data.stock_tracking_mode,
+                    },
+                    message=(
+                        f"Cannot change stock_tracking_mode from '{defn.stock_tracking_mode}' "
+                        f"to '{data.stock_tracking_mode}' for definition {definition_id} "
+                        "because it already has stock instances. "
+                        "Delete or reassign all instances first."
+                    ),
+                )
 
         return self._repo.update(
             defn,
