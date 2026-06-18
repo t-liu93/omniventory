@@ -81,7 +81,7 @@ Legend: ⬜ planned · 🟡 active · 🟢 done. **Active milestone = the single
 | **M0** | Foundations & scaffolding | running skeleton | 🟢 |
 | **M1** | Unified core model & durable-goods registry | ② (registry) | 🟢 |
 | **M1.5** | Internationalization (i18n) foundation | all (ZH + EN) | 🟢 |
-| **M2** | Stock ledger & consumables | ③ (in/out + low-stock) | ⬜ |
+| **M2** | Stock ledger & consumables | ③ (in/out + low-stock) | 🟡 |
 | **M3** | Best-before / expiry & perishables | ① (data + listings) | ⬜ |
 | **M4** | Unified reminder & notification engine | ①②③ proactive alerts | ⬜ |
 | **M5** | Cross-cutting + barcode + data I/O | all | ⬜ |
