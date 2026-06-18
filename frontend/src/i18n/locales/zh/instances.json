@@ -34,7 +34,9 @@
     "purchasePriceField": "购买价格",
     "purchaseDateField": "购买日期",
     "purchaseSourceField": "购买来源",
-    "createdField": "创建时间"
+    "createdField": "创建时间",
+    "actionsTitle": "批次操作",
+    "levelBadgeAriaLabel": "库存水位：{{level}}"
   },
   "loadError": "未找到实例。",
   "deleteModal": {
@@ -43,6 +45,12 @@
   },
   "success": {
     "updated": "实例已更新。",
-    "deleted": "实例已删除。"
+    "deleted": "实例已删除。",
+    "intake": "入库记录已创建。",
+    "discard": "报废记录已创建。",
+    "adjust": "盘点调整已记录。",
+    "move": "批次已移位。",
+    "reverse": "移动记录已撤销。",
+    "consume": "已消耗。"
   }
 }

@@ -16,5 +16,60 @@
     "adjust": "Adjust",
     "discard": "Discard",
     "correction": "Correction"
+  },
+  "actions": {
+    "consume": "Consume (FIFO)",
+    "intake": "Intake",
+    "move": "Move",
+    "adjust": "Adjust",
+    "discard": "Discard",
+    "reverse": "Reverse (undo)"
+  },
+  "consumeModal": {
+    "title": "Consume (FIFO)",
+    "hint": "Deducts from the oldest lots first.",
+    "quantityLabel": "Quantity to consume",
+    "noteLabel": "Note (optional)"
+  },
+  "intakeModal": {
+    "title": "Intake",
+    "quantityLabel": "Quantity",
+    "noteLabel": "Note (optional)"
+  },
+  "adjustModal": {
+    "title": "Adjust (stock-take)",
+    "hint": "Enter the absolute counted value — the system will compute the signed delta.",
+    "quantityLabel": "Counted quantity",
+    "noteLabel": "Note (optional)"
+  },
+  "discardModal": {
+    "title": "Discard",
+    "quantityLabel": "Quantity",
+    "noteLabel": "Note (optional)"
+  },
+  "moveModal": {
+    "title": "Move (whole lot)",
+    "locationLabel": "Destination location",
+    "noteLabel": "Note (optional)"
+  },
+  "reverseModal": {
+    "title": "Reverse movement",
+    "hint": "This will append a correction entry to undo the selected movement.",
+    "noteLabel": "Note (optional)"
+  },
+  "lowStockBadge": "Low stock",
+  "history": {
+    "title": "Movement history",
+    "colType": "Type",
+    "colDelta": "Delta",
+    "colFrom": "From",
+    "colTo": "To",
+    "colOccurredAt": "Date",
+    "colActor": "By",
+    "colReversalOf": "Reversal of",
+    "reversalOf": "Reversal of #{{id}}",
+    "empty": "No movements yet.",
+    "unknownActor": "—",
+    "reverseBtn": "Reverse"
   }
 }

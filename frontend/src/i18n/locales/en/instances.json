@@ -34,7 +34,9 @@
     "purchasePriceField": "Purchase Price",
     "purchaseDateField": "Purchase Date",
     "purchaseSourceField": "Purchase Source",
-    "createdField": "Created"
+    "createdField": "Created",
+    "actionsTitle": "Lot actions",
+    "levelBadgeAriaLabel": "Stock level: {{level}}"
   },
   "loadError": "Instance not found.",
   "deleteModal": {
@@ -43,6 +45,12 @@
   },
   "success": {
     "updated": "Instance updated.",
-    "deleted": "Instance deleted."
+    "deleted": "Instance deleted.",
+    "intake": "Intake recorded.",
+    "discard": "Discard recorded.",
+    "adjust": "Adjustment recorded.",
+    "move": "Lot moved.",
+    "reverse": "Movement reversed.",
+    "consume": "Consumed."
   }
 }

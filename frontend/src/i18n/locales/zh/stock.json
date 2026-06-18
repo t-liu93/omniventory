@@ -16,5 +16,60 @@
     "adjust": "盘点调整",
     "discard": "报废",
     "correction": "更正"
+  },
+  "actions": {
+    "consume": "消耗（先进先出）",
+    "intake": "入库",
+    "move": "移位",
+    "adjust": "盘点调整",
+    "discard": "报废",
+    "reverse": "撤销"
+  },
+  "consumeModal": {
+    "title": "消耗（先进先出）",
+    "hint": "从最旧的批次开始扣减。",
+    "quantityLabel": "消耗数量",
+    "noteLabel": "备注（可选）"
+  },
+  "intakeModal": {
+    "title": "入库",
+    "quantityLabel": "数量",
+    "noteLabel": "备注（可选）"
+  },
+  "adjustModal": {
+    "title": "盘点调整",
+    "hint": "输入实际盘点数量——系统将自动计算差额。",
+    "quantityLabel": "盘点数量",
+    "noteLabel": "备注（可选）"
+  },
+  "discardModal": {
+    "title": "报废",
+    "quantityLabel": "数量",
+    "noteLabel": "备注（可选）"
+  },
+  "moveModal": {
+    "title": "移位（整批）",
+    "locationLabel": "目标位置",
+    "noteLabel": "备注（可选）"
+  },
+  "reverseModal": {
+    "title": "撤销移动记录",
+    "hint": "将追加一条更正记录以撤销所选操作。",
+    "noteLabel": "备注（可选）"
+  },
+  "lowStockBadge": "库存不足",
+  "history": {
+    "title": "移动历史",
+    "colType": "类型",
+    "colDelta": "变化量",
+    "colFrom": "来源",
+    "colTo": "目标",
+    "colOccurredAt": "日期",
+    "colActor": "操作人",
+    "colReversalOf": "撤销对象",
+    "reversalOf": "撤销 #{{id}}",
+    "empty": "暂无移动记录。",
+    "unknownActor": "—",
+    "reverseBtn": "撤销"
   }
 }

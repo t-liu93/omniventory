@@ -12,6 +12,10 @@
  * Money / quantity are sent as strings per the API schema (Decimal on the wire).
  *
  * Client-side serial ⇒ quantity = 1 rule (§7.3) is handled inside InstanceFormModal.
+ *
+ * M2 Step 7: Consume (FIFO) button, per-lot action menu (Intake/Move/Adjust/Discard),
+ * low-stock badge (client-side derived from loaded lots vs min_stock), and mode-aware
+ * quantity/level rendering in the instances table.
  */
 import { useState, useEffect, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
@@ -34,8 +38,9 @@ import {
   ActionIcon,
   Card,
   SimpleGrid,
+  Menu,
 } from "@mantine/core";
-import { Plus, Edit2, Trash2, AlertCircle, ArrowLeft, Search } from "react-feather";
+import { Plus, Edit2, Trash2, AlertCircle, ArrowLeft, Search, MoreVertical } from "react-feather";
 import { useTranslation, Trans } from "react-i18next";
 import { client } from "../api/client";
 import { mapApiError } from "../i18n/errors";
@@ -642,9 +647,32 @@ export function Items() {
 
 // ── ItemDetail page (definition detail + instances) ───────────────────────────
 
+// ── Ledger action modal state ─────────────────────────────────────────────────
+
+type LedgerActionKind = "intake" | "discard" | "adjust" | "move";
+
+interface LedgerActionState {
+  kind: LedgerActionKind;
+  instanceId: number;
+}
+
+interface ConsumeFormState {
+  quantity: string;
+  note: string;
+}
+
+interface LedgerActionFormState {
+  quantity: string;
+  note: string;
+  to_location_id: string; // for move
+}
+
+// ── ItemDetail ────────────────────────────────────────────────────────────────
+
 export function ItemDetail() {
   const { t } = useTranslation("items");
   const { t: tStock } = useTranslation("stock");
+  const { t: tInst } = useTranslation("instances");
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const defId = Number(id);
@@ -674,6 +702,18 @@ export function ItemDetail() {
   );
   const [instBusy, setInstBusy] = useState(false);
   const [instError, setInstError] = useState<string | null>(null);
+
+  // Consume (FIFO) modal
+  const [consumeOpen, setConsumeOpen] = useState(false);
+  const [consumeForm, setConsumeForm] = useState<ConsumeFormState>({ quantity: "", note: "" });
+  const [consumeBusy, setConsumeBusy] = useState(false);
+  const [consumeError, setConsumeError] = useState<string | null>(null);
+
+  // Per-lot ledger action modal (intake / discard / adjust / move)
+  const [ledgerAction, setLedgerAction] = useState<LedgerActionState | null>(null);
+  const [ledgerForm, setLedgerForm] = useState<LedgerActionFormState>({ quantity: "", note: "", to_location_id: "" });
+  const [ledgerBusy, setLedgerBusy] = useState(false);
+  const [ledgerError, setLedgerError] = useState<string | null>(null);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -953,11 +993,137 @@ export function ItemDetail() {
     }
   }
 
+  // ── Consume (FIFO) ───────────────────────────────────────────────────────────
+
+  function openConsume() {
+    setConsumeForm({ quantity: "", note: "" });
+    setConsumeError(null);
+    setConsumeOpen(true);
+  }
+
+  function closeConsume() {
+    setConsumeOpen(false);
+    setConsumeError(null);
+  }
+
+  async function handleConsume() {
+    if (!consumeForm.quantity.trim()) return;
+    setConsumeBusy(true);
+    setConsumeError(null);
+    try {
+      const { error } = await client.POST(
+        "/api/definitions/{definition_id}/consume",
+        {
+          params: { path: { definition_id: defId } },
+          body: {
+            quantity: consumeForm.quantity,
+            note: consumeForm.note.trim() || null,
+          },
+        },
+      );
+      if (error) {
+        setConsumeError(mapApiError(error));
+        return;
+      }
+      closeConsume();
+      notifySuccess(tInst("success.consume"));
+      await loadAll();
+    } finally {
+      setConsumeBusy(false);
+    }
+  }
+
+  // ── Per-lot ledger actions ────────────────────────────────────────────────────
+
+  function openLedgerAction(kind: LedgerActionKind, instanceId: number) {
+    setLedgerForm({ quantity: "", note: "", to_location_id: "" });
+    setLedgerError(null);
+    setLedgerAction({ kind, instanceId });
+  }
+
+  function closeLedgerAction() {
+    setLedgerAction(null);
+    setLedgerError(null);
+  }
+
+  async function handleLedgerAction() {
+    if (!ledgerAction) return;
+    const { kind, instanceId } = ledgerAction;
+    setLedgerBusy(true);
+    setLedgerError(null);
+    try {
+      let error: unknown = null;
+      if (kind === "intake") {
+        const res = await client.POST("/api/instances/{instance_id}/intake", {
+          params: { path: { instance_id: instanceId } },
+          body: {
+            quantity: ledgerForm.quantity,
+            note: ledgerForm.note.trim() || null,
+          },
+        });
+        error = res.error;
+      } else if (kind === "discard") {
+        const res = await client.POST("/api/instances/{instance_id}/discard", {
+          params: { path: { instance_id: instanceId } },
+          body: {
+            quantity: ledgerForm.quantity,
+            note: ledgerForm.note.trim() || null,
+          },
+        });
+        error = res.error;
+      } else if (kind === "adjust") {
+        const res = await client.POST("/api/instances/{instance_id}/adjust", {
+          params: { path: { instance_id: instanceId } },
+          body: {
+            quantity: ledgerForm.quantity,
+            note: ledgerForm.note.trim() || null,
+          },
+        });
+        error = res.error;
+      } else if (kind === "move") {
+        if (!ledgerForm.to_location_id) return;
+        const res = await client.POST("/api/instances/{instance_id}/move", {
+          params: { path: { instance_id: instanceId } },
+          body: {
+            to_location_id: Number(ledgerForm.to_location_id),
+            note: ledgerForm.note.trim() || null,
+          },
+        });
+        error = res.error;
+      }
+      if (error) {
+        setLedgerError(mapApiError(error));
+        return;
+      }
+      closeLedgerAction();
+      const successKey = kind as keyof typeof tInst;
+      notifySuccess(tInst(`success.${successKey}` as never, { defaultValue: "Done." }));
+      await loadAll();
+    } finally {
+      setLedgerBusy(false);
+    }
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   if (loading) return <LoadingState />;
   if (loadError) return <ErrorState message={loadError} />;
   if (!def) return <ErrorState message={t("notFound")} />;
+
+  // Low-stock badge: client-side derived from loaded instances vs min_stock.
+  // Rationale: instances are already loaded; using them avoids an extra
+  // GET /low-stock call. The Step-8 dashboard tile MUST use GET /low-stock
+  // and must not re-derive; this per-definition badge uses in-memory data.
+  const isLowStock =
+    def.stock_tracking_mode === "exact" &&
+    def.min_stock != null &&
+    (() => {
+      const total = instances.reduce((sum, inst) => {
+        if (inst.quantity == null) return sum;
+        return sum + parseFloat(inst.quantity);
+      }, 0);
+      return total < parseFloat(def.min_stock);
+    })();
 
   const catName =
     def.category_id != null
@@ -1079,15 +1245,35 @@ export function ItemDetail() {
       {/* Instances section */}
       <Stack gap="sm">
         <Group justify="space-between" wrap="nowrap">
-          <Title order={4}>{t("detail.instancesTitle")}</Title>
-          <Button
-            size="xs"
-            leftSection={<Plus size={12} />}
-            onClick={openCreateInst}
-            data-testid="register-instance-btn"
-          >
-            {t("detail.registerInstanceBtn")}
-          </Button>
+          <Group gap={8} align="center">
+            <Title order={4}>{t("detail.instancesTitle")}</Title>
+            {isLowStock && (
+              <Badge size="sm" color="red" variant="filled" data-testid="low-stock-badge">
+                {tStock("lowStockBadge")}
+              </Badge>
+            )}
+          </Group>
+          <Group gap={8}>
+            {def.stock_tracking_mode === "exact" && (
+              <Button
+                size="xs"
+                variant="light"
+                color="orange"
+                onClick={openConsume}
+                data-testid="consume-btn"
+              >
+                {tStock("actions.consume")}
+              </Button>
+            )}
+            <Button
+              size="xs"
+              leftSection={<Plus size={12} />}
+              onClick={openCreateInst}
+              data-testid="register-instance-btn"
+            >
+              {t("detail.registerInstanceBtn")}
+            </Button>
+          </Group>
         </Group>
 
         {/* Instance search */}
@@ -1132,7 +1318,21 @@ export function ItemDetail() {
                       </Anchor>
                     </Table.Td>
                     <Table.Td>
-                      <Text size="sm">{formatQuantity(inst.quantity)}</Text>
+                      {/* Render by mode: exact (or unset default) → quantity, level → badge, none → — */}
+                      {(def.stock_tracking_mode ?? "exact") !== "level" && (def.stock_tracking_mode ?? "exact") !== "none" ? (
+                        <Text size="sm" data-testid={`inst-qty-${inst.id}`}>{formatQuantity(inst.quantity)}</Text>
+                      ) : def.stock_tracking_mode === "level" && inst.stock_level ? (
+                        <Badge
+                          size="sm"
+                          color={inst.stock_level === "high" ? "green" : inst.stock_level === "medium" ? "yellow" : "red"}
+                          variant="light"
+                          data-testid={`inst-level-badge-${inst.id}`}
+                        >
+                          {tStock(`stockLevel.${inst.stock_level}`, { defaultValue: inst.stock_level })}
+                        </Badge>
+                      ) : (
+                        <Text size="sm" c="dimmed">—</Text>
+                      )}
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm" c="dimmed">
@@ -1159,6 +1359,47 @@ export function ItemDetail() {
                         >
                           <Edit2 size={14} />
                         </ActionIcon>
+                        {/* Per-lot ledger action menu (exact mode only) */}
+                        {def.stock_tracking_mode === "exact" && (
+                          <Menu shadow="md" position="bottom-end" withinPortal>
+                            <Menu.Target>
+                              <ActionIcon
+                                size="sm"
+                                variant="subtle"
+                                aria-label={tInst("detail.actionsTitle")}
+                                data-testid={`lot-actions-${inst.id}`}
+                              >
+                                <MoreVertical size={14} />
+                              </ActionIcon>
+                            </Menu.Target>
+                            <Menu.Dropdown>
+                              <Menu.Item
+                                onClick={() => openLedgerAction("intake", inst.id)}
+                                data-testid={`lot-intake-${inst.id}`}
+                              >
+                                {tStock("actions.intake")}
+                              </Menu.Item>
+                              <Menu.Item
+                                onClick={() => openLedgerAction("adjust", inst.id)}
+                                data-testid={`lot-adjust-${inst.id}`}
+                              >
+                                {tStock("actions.adjust")}
+                              </Menu.Item>
+                              <Menu.Item
+                                onClick={() => openLedgerAction("discard", inst.id)}
+                                data-testid={`lot-discard-${inst.id}`}
+                              >
+                                {tStock("actions.discard")}
+                              </Menu.Item>
+                              <Menu.Item
+                                onClick={() => openLedgerAction("move", inst.id)}
+                                data-testid={`lot-move-${inst.id}`}
+                              >
+                                {tStock("actions.move")}
+                              </Menu.Item>
+                            </Menu.Dropdown>
+                          </Menu>
+                        )}
                         <ActionIcon
                           size="sm"
                           variant="subtle"
@@ -1178,6 +1419,117 @@ export function ItemDetail() {
           </Table.ScrollContainer>
         )}
       </Stack>
+
+      {/* Consume (FIFO) modal */}
+      <Modal opened={consumeOpen} onClose={closeConsume} title={tStock("consumeModal.title")} size="sm">
+        <Stack gap="sm">
+          {consumeError && (
+            <Alert icon={<AlertCircle size={16} />} color="red" variant="light" data-testid="consume-error-alert">
+              {consumeError}
+            </Alert>
+          )}
+          <Text size="xs" c="dimmed">{tStock("consumeModal.hint")}</Text>
+          <NumberInput
+            label={tStock("consumeModal.quantityLabel")}
+            value={consumeForm.quantity === "" ? "" : Number(consumeForm.quantity)}
+            onChange={(v) => setConsumeForm((f) => ({ ...f, quantity: v === "" ? "" : String(v) }))}
+            min={0}
+            allowDecimal
+            required
+            data-testid="consume-quantity-input"
+          />
+          <TextInput
+            label={tStock("consumeModal.noteLabel")}
+            value={consumeForm.note}
+            onChange={(e) => {
+              const value = e.currentTarget.value;
+              setConsumeForm((f) => ({ ...f, note: value }));
+            }}
+            data-testid="consume-note-input"
+          />
+          <Group justify="flex-end">
+            <Button variant="default" onClick={closeConsume} disabled={consumeBusy}>
+              {t("common:actions.cancel", "Cancel")}
+            </Button>
+            <Button
+              onClick={handleConsume}
+              loading={consumeBusy}
+              disabled={!consumeForm.quantity}
+              data-testid="consume-submit-btn"
+            >
+              {tStock("actions.consume")}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* Per-lot ledger action modal */}
+      {ledgerAction && (
+        <Modal
+          opened={!!ledgerAction}
+          onClose={closeLedgerAction}
+          title={tStock(`${ledgerAction.kind}Modal.title` as never, { defaultValue: ledgerAction.kind })}
+          size="sm"
+        >
+          <Stack gap="sm">
+            {ledgerError && (
+              <Alert icon={<AlertCircle size={16} />} color="red" variant="light" data-testid="ledger-error-alert">
+                {ledgerError}
+              </Alert>
+            )}
+            {ledgerAction.kind === "adjust" && (
+              <Text size="xs" c="dimmed">{tStock("adjustModal.hint")}</Text>
+            )}
+            {ledgerAction.kind !== "move" && (
+              <NumberInput
+                label={tStock(`${ledgerAction.kind}Modal.quantityLabel` as never, { defaultValue: "Quantity" })}
+                value={ledgerForm.quantity === "" ? "" : Number(ledgerForm.quantity)}
+                onChange={(v) => setLedgerForm((f) => ({ ...f, quantity: v === "" ? "" : String(v) }))}
+                min={0}
+                allowDecimal
+                required
+                data-testid="ledger-quantity-input"
+              />
+            )}
+            {ledgerAction.kind === "move" && (
+              <Select
+                label={tStock("moveModal.locationLabel")}
+                data={locations.map((l) => ({ value: String(l.id), label: l.name }))}
+                value={ledgerForm.to_location_id}
+                onChange={(v) => setLedgerForm((f) => ({ ...f, to_location_id: v ?? "" }))}
+                required
+                data-testid="ledger-location-select"
+              />
+            )}
+            <TextInput
+              label={tStock(`${ledgerAction.kind}Modal.noteLabel` as never, { defaultValue: "Note (optional)" })}
+              value={ledgerForm.note}
+              onChange={(e) => {
+                const value = e.currentTarget.value;
+                setLedgerForm((f) => ({ ...f, note: value }));
+              }}
+              data-testid="ledger-note-input"
+            />
+            <Group justify="flex-end">
+              <Button variant="default" onClick={closeLedgerAction} disabled={ledgerBusy}>
+                {t("common:actions.cancel", "Cancel")}
+              </Button>
+              <Button
+                onClick={handleLedgerAction}
+                loading={ledgerBusy}
+                disabled={
+                  ledgerAction.kind !== "move"
+                    ? !ledgerForm.quantity
+                    : !ledgerForm.to_location_id
+                }
+                data-testid="ledger-submit-btn"
+              >
+                {tStock(`actions.${ledgerAction.kind}` as never, { defaultValue: ledgerAction.kind })}
+              </Button>
+            </Group>
+          </Stack>
+        </Modal>
+      )}
 
       {/* Edit definition modal */}
       <DefinitionFormModal
