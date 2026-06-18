@@ -15,6 +15,7 @@ delete(defn)                    Delete an ItemDefinition row.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from decimal import Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -77,6 +78,8 @@ class ItemDefinitionRepository:
         category_id: int | None = None,
         unit: str = "pcs",
         default_location_id: int | None = None,
+        stock_tracking_mode: str = "exact",
+        min_stock: Decimal | None = None,
     ) -> ItemDefinition:
         """Insert a new ItemDefinition and flush to get its PK."""
         defn = ItemDefinition(
@@ -86,6 +89,8 @@ class ItemDefinitionRepository:
             category_id=category_id,
             unit=unit,
             default_location_id=default_location_id,
+            stock_tracking_mode=stock_tracking_mode,
+            min_stock=min_stock,
         )
         self._db.add(defn)
         self._db.flush()
@@ -103,12 +108,18 @@ class ItemDefinitionRepository:
         unit: str | None = None,
         set_default_location_id: bool = False,
         default_location_id: int | None = None,
+        stock_tracking_mode: str | None = None,
+        set_min_stock: bool = False,
+        min_stock: Decimal | None = None,
     ) -> ItemDefinition:
         """Apply partial field updates to an ItemDefinition.
 
         Nullable FK fields (``category_id``, ``default_location_id``) use an
         explicit ``set_*`` flag to distinguish "don't change" from "set to
         NULL" — the same pattern as the Location/Category repositories.
+
+        ``min_stock`` also uses an explicit ``set_min_stock`` flag for the same
+        reason (can legitimately be set to NULL to remove the threshold).
         """
         if name is not None:
             defn.name = name
@@ -122,6 +133,10 @@ class ItemDefinitionRepository:
             defn.unit = unit
         if set_default_location_id:
             defn.default_location_id = default_location_id
+        if stock_tracking_mode is not None:
+            defn.stock_tracking_mode = stock_tracking_mode
+        if set_min_stock:
+            defn.min_stock = min_stock
         self._db.flush()
         return defn
 

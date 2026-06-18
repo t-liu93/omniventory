@@ -8,6 +8,7 @@ directly from SQLAlchemy ORM objects.
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 
 from pydantic import BaseModel
 
@@ -23,6 +24,8 @@ class DefinitionCreate(BaseModel):
     kind_id: int | None = None  # optional; service defaults to 'durable' when omitted
     unit: str = "pcs"
     default_location_id: int | None = None
+    stock_tracking_mode: str = "exact"  # validated app-layer against STOCK_TRACKING_MODES (M2)
+    min_stock: Decimal | None = None  # low-stock threshold; meaningful for 'exact' mode only
 
 
 class DefinitionUpdate(BaseModel):
@@ -34,6 +37,8 @@ class DefinitionUpdate(BaseModel):
     kind_id: int | None = None
     unit: str | None = None
     default_location_id: int | None = None
+    stock_tracking_mode: str | None = None  # validated app-layer against STOCK_TRACKING_MODES (M2)
+    min_stock: Decimal | None = None  # low-stock threshold; meaningful for 'exact' mode only
 
 
 class DefinitionResponse(BaseModel):
@@ -47,6 +52,8 @@ class DefinitionResponse(BaseModel):
     kind: KindResponse
     unit: str
     default_location_id: int | None
+    stock_tracking_mode: str
+    min_stock: Decimal | None
     created_at: datetime
 
     model_config = {"from_attributes": True}

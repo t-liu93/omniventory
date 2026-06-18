@@ -230,8 +230,28 @@
             ],
             "title": "Kind Id"
           },
+          "min_stock": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Stock"
+          },
           "name": {
             "title": "Name",
+            "type": "string"
+          },
+          "stock_tracking_mode": {
+            "default": "exact",
+            "title": "Stock Tracking Mode",
             "type": "string"
           },
           "unit": {
@@ -298,8 +318,24 @@
             "title": "Kind Id",
             "type": "integer"
           },
+          "min_stock": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Stock"
+          },
           "name": {
             "title": "Name",
+            "type": "string"
+          },
+          "stock_tracking_mode": {
+            "title": "Stock Tracking Mode",
             "type": "string"
           },
           "unit": {
@@ -316,6 +352,8 @@
           "kind",
           "unit",
           "default_location_id",
+          "stock_tracking_mode",
+          "min_stock",
           "created_at"
         ],
         "title": "DefinitionResponse",
@@ -368,6 +406,21 @@
             ],
             "title": "Kind Id"
           },
+          "min_stock": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Stock"
+          },
           "name": {
             "anyOf": [
               {
@@ -378,6 +431,17 @@
               }
             ],
             "title": "Name"
+          },
+          "stock_tracking_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stock Tracking Mode"
           },
           "unit": {
             "anyOf": [

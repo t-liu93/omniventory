@@ -10,9 +10,12 @@ Design notes
 - ``kind_id`` is a real FK → ``item_kinds.id`` (NOT a string enum or CHECK).
   The application service resolves the ``durable`` kind when ``kind_id`` is
   omitted on create.
-- ``min_stock`` (M2) and ``default_best_before_days`` (M3) are intentionally
-  absent — they are added by the milestone that consumes them (M1.md §2
-  "Definition defaults timing").
+- ``stock_tracking_mode`` (M2) is validated app-layer against
+  ``STOCK_TRACKING_MODES``; no DB CHECK constraint (roadmap §2.11).
+- ``min_stock`` (M2) is the reorder-point threshold; meaningful only for
+  ``exact`` mode.  NULL means no threshold.
+- ``default_best_before_days`` (M3) is intentionally absent — added by the
+  milestone that consumes it (M1.md §2 "Definition defaults timing").
 - ``default_location_id`` is a nullable FK → ``locations.id``; it is the
   *suggested* location for new instances of this definition.
 """
@@ -20,8 +23,9 @@ Design notes
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -40,6 +44,8 @@ class ItemDefinition(Base):
     kind_id               FK → item_kinds.id; NOT NULL (service defaults to durable).
     unit                  Free-text unit string (default ``pcs``).
     default_location_id   FK → locations.id; nullable; suggested location for instances.
+    stock_tracking_mode   String(16); validated app-layer; default ``exact`` (M2).
+    min_stock             Numeric(18,6); nullable; low-stock threshold for ``exact`` mode (M2).
     created_at            Row-creation timestamp (UTC, set by DB on insert).
     """
 
@@ -67,6 +73,16 @@ class ItemDefinition(Base):
             name="fk_item_definitions_default_location_id",
             ondelete="SET NULL",
         ),
+        nullable=True,
+        default=None,
+    )
+    stock_tracking_mode: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        server_default="exact",
+    )
+    min_stock: Mapped[Decimal | None] = mapped_column(
+        Numeric(18, 6),
         nullable=True,
         default=None,
     )

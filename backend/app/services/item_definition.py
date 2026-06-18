@@ -10,6 +10,9 @@ Business rules handled here:
   entity) — consistent with the validation error contract (M1.md §4.2).
 - **FK existence checks**: optional ``category_id`` and
   ``default_location_id`` are validated to exist when provided.
+- **``stock_tracking_mode`` validation** (M2): validated app-layer against
+  ``STOCK_TRACKING_MODES``; raises 422 with ``validation.unsupported_tracking_mode``
+  on unknown values (roadmap §2.11 — no DB CHECK).
 
 All DB access goes through the repositories; no raw queries in this layer.
 """
@@ -19,6 +22,7 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 
 from app.core.errors import AppError, ErrorCode
+from app.core.stock import STOCK_TRACKING_MODES
 from app.models.item_definition import ItemDefinition
 from app.models.item_kind import ItemKind
 from app.repositories.category import CategoryRepository
@@ -111,6 +115,22 @@ class ItemDefinitionService:
                 message=f"Location {location_id} not found.",
             )
 
+    def _validate_tracking_mode(self, mode: str) -> None:
+        """Raise 422 if ``mode`` is not a supported stock-tracking mode (M2 §3.1 / §4.7).
+
+        Validation is **app-layer only** — no DB CHECK constraint (roadmap §2.11).
+        """
+        if mode not in STOCK_TRACKING_MODES:
+            raise AppError(
+                ErrorCode.UNSUPPORTED_TRACKING_MODE,
+                status_code=422,
+                params={"value": mode, "supported": list(STOCK_TRACKING_MODES)},
+                message=(
+                    f"Unsupported stock_tracking_mode {mode!r}. "
+                    f"Supported values: {list(STOCK_TRACKING_MODES)}."
+                ),
+            )
+
     # ---------------------------------------------------------------------- #
     # CRUD                                                                     #
     # ---------------------------------------------------------------------- #
@@ -120,6 +140,7 @@ class ItemDefinitionService:
 
         - Resolves ``kind_id`` (defaults to ``durable`` when omitted).
         - Validates ``category_id`` and ``default_location_id`` if provided.
+        - Validates ``stock_tracking_mode`` against ``STOCK_TRACKING_MODES`` (M2).
         """
         resolved_kind_id = self._resolve_kind_id(data.kind_id)
 
@@ -129,6 +150,8 @@ class ItemDefinitionService:
         if data.default_location_id is not None:
             self._assert_location_exists(data.default_location_id)
 
+        self._validate_tracking_mode(data.stock_tracking_mode)
+
         return self._repo.create(
             name=data.name,
             kind_id=resolved_kind_id,
@@ -136,6 +159,8 @@ class ItemDefinitionService:
             category_id=data.category_id,
             unit=data.unit,
             default_location_id=data.default_location_id,
+            stock_tracking_mode=data.stock_tracking_mode,
+            min_stock=data.min_stock,
         )
 
     def get(self, definition_id: int) -> ItemDefinition:
@@ -165,6 +190,7 @@ class ItemDefinitionService:
 
         - Validates ``kind_id`` if changed.
         - Validates ``category_id`` and ``default_location_id`` if changed.
+        - Validates ``stock_tracking_mode`` if provided (M2).
         """
         defn = self._get_or_404(definition_id)
 
@@ -175,12 +201,16 @@ class ItemDefinitionService:
 
         category_id_changed = "category_id" in data.model_fields_set
         location_id_changed = "default_location_id" in data.model_fields_set
+        min_stock_changed = "min_stock" in data.model_fields_set
 
         if category_id_changed and data.category_id is not None:
             self._assert_category_exists(data.category_id)
 
         if location_id_changed and data.default_location_id is not None:
             self._assert_location_exists(data.default_location_id)
+
+        if data.stock_tracking_mode is not None:
+            self._validate_tracking_mode(data.stock_tracking_mode)
 
         return self._repo.update(
             defn,
@@ -192,6 +222,9 @@ class ItemDefinitionService:
             unit=data.unit,
             set_default_location_id=location_id_changed,
             default_location_id=data.default_location_id,
+            stock_tracking_mode=data.stock_tracking_mode,
+            set_min_stock=min_stock_changed,
+            min_stock=data.min_stock,
         )
 
     def delete(self, definition_id: int) -> None:

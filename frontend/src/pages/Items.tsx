@@ -344,6 +344,7 @@ export function Items() {
           default_location_id: defForm.default_location_id
             ? Number(defForm.default_location_id)
             : null,
+          stock_tracking_mode: "exact",
         },
       });
       if (error) {

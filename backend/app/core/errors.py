@@ -56,6 +56,7 @@ class ErrorCode:
     # --- Validation ---
     INVALID_INPUT = "validation.invalid_input"
     UNSUPPORTED_LANGUAGE = "validation.unsupported_language"  # Step 2
+    UNSUPPORTED_TRACKING_MODE = "validation.unsupported_tracking_mode"  # M2 Step 1
 
     # --- Tree (shared) ---
     TREE_CYCLE = "tree.cycle"
@@ -97,6 +98,7 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     ErrorCode.SETUP_ALREADY_COMPLETE: "Setup already complete.",
     ErrorCode.INVALID_INPUT: "Request validation failed.",
     ErrorCode.UNSUPPORTED_LANGUAGE: "Unsupported language code.",
+    ErrorCode.UNSUPPORTED_TRACKING_MODE: "Unsupported stock tracking mode.",
     ErrorCode.TREE_CYCLE: "Operation would create a cycle in the tree.",
     ErrorCode.TREE_DELETE_HAS_CHILDREN: "Cannot delete a node that still has children.",
     ErrorCode.LOCATION_NOT_FOUND: "Location not found.",

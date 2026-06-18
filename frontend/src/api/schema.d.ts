@@ -569,8 +569,15 @@ export interface components {
             description?: string | null;
             /** Kind Id */
             kind_id?: number | null;
+            /** Min Stock */
+            min_stock?: number | string | null;
             /** Name */
             name: string;
+            /**
+             * Stock Tracking Mode
+             * @default exact
+             */
+            stock_tracking_mode: string;
             /**
              * Unit
              * @default pcs
@@ -598,8 +605,12 @@ export interface components {
             kind: components["schemas"]["KindResponse"];
             /** Kind Id */
             kind_id: number;
+            /** Min Stock */
+            min_stock: string | null;
             /** Name */
             name: string;
+            /** Stock Tracking Mode */
+            stock_tracking_mode: string;
             /** Unit */
             unit: string;
         };
@@ -616,8 +627,12 @@ export interface components {
             description?: string | null;
             /** Kind Id */
             kind_id?: number | null;
+            /** Min Stock */
+            min_stock?: number | string | null;
             /** Name */
             name?: string | null;
+            /** Stock Tracking Mode */
+            stock_tracking_mode?: string | null;
             /** Unit */
             unit?: string | null;
         };
