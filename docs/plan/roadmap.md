@@ -32,7 +32,7 @@ These were settled in round-1 planning discussion. Changing one is a "foundation
 ### 1.3 Scope decisions
 - **All four "optional" capabilities are in scope** as committed milestones: barcode scan + product recognition, multi-unit conversion, shopping list, durable maintenance schedules.
 - **CSV import/export + backup/restore** is core (M5), not optional.
-- **Integrations** (later milestone): **SMTP** (folded into the M4 reminder channels), **MQTT** (Home Assistant / IoT two-way), and an **OpenAI-compatible LLM backend** (scan product/receipt → auto-categorize; receipt → batch product creation). The LLM backend is a **reserved abstraction/hook now; real features later**.
+- **Integrations**: the **reminder / notification channels** all land in **M4** — **in-app**, **SMTP** email, **HTTP** (outbound webhook + an inbound Home Assistant state endpoint for its RESTful sensor), and the **full MQTT bridge** (Home Assistant: reminder publish + stock/expiry/low-stock state topics + auto-discovery + inbound commands; **pulled forward from M9**). The **OpenAI-compatible LLM backend** (scan product/receipt → auto-categorize; receipt → batch product creation) and a **public third-party REST API + generic event webhooks** stay **M9** — the LLM backend is a **reserved abstraction/hook now; real features later**.
 - Explicitly **not** building InvenTree-style BOM / build orders / purchase-sales orders / part variants — over-designed for a household.
 
 ---
@@ -46,7 +46,7 @@ Hold on every milestone. Most are the investigation §3.3 takeaways, made bindin
 3. **Quantity is always derived from a movement ledger, never overwritten.** Every in/out/move/adjust is a typed transaction; current quantity = aggregation. Supports consumption-rate, audit, and undo. (Homebox's overwrite-float is the anti-pattern.)
 4. **Expiry / warranty / value / location live on the instance/lot; defaults live on the definition** (`default_best_before_days`, `min_stock`, default location). Batch-level best-before (Grocy precision) beats item-level.
 5. **Locations are a self-referential tree** (arbitrary depth). A **container can itself be a tracked item** (the toolbox is both a location and a valuable asset — Homebox's good insight). Never flat locations (Grocy's trap → no hierarchical durable tracking).
-6. **One unified reminder engine, many sources.** It scans `best_before`, `warranty_expires`, `min_stock`/low-stock, and (later) maintenance-due. **Configurable "N days ahead"** per item and per user; **event-triggered + daily scheduled fallback** (double safety); **default-on**; notifies the **responsible party**; channels are **pluggable** (in-app, SMTP, MQTT, webhook). Avoids all three projects' reminder failures (hardcoded / default-off / subscriber-only / pull-only).
+6. **One unified reminder engine, many sources.** It scans `best_before`, `warranty_expires`, `min_stock`/low-stock, and (later) maintenance-due. **Configurable "N days ahead"** — **global + per-item + per-user** lead times (all three delivered in M4); **event-triggered + daily scheduled fallback** (double safety); **default-on**; notifies the **responsible party**; channels are **pluggable** (in-app, SMTP email, HTTP webhook + HA state endpoint, full MQTT bridge). Avoids all three projects' reminder failures (hardcoded / default-off / subscriber-only / pull-only).
 7. **Warranty is a first-class field** and a reminder source (all three reference projects lack proper warranty handling).
 8. **Cross-cutting capabilities are generic/reusable, not duplicated per table:** photos/attachments (generic `model_type + model_id`), tags, notes, custom fields, barcodes.
 9. **Money and quantity are `Decimal`;** quantity supports fractions (wire by the metre, liquids by the litre). Rounding rules pinned where money is involved.
@@ -83,12 +83,12 @@ Legend: ⬜ planned · 🟡 active · 🟢 done. **Active milestone = the single
 | **M1.5** | Internationalization (i18n) foundation | all (ZH + EN) | 🟢 |
 | **M2** | Stock ledger & consumables | ③ (in/out + low-stock) | 🟢 |
 | **M3** | Best-before / expiry & perishables | ① (data + listings) | 🟢 |
-| **M4** | Unified reminder & notification engine | ①②③ proactive alerts | ⬜ |
+| **M4** | Unified reminder & notification engine | ①②③ proactive alerts | 🟡 |
 | **M5** | Cross-cutting + barcode + data I/O | all | ⬜ |
 | **M6** | Multi-user & roles | all | ⬜ |
 | **M7** | Shopping list & maintenance schedules | ③ / ② | ⬜ |
 | **M8** | Multi-unit conversion | ③ | ⬜ |
-| **M9** | Integrations & extensions (MQTT / API / LLM) | all | ⬜ |
+| **M9** | Integrations & extensions (public API / LLM) | all | ⬜ |
 
 **Suggested 1.0 cut: through M6** (all three needs fully covered with proactive reminders, data I/O, and multi-user). M7–M9 are 1.x / post-1.0. Adjustable.
 
@@ -141,11 +141,15 @@ Legend: ⬜ planned · 🟡 active · 🟢 done. **Active milestone = the single
 > Locked: the detailed design doc (`docs/plan/milestones/M3.md`) is now written. It puts **`best_before_date` on the lot** (batch-level, mode-independent) and **`default_best_before_days` on the definition**, **auto-computes** best-before on intake (explicit-wins → definition-default → NULL), turns the M2 FIFO walk into **FEFO** (nearest-expiry-first — the M2 §12 promise, only the `ORDER BY` changes), and adds a **computed `GET /expiring`** read (per-lot, expired ∪ expiring-within-N) surfaced as a dashboard tile + a `/expiring` page. Reminders stay **M4**; opened/frozen "+N days" is **deferred**; **no new error codes** (Pydantic `ge=0`).
 
 ### M4 — Unified reminder & notification engine (①②③ proactive)
-**Goal:** the differentiator — one engine, proactive "N days ahead" alerts across all sources.
+**Goal:** the differentiator — one engine, proactive "N days ahead" alerts across all sources. **(Largest milestone so far — maximal scope ratified; 4 phases / 12 atomic steps.)**
 - Consolidate trigger sources: best_before, `warranty_expires`, low-stock (maintenance-due added in M7).
-- Per-item **and** per-user configurable lead times; **event-triggered + daily scheduled scan** (double safety); **default-on**; assign/notify the responsible user; digesting.
-- **Pluggable channels**: in-app + **Email SMTP** (MQTT channel arrives in M9).
-- 🟢 Configure lead times; run the daily scan; receive a consolidated reminder in-app and by email covering an expiring item, an expiring warranty, and a low-stock item.
+- **Global + per-item + per-user** configurable lead times (resolution: per-item → per-user → global); low-stock is **immediate + repeat episodes** (re-remind on a configurable cadence while it persists, close on replenish).
+- **Event-triggered (low-stock) + daily scheduled scan** (APScheduler, household-local time; double safety); **default-on**; an on-demand "run scan now" trigger; notify all active users (responsible-party routing = M6).
+- A new **KV `settings` table** + a frontend **Configuration page** hold all reminder + channel config (the seed of the future settings surface).
+- **Pluggable channels**: **in-app** inbox, **Email SMTP** (daily digest), **HTTP** (outbound webhook + inbound HA state endpoint), and the **full MQTT bridge** (reminder publish + state topics + Home Assistant auto-discovery + inbound commands — pulled forward from M9). A small **bilingual server message catalog** renders email/MQTT/HTTP text (a scoped exception to the wire/display split).
+- 🟢 Configure global + per-item + per-user lead times; run the scan (on-demand + daily); receive a consolidated set of reminders in-app, an email digest, MQTT state + an HA-discovered sensor, and an HTTP webhook/state read — covering an expiring item, an expiring warranty, and a low-stock item; the low-stock repeat fires on cadence and the episode closes on replenish.
+
+> Locked: the detailed design doc (`docs/plan/milestones/M4.md`) is now written. It ratifies the **maximal scope**: lead times **global + per-item + per-user** (new nullable override columns on `item_definitions` + `users`, resolved per-item → per-user → global); **three new tables** — a user-facing **`settings`** KV store (distinct from `app_config` secrets and `household.settings`), **`notifications`** (in-app inbox + idempotent dedup + the low-stock **episode** model, opener-row-as-episode, no extra table), and **`notification_deliveries`** (delivery log); a single idempotent **`ReminderEngine.run_scan()`** (date sources fire once per recipient/lot/date; low-stock = immediate opener + repeat offsets `[1,3,7]` default + close-on-recovery) plus an **event hook** on movements; an **APScheduler** daily scan in `household.timezone` (resolving the M3 §12 "today" deferral) + `POST /reminders/run`; **four channels** behind a dispatcher — in-app (code+params, frontend-localized), **email digest** + **HTTP** + **full MQTT bridge** (rendered via a small **bilingual server catalog** in the recipient's language); **HTTP** = outbound webhook **and** a token-guarded **`GET /integrations/state`** for Home Assistant's RESTful sensor; a frontend **notification bell/inbox** + **Configuration page**. New backend deps: **apscheduler**, **paho-mqtt**, **httpx** (runtime). Two new error codes (`notification.not_found`, `integration.invalid_token`). Deferred to later: responsible-party routing + per-user channel/cadence (M6), SSRF/rate-limit hardening (M6), maintenance-due source (M7).
 
 ### M5 — Cross-cutting capabilities + barcode + data I/O
 **Goal:** the daily-use ergonomics and data portability of a real self-hosted app.
@@ -172,11 +176,10 @@ Legend: ⬜ planned · 🟡 active · 🟢 done. **Active milestone = the single
 - 🟢 Define units (case = 24 pieces); intake 2 cases; consume 5 pieces; stock and value are correct.
 
 ### M9 — Integrations & extensions (post-1.0)
-**Goal:** connect to the smart-home and unlock AI-assisted entry.
-- **MQTT** bridge (Home Assistant / IoT): publish stock / expiry / low-stock events, accept commands; MQTT also usable as a reminder channel.
-- **Public REST API + webhooks + OpenAPI client.**
+**Goal:** unlock AI-assisted entry and open the system to third-party automation. *(The MQTT / Home Assistant bridge moved to **M4** — see §1.3 / M4.)*
+- **Public third-party REST API + generic event webhooks + OpenAPI client** (beyond M4's reminder-specific HTTP/MQTT integration).
 - **LLM (OpenAI-compatible)** features on the reserved hook: scan product/receipt → auto-categorize; receipt → batch product creation.
-- 🟢 An expiry event reaches Home Assistant over MQTT; an uploaded receipt drafts a batch of products via the LLM.
+- 🟢 A third-party client drives the public API with a scoped token; an uploaded receipt drafts a batch of products via the LLM.
 
 ---
 
@@ -192,6 +195,7 @@ Not scheduled; revisit when the core is stable.
 
 ## 7. Open questions / to revisit
 - Exact role set & permission granularity for M6 (admin/member/viewer is the current assumption).
+- **M4 channel security is deferred to the M6 hardening pass:** SSRF guard on the outbound HTTP webhook, rate limiting, and tighter MQTT inbound-command auth/allow-listing (the broker is operator-trusted and `commands_enabled` defaults off in M4). Also open in M4: the **per-item vs per-user lead-time precedence** rule (M4 locks per-item > per-user; a "max-of-applicable" alternative may revisit) and the **low-stock repeat cadence** default (`[1,3,7]`). See `M4.md` §12.
 - Whether multi-unit conversion (M8) earns its complexity for the household use case, or stays a thin opt-in.
 - **Stock-tracking modes `level` / `none` ergonomics:** in practice (M2) the author finds the current `level` (qualitative high/medium/low) and `none` (presence-only) modes not fully satisfying, but no concrete better design has emerged yet — revisit once real usage clarifies what's missing (relates to M2 §12's `level` granularity question).
 - Author noted "probably more capabilities not yet thought of" — additions get slotted here, then into the table.
