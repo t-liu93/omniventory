@@ -9,8 +9,10 @@
  * No pagination needed for M2 (list is bounded by definitions count).
  */
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
+  Anchor,
   Table,
   Text,
   Badge,
@@ -102,9 +104,9 @@ export function LowStock() {
                   data-testid={`low-stock-row-${item.definition_id}`}
                 >
                   <Table.Td>
-                    <Text size="sm" fw={500}>
+                    <Anchor component={Link} to={`/items/${item.definition_id}`} size="sm" fw={500}>
                       {item.name}
-                    </Text>
+                    </Anchor>
                   </Table.Td>
                   <Table.Td data-testid={`low-stock-current-${item.definition_id}`}>
                     {item.mode === "exact" ? (

@@ -355,6 +355,63 @@ describe("LowStock page — full list", () => {
   });
 });
 
+// ── Tests: LowStock page — item name links to item detail ────────────────────
+
+describe("LowStock page — item name links to item detail", () => {
+  it("renders item name as a link to /items/:definition_id for an exact-mode item", async () => {
+    vi.mocked(client.GET).mockResolvedValue({
+      data: [exactLowItem],
+      response: new Response(null, { status: 200 }),
+    } as AnyResult);
+
+    renderLowStockPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId(`low-stock-row-${exactLowItem.definition_id}`)).toBeDefined();
+    });
+
+    const link = screen.getByRole("link", { name: /AA Batteries/i }) as HTMLAnchorElement;
+    expect(link).toBeDefined();
+    expect(link.getAttribute("href")).toBe(`/items/${exactLowItem.definition_id}`);
+  });
+
+  it("renders item name as a link to /items/:definition_id for a level-mode item", async () => {
+    vi.mocked(client.GET).mockResolvedValue({
+      data: [levelLowItem],
+      response: new Response(null, { status: 200 }),
+    } as AnyResult);
+
+    renderLowStockPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId(`low-stock-row-${levelLowItem.definition_id}`)).toBeDefined();
+    });
+
+    const link = screen.getByRole("link", { name: /Assorted Screws/i }) as HTMLAnchorElement;
+    expect(link).toBeDefined();
+    expect(link.getAttribute("href")).toBe(`/items/${levelLowItem.definition_id}`);
+  });
+
+  it("renders each item name as a link when multiple items are present", async () => {
+    vi.mocked(client.GET).mockResolvedValue({
+      data: [exactLowItem, levelLowItem],
+      response: new Response(null, { status: 200 }),
+    } as AnyResult);
+
+    renderLowStockPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId(`low-stock-row-${exactLowItem.definition_id}`)).toBeDefined();
+    });
+
+    const link1 = screen.getByRole("link", { name: /AA Batteries/i }) as HTMLAnchorElement;
+    expect(link1.getAttribute("href")).toBe(`/items/${exactLowItem.definition_id}`);
+
+    const link2 = screen.getByRole("link", { name: /Assorted Screws/i }) as HTMLAnchorElement;
+    expect(link2.getAttribute("href")).toBe(`/items/${levelLowItem.definition_id}`);
+  });
+});
+
 // ── Tests: navigation from dashboard tile to /low-stock ──────────────────────
 
 describe("Dashboard tile → LowStock view navigation", () => {
