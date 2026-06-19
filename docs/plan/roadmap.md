@@ -82,7 +82,7 @@ Legend: ⬜ planned · 🟡 active · 🟢 done. **Active milestone = the single
 | **M1** | Unified core model & durable-goods registry | ② (registry) | 🟢 |
 | **M1.5** | Internationalization (i18n) foundation | all (ZH + EN) | 🟢 |
 | **M2** | Stock ledger & consumables | ③ (in/out + low-stock) | 🟢 |
-| **M3** | Best-before / expiry & perishables | ① (data + listings) | ⬜ |
+| **M3** | Best-before / expiry & perishables | ① (data + listings) | 🟡 |
 | **M4** | Unified reminder & notification engine | ①②③ proactive alerts | ⬜ |
 | **M5** | Cross-cutting + barcode + data I/O | all | ⬜ |
 | **M6** | Multi-user & roles | all | ⬜ |
@@ -137,6 +137,8 @@ Legend: ⬜ planned · 🟡 active · 🟢 done. **Active milestone = the single
 - Expiring / expired filters + dashboard; FIFO already honours best_before.
 - *(Optional, may defer to a refinement:* opened/frozen/thawed "+N days" adjustments — Grocy-style.*)*
 - 🟢 Intake a perishable with a default shelf life → best_before auto-computed; list items expiring within N days; expired items flagged.
+
+> Locked: the detailed design doc (`docs/plan/milestones/M3.md`) is now written. It puts **`best_before_date` on the lot** (batch-level, mode-independent) and **`default_best_before_days` on the definition**, **auto-computes** best-before on intake (explicit-wins → definition-default → NULL), turns the M2 FIFO walk into **FEFO** (nearest-expiry-first — the M2 §12 promise, only the `ORDER BY` changes), and adds a **computed `GET /expiring`** read (per-lot, expired ∪ expiring-within-N) surfaced as a dashboard tile + a `/expiring` page. Reminders stay **M4**; opened/frozen "+N days" is **deferred**; **no new error codes** (Pydantic `ge=0`).
 
 ### M4 — Unified reminder & notification engine (①②③ proactive)
 **Goal:** the differentiator — one engine, proactive "N days ahead" alerts across all sources.
