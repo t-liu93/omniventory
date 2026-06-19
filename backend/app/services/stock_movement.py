@@ -6,8 +6,9 @@ This service owns all the "easy-to-get-wrong" ledger logic (M2 §5):
 - ``discard``      — write off stock (−qty); rejected if it drives the lot < 0.
 - ``adjust``       — stock-take to an absolute counted value (signed delta).
 - ``move``         — whole-lot location change (delta = 0).
-- ``consume_fifo`` — FIFO consumption across a definition's lots, oldest-first
-                     by (received_at, id).
+- ``consume_fifo`` — FEFO consumption across a definition's lots,
+                     nearest-expiry-first by (best_before_date NULLS LAST,
+                     received_at, id).
 - ``reverse``      — append a compensating correction movement; undo a past
                      movement without mutating the ledger.
 
@@ -403,11 +404,14 @@ class StockMovementService:
         occurred_at: datetime | None = None,
         note: str | None = None,
     ) -> list[StockInstance]:
-        """Consume stock from an exact-mode definition's lots in FIFO order.
+        """Consume stock from an exact-mode definition's lots in FEFO order.
 
-        Walks the definition's active lots oldest-first by (received_at, id),
+        Walks the definition's active lots nearest-expiry-first by
+        ``(best_before_date ASC NULLS LAST, received_at ASC, id ASC)``,
         decrementing each via a ``consume`` movement until the requested
-        quantity is satisfied.
+        quantity is satisfied.  Lots with a best-before date are consumed
+        before never-expiring lots (NULL best_before_date); lots sharing the
+        same best-before date fall back to oldest-received-first (M2 tie-break).
 
         If the total available stock is insufficient, raises ``stock.insufficient``
         (422) and writes NOTHING (transaction integrity).
@@ -456,7 +460,8 @@ class StockMovementService:
                 message=f"Consume quantity must be positive (> 0); got {quantity}.",
             )
 
-        # Load the lots eligible for FIFO: quantity > 0, ordered by (received_at, id).
+        # Load the lots eligible for FEFO: quantity > 0, ordered by
+        # (best_before_date ASC NULLS LAST, received_at ASC, id ASC).
         lots = self._instance_repo.list_active_lots_for_definition(definition.id)
 
         # Check total availability BEFORE writing anything (M2 §4.3).
@@ -472,7 +477,7 @@ class StockMovementService:
                 ),
             )
 
-        # Walk oldest-first, append one consume per lot touched.
+        # Walk nearest-expiry-first, append one consume per lot touched.
         remaining = quantity
         touched: list[StockInstance] = []
         for lot in lots:

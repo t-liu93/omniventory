@@ -84,13 +84,21 @@ class StockInstanceRepository:
         return list(self._db.scalars(stmt).all())
 
     def list_active_lots_for_definition(self, definition_id: int) -> list[StockInstance]:
-        """Return lots for a definition with quantity > 0, ordered by (received_at, id).
+        """Return lots for a definition with quantity > 0, ordered by the FEFO key.
 
-        This is the FIFO ordering key used by consume_fifo (M2 §4.3):
-        oldest received_at first, with id as the tie-breaker.
+        This is the FEFO ordering key used by consume_fifo (M3 §4.3):
+        nearest best_before_date first (dated lots before NULL/never-expiring
+        lots), then oldest received_at, then stable id as the tie-breaker.
+
+        NULLS-LAST is expressed portably via a leading ``best_before_date IS
+        NULL`` boolean (0 = dated, 1 = NULL) rather than a dialect-specific
+        ``NULLS LAST`` clause — this works correctly on both SQLite (which
+        sorts NULLs first under plain ASC) and Postgres (roadmap §2.11).
 
         Only lots with quantity > 0 are returned — zero-quantity lots are
-        retained in the DB (M2 §2 "empty lots are kept") but skipped by FIFO.
+        retained in the DB (M2 §2 "empty lots are kept") but skipped by FEFO.
+
+        The WHERE clause is unchanged from M2; only the ORDER BY changes.
 
         Pure data access — no business rules here.
         """
@@ -100,7 +108,14 @@ class StockInstanceRepository:
                 StockInstance.definition_id == definition_id,
                 StockInstance.quantity > 0,
             )
-            .order_by(StockInstance.received_at, StockInstance.id)
+            .order_by(
+                StockInstance.best_before_date.is_(
+                    None
+                ),  # 0=dated first, 1=NULL last (portable NULLS LAST)
+                StockInstance.best_before_date,  # nearest expiry first
+                StockInstance.received_at,  # then oldest received (M2 tie-break)
+                StockInstance.id,  # then stable id
+            )
         )
         return list(self._db.scalars(stmt).all())
 
