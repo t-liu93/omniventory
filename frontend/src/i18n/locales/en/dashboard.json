@@ -10,9 +10,16 @@
     "description": "Record serial numbers, warranties, purchase value, and full lifecycle history for durable assets.",
     "badge": "Coming soon"
   },
-  "consumableCard": {
-    "title": "Consumable Stock",
-    "description": "Monitor stock levels with in/out movement logs, minimum thresholds, and low-stock alerts.",
-    "badge": "Coming soon"
+  "lowStockCard": {
+    "title": "Low-stock Alert",
+    "countLabel_one": "{{count}} item low",
+    "countLabel_other": "{{count}} items low",
+    "nameLabel": "Item",
+    "currentLabel": "Current",
+    "thresholdLabel": "Threshold",
+    "levelLow": "Low",
+    "emptyState": "All stock levels look good.",
+    "loadError": "Failed to load low-stock data.",
+    "viewAll": "View all low-stock items"
   }
 }

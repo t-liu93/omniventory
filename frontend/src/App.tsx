@@ -30,6 +30,7 @@ import { Locations } from "./pages/Locations";
 import { Categories } from "./pages/Categories";
 import { Items, ItemDetail } from "./pages/Items";
 import { InstanceDetail } from "./pages/InstanceDetail";
+import { LowStock } from "./pages/LowStock";
 import { NotFound } from "./pages/NotFound";
 import { client } from "./api/client";
 import i18n from "./i18n";
@@ -111,6 +112,7 @@ function App() {
           <Route path="/items" element={<Items />} />
           <Route path="/items/:id" element={<ItemDetail />} />
           <Route path="/instances/:id" element={<InstanceDetail />} />
+          <Route path="/low-stock" element={<LowStock />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </AppShell>

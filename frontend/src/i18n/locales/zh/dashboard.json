@@ -10,9 +10,16 @@
     "description": "记录序列号、保修信息、购入价值及耐用资产的完整生命周期历史。",
     "badge": "即将上线"
   },
-  "consumableCard": {
-    "title": "消耗品库存",
-    "description": "通过出入库记录、最低库存阈值和低库存警报监控库存水平。",
-    "badge": "即将上线"
+  "lowStockCard": {
+    "title": "低库存警报",
+    "countLabel_one": "{{count}} 项库存不足",
+    "countLabel_other": "{{count}} 项库存不足",
+    "nameLabel": "物品",
+    "currentLabel": "当前",
+    "thresholdLabel": "阈值",
+    "levelLow": "低",
+    "emptyState": "所有库存水平正常。",
+    "loadError": "加载低库存数据失败。",
+    "viewAll": "查看所有低库存物品"
   }
 }
