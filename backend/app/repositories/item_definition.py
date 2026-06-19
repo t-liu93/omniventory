@@ -80,6 +80,7 @@ class ItemDefinitionRepository:
         default_location_id: int | None = None,
         stock_tracking_mode: str = "exact",
         min_stock: Decimal | None = None,
+        default_best_before_days: int | None = None,
     ) -> ItemDefinition:
         """Insert a new ItemDefinition and flush to get its PK."""
         defn = ItemDefinition(
@@ -91,6 +92,7 @@ class ItemDefinitionRepository:
             default_location_id=default_location_id,
             stock_tracking_mode=stock_tracking_mode,
             min_stock=min_stock,
+            default_best_before_days=default_best_before_days,
         )
         self._db.add(defn)
         self._db.flush()
@@ -111,6 +113,8 @@ class ItemDefinitionRepository:
         stock_tracking_mode: str | None = None,
         set_min_stock: bool = False,
         min_stock: Decimal | None = None,
+        set_default_best_before_days: bool = False,
+        default_best_before_days: int | None = None,
     ) -> ItemDefinition:
         """Apply partial field updates to an ItemDefinition.
 
@@ -118,8 +122,9 @@ class ItemDefinitionRepository:
         explicit ``set_*`` flag to distinguish "don't change" from "set to
         NULL" — the same pattern as the Location/Category repositories.
 
-        ``min_stock`` also uses an explicit ``set_min_stock`` flag for the same
-        reason (can legitimately be set to NULL to remove the threshold).
+        ``min_stock`` and ``default_best_before_days`` also use explicit
+        ``set_*`` flags for the same reason (can legitimately be set to NULL
+        to remove the threshold / shelf-life default).
         """
         if name is not None:
             defn.name = name
@@ -137,6 +142,8 @@ class ItemDefinitionRepository:
             defn.stock_tracking_mode = stock_tracking_mode
         if set_min_stock:
             defn.min_stock = min_stock
+        if set_default_best_before_days:
+            defn.default_best_before_days = default_best_before_days
         self._db.flush()
         return defn
 

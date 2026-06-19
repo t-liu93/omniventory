@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.schemas.item_kind import KindResponse
 
@@ -26,6 +26,15 @@ class DefinitionCreate(BaseModel):
     default_location_id: int | None = None
     stock_tracking_mode: str = "exact"  # validated app-layer against STOCK_TRACKING_MODES (M2)
     min_stock: Decimal | None = None  # low-stock threshold; meaningful for 'exact' mode only
+    default_best_before_days: int | None = Field(
+        default=None,
+        ge=0,
+        description=(
+            "Default shelf life in days (M3). ``NULL`` = no default. "
+            "Must be ≥ 0 (0 = same-day expiry). "
+            "Pydantic ge=0 is the sole validation; no DB CHECK constraint."
+        ),
+    )
 
 
 class DefinitionUpdate(BaseModel):
@@ -39,6 +48,14 @@ class DefinitionUpdate(BaseModel):
     default_location_id: int | None = None
     stock_tracking_mode: str | None = None  # validated app-layer against STOCK_TRACKING_MODES (M2)
     min_stock: Decimal | None = None  # low-stock threshold; meaningful for 'exact' mode only
+    default_best_before_days: int | None = Field(
+        default=None,
+        ge=0,
+        description=(
+            "Default shelf life in days (M3). ``NULL`` = remove the default. "
+            "Must be ≥ 0 when provided."
+        ),
+    )
 
 
 class DefinitionResponse(BaseModel):
@@ -54,6 +71,7 @@ class DefinitionResponse(BaseModel):
     default_location_id: int | None
     stock_tracking_mode: str
     min_stock: Decimal | None
+    default_best_before_days: int | None  # M3: shelf-life default in days; NULL = no default
     created_at: datetime
 
     model_config = {"from_attributes": True}

@@ -14,8 +14,10 @@ Design notes
   ``STOCK_TRACKING_MODES``; no DB CHECK constraint (roadmap §2.11).
 - ``min_stock`` (M2) is the reorder-point threshold; meaningful only for
   ``exact`` mode.  NULL means no threshold.
-- ``default_best_before_days`` (M3) is intentionally absent — added by the
-  milestone that consumes it (M1.md §2 "Definition defaults timing").
+- ``default_best_before_days`` (M3) is the default shelf life in days;
+  auto-computes a lot's ``best_before_date`` on intake when none is given
+  (M3 Step 2).  ``NULL`` means no default.  Validated ``≥ 0`` by Pydantic
+  (no DB CHECK — roadmap §2.11).  Editing it is non-retroactive.
 - ``default_location_id`` is a nullable FK → ``locations.id``; it is the
   *suggested* location for new instances of this definition.
 """
@@ -37,16 +39,19 @@ class ItemDefinition(Base):
 
     Columns
     -------
-    id                    Auto-increment surrogate PK.
-    name                  Human-readable product name.
-    description           Optional longer description.
-    category_id           FK → categories.id; nullable.
-    kind_id               FK → item_kinds.id; NOT NULL (service defaults to durable).
-    unit                  Free-text unit string (default ``pcs``).
-    default_location_id   FK → locations.id; nullable; suggested location for instances.
-    stock_tracking_mode   String(16); validated app-layer; default ``exact`` (M2).
-    min_stock             Numeric(18,6); nullable; low-stock threshold for ``exact`` mode (M2).
-    created_at            Row-creation timestamp (UTC, set by DB on insert).
+    id                         Auto-increment surrogate PK.
+    name                       Human-readable product name.
+    description                Optional longer description.
+    category_id                FK → categories.id; nullable.
+    kind_id                    FK → item_kinds.id; NOT NULL (service defaults to durable).
+    unit                       Free-text unit string (default ``pcs``).
+    default_location_id        FK → locations.id; nullable; suggested location for instances.
+    stock_tracking_mode        String(16); validated app-layer; default ``exact`` (M2).
+    min_stock                  Numeric(18,6); nullable; low-stock threshold for ``exact`` mode (M2).
+    default_best_before_days   Integer; nullable; default shelf life in days (M3). ``≥ 0``
+                               (Pydantic-validated). Auto-computes best_before_date on lot
+                               intake when none is provided. Editing is non-retroactive.
+    created_at                 Row-creation timestamp (UTC, set by DB on insert).
     """
 
     __tablename__ = "item_definitions"
@@ -83,6 +88,11 @@ class ItemDefinition(Base):
     )
     min_stock: Mapped[Decimal | None] = mapped_column(
         Numeric(18, 6),
+        nullable=True,
+        default=None,
+    )
+    default_best_before_days: Mapped[int | None] = mapped_column(
+        Integer,
         nullable=True,
         default=None,
     )

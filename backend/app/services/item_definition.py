@@ -141,6 +141,8 @@ class ItemDefinitionService:
         - Resolves ``kind_id`` (defaults to ``durable`` when omitted).
         - Validates ``category_id`` and ``default_location_id`` if provided.
         - Validates ``stock_tracking_mode`` against ``STOCK_TRACKING_MODES`` (M2).
+        - Stores ``default_best_before_days`` as-is; Pydantic ``ge=0`` is the
+          sole guard (M3.md §2 "No new error codes").
         """
         resolved_kind_id = self._resolve_kind_id(data.kind_id)
 
@@ -161,6 +163,7 @@ class ItemDefinitionService:
             default_location_id=data.default_location_id,
             stock_tracking_mode=data.stock_tracking_mode,
             min_stock=data.min_stock,
+            default_best_before_days=data.default_best_before_days,
         )
 
     def get(self, definition_id: int) -> ItemDefinition:
@@ -193,6 +196,8 @@ class ItemDefinitionService:
         - Validates ``stock_tracking_mode`` if provided (M2).
         - Rejects a tracking-mode change when the definition already has lots
           (M2 Step 4 — ``item_definition.tracking_mode_change_conflict``, 409).
+        - Stores ``default_best_before_days`` as-is; Pydantic ``ge=0`` is the
+          sole guard (M3.md §2 "No new error codes").
         """
         defn = self._get_or_404(definition_id)
 
@@ -204,6 +209,7 @@ class ItemDefinitionService:
         category_id_changed = "category_id" in data.model_fields_set
         location_id_changed = "default_location_id" in data.model_fields_set
         min_stock_changed = "min_stock" in data.model_fields_set
+        best_before_days_changed = "default_best_before_days" in data.model_fields_set
 
         if category_id_changed and data.category_id is not None:
             self._assert_category_exists(data.category_id)
@@ -249,6 +255,8 @@ class ItemDefinitionService:
             stock_tracking_mode=data.stock_tracking_mode,
             set_min_stock=min_stock_changed,
             min_stock=data.min_stock,
+            set_default_best_before_days=best_before_days_changed,
+            default_best_before_days=data.default_best_before_days,
         )
 
     def delete(self, definition_id: int) -> None:

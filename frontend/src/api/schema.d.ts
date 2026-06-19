@@ -796,6 +796,11 @@ export interface components {
         DefinitionCreate: {
             /** Category Id */
             category_id?: number | null;
+            /**
+             * Default Best Before Days
+             * @description Default shelf life in days (M3). ``NULL`` = no default. Must be ≥ 0 (0 = same-day expiry). Pydantic ge=0 is the sole validation; no DB CHECK constraint.
+             */
+            default_best_before_days?: number | null;
             /** Default Location Id */
             default_location_id?: number | null;
             /** Description */
@@ -829,6 +834,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Default Best Before Days */
+            default_best_before_days: number | null;
             /** Default Location Id */
             default_location_id: number | null;
             /** Description */
@@ -854,6 +861,11 @@ export interface components {
         DefinitionUpdate: {
             /** Category Id */
             category_id?: number | null;
+            /**
+             * Default Best Before Days
+             * @description Default shelf life in days (M3). ``NULL`` = remove the default. Must be ≥ 0 when provided.
+             */
+            default_best_before_days?: number | null;
             /** Default Location Id */
             default_location_id?: number | null;
             /** Description */
