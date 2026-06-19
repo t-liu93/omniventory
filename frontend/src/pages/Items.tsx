@@ -54,6 +54,7 @@ import {
   InstanceFormModal,
   type InstanceFormState,
 } from "../components/InstanceFormModal";
+import { ExpiryBadge } from "../components/ExpiryBadge";
 import { formatDate, formatQuantity } from "../i18n/format";
 
 // ── Schema types ─────────────────────────────────────────────────────────────
@@ -75,6 +76,7 @@ interface DefinitionFormState {
   default_location_id: string;
   stock_tracking_mode: string; // "exact" | "level" | "none"
   min_stock: string; // numeric string or "" when not set
+  default_best_before_days: string; // integer string or "" when not set
 }
 
 const emptyDefForm = (): DefinitionFormState => ({
@@ -86,6 +88,7 @@ const emptyDefForm = (): DefinitionFormState => ({
   default_location_id: "",
   stock_tracking_mode: "exact",
   min_stock: "",
+  default_best_before_days: "",
 });
 
 const emptyInstanceForm = (definitionId?: number): InstanceFormState => ({
@@ -96,6 +99,7 @@ const emptyInstanceForm = (definitionId?: number): InstanceFormState => ({
   serial: "",
   model_number: "",
   manufacturer: "",
+  best_before_date: "",
   warranty_expires: "",
   warranty_details: "",
   purchase_price: "",
@@ -248,6 +252,16 @@ function DefinitionFormModal({
             data-testid="def-min-stock-input"
           />
         )}
+        <NumberInput
+          label={t("defForm.defaultBestBeforeDaysLabel")}
+          placeholder={t("defForm.defaultBestBeforeDaysPlaceholder")}
+          value={form.default_best_before_days === "" ? "" : Number(form.default_best_before_days)}
+          onChange={(v) => setForm((f) => ({ ...f, default_best_before_days: v === "" ? "" : String(Math.round(Number(v))) }))}
+          min={0}
+          allowDecimal={false}
+          suffix=" days"
+          data-testid="def-default-best-before-days-input"
+        />
         <Group justify="flex-end">
           <Button variant="default" onClick={onClose} disabled={busy}>
             {t("common:actions.cancel", "Cancel")}
@@ -351,6 +365,8 @@ export function Items() {
         def.default_location_id != null ? String(def.default_location_id) : "",
       stock_tracking_mode: def.stock_tracking_mode ?? "exact",
       min_stock: def.min_stock != null ? String(def.min_stock) : "",
+      default_best_before_days:
+        def.default_best_before_days != null ? String(def.default_best_before_days) : "",
     });
     setDefError(null);
     setDefModal({ kind: "edit", def });
@@ -385,6 +401,10 @@ export function Items() {
           min_stock:
             defForm.stock_tracking_mode === "exact" && defForm.min_stock !== ""
               ? defForm.min_stock
+              : null,
+          default_best_before_days:
+            defForm.default_best_before_days !== ""
+              ? Number(defForm.default_best_before_days)
               : null,
         },
       });
@@ -423,6 +443,10 @@ export function Items() {
             min_stock:
               defForm.stock_tracking_mode === "exact" && defForm.min_stock !== ""
                 ? defForm.min_stock
+                : null,
+            default_best_before_days:
+              defForm.default_best_before_days !== ""
+                ? Number(defForm.default_best_before_days)
                 : null,
           },
         },
@@ -784,6 +808,8 @@ export function ItemDetail() {
         def.default_location_id != null ? String(def.default_location_id) : "",
       stock_tracking_mode: def.stock_tracking_mode ?? "exact",
       min_stock: def.min_stock != null ? String(def.min_stock) : "",
+      default_best_before_days:
+        def.default_best_before_days != null ? String(def.default_best_before_days) : "",
     });
     setDefError(null);
     setDefModal({ kind: "edit", def });
@@ -817,6 +843,10 @@ export function ItemDetail() {
             min_stock:
               defForm.stock_tracking_mode === "exact" && defForm.min_stock !== ""
                 ? defForm.min_stock
+                : null,
+            default_best_before_days:
+              defForm.default_best_before_days !== ""
+                ? Number(defForm.default_best_before_days)
                 : null,
           },
         },
@@ -858,7 +888,18 @@ export function ItemDetail() {
   // ── Instance CRUD ──────────────────────────────────────────────────────────
 
   function openCreateInst() {
-    setInstForm(emptyInstanceForm(defId));
+    const form = emptyInstanceForm(defId);
+    // Pre-fill best_before_date from the definition's default shelf life (M3).
+    // The user can override or clear; the server also auto-computes on create when omitted.
+    if (def?.default_best_before_days != null) {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() + def.default_best_before_days);
+      const y = d.getUTCFullYear();
+      const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+      const day = String(d.getUTCDate()).padStart(2, "0");
+      form.best_before_date = `${y}-${m}-${day}`;
+    }
+    setInstForm(form);
     setInstError(null);
     setInstModal({ kind: "create", definitionId: defId });
   }
@@ -872,6 +913,7 @@ export function ItemDetail() {
       serial: inst.serial ?? "",
       model_number: inst.model_number ?? "",
       manufacturer: inst.manufacturer ?? "",
+      best_before_date: inst.best_before_date ?? "",
       warranty_expires: inst.warranty_expires ?? "",
       warranty_details: inst.warranty_details ?? "",
       purchase_price: inst.purchase_price ?? "",
@@ -911,6 +953,7 @@ export function ItemDetail() {
           serial,
           model_number: instForm.model_number.trim() || null,
           manufacturer: instForm.manufacturer.trim() || null,
+          best_before_date: instForm.best_before_date.trim() || null,
           warranty_expires: instForm.warranty_expires.trim() || null,
           warranty_details: instForm.warranty_details.trim() || null,
           purchase_price: instForm.purchase_price.trim() || null,
@@ -950,6 +993,7 @@ export function ItemDetail() {
             serial,
             model_number: instForm.model_number.trim() || null,
             manufacturer: instForm.manufacturer.trim() || null,
+            best_before_date: instForm.best_before_date.trim() || null,
             warranty_expires: instForm.warranty_expires.trim() || null,
             warranty_details: instForm.warranty_details.trim() || null,
             purchase_price: instForm.purchase_price.trim() || null,
@@ -1236,6 +1280,16 @@ export function ItemDetail() {
                 </Text>
               </Stack>
             )}
+            {def.default_best_before_days != null && (
+              <Stack gap={2}>
+                <Text size="xs" c="dimmed" fw={500} tt="uppercase">
+                  {t("detail.defaultBestBeforeDaysLabel")}
+                </Text>
+                <Text size="sm" data-testid="def-default-best-before-days-value">
+                  {t("expiry:shelfLifeDisplay", { days: def.default_best_before_days })}
+                </Text>
+              </Stack>
+            )}
           </SimpleGrid>
         </Stack>
       </Card>
@@ -1297,6 +1351,7 @@ export function ItemDetail() {
                   <Table.Th>{t("detail.colLocation")}</Table.Th>
                   <Table.Th>{t("detail.colManufacturer")}</Table.Th>
                   <Table.Th>{t("detail.colWarranty")}</Table.Th>
+                  <Table.Th>{t("detail.colBestBefore")}</Table.Th>
                   <Table.Th />
                 </Table.Tr>
               </Table.Thead>
@@ -1347,6 +1402,16 @@ export function ItemDetail() {
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm">{inst.warranty_expires ? formatDate(inst.warranty_expires) : "—"}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Group gap={4} align="center" wrap="nowrap">
+                        {inst.best_before_date ? (
+                          <Text size="sm">{formatDate(inst.best_before_date)}</Text>
+                        ) : (
+                          <Text size="sm" c="dimmed">—</Text>
+                        )}
+                        <ExpiryBadge bestBeforeDate={inst.best_before_date} />
+                      </Group>
                     </Table.Td>
                     <Table.Td>
                       <Group gap={4} justify="flex-end" wrap="nowrap">
@@ -1602,6 +1667,7 @@ export function ItemDetail() {
         lockDefinition
         trackingMode={def?.stock_tracking_mode ?? "exact"}
         isEdit={false}
+        definitionDefaultBestBeforeDays={def?.default_best_before_days}
       />
 
       {/* Edit instance modal */}
@@ -1619,6 +1685,7 @@ export function ItemDetail() {
         lockDefinition
         trackingMode={def?.stock_tracking_mode ?? "exact"}
         isEdit={true}
+        definitionDefaultBestBeforeDays={def?.default_best_before_days}
       />
 
       {/* Delete instance modal */}

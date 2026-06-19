@@ -29,6 +29,7 @@
     "defaultLocationLabel": "默认位置：",
     "trackingModeLabel": "追踪模式：",
     "minStockLabel": "最低库存：",
+    "defaultBestBeforeDaysLabel": "默认保质期：",
     "instancesTitle": "实例",
     "registerInstanceBtn": "登记实例",
     "instanceSearchPlaceholder": "按序列号、型号、制造商搜索……",
@@ -38,6 +39,7 @@
     "colLocation": "位置",
     "colManufacturer": "制造商",
     "colWarranty": "保修",
+    "colBestBefore": "到期日",
     "editInstanceAriaLabel": "编辑实例 {{id}}",
     "deleteInstanceAriaLabel": "删除实例 {{id}}"
   },
@@ -60,6 +62,8 @@
     "trackingModeLabel": "库存追踪模式",
     "minStockLabel": "最低库存（补货点）",
     "minStockPlaceholder": "例如 4",
+    "defaultBestBeforeDaysLabel": "默认保质期（天）",
+    "defaultBestBeforeDaysPlaceholder": "例如 7",
     "noneOption": "— 无 —"
   },
   "deleteDefModal": {

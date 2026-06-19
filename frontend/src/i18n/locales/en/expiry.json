@@ -1,0 +1,10 @@
+{
+  "bestBeforeLabel": "Best Before",
+  "expired": "Expired",
+  "expiresIn_one": "Expires in {{count}} day",
+  "expiresIn_other": "Expires in {{count}} days",
+  "expiresInDays": "Expires in {{count}} days",
+  "defaultHint": "Will default to {{date}} if left empty (definition default: {{days}} days)",
+  "shelfLifeLabel": "Default shelf life",
+  "shelfLifeDisplay": "Default shelf life: {{days}} days"
+}

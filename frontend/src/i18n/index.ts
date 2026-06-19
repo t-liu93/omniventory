@@ -33,6 +33,7 @@ import enInstances from "./locales/en/instances.json";
 import enErrors from "./locales/en/errors.json";
 import enDashboard from "./locales/en/dashboard.json";
 import enStock from "./locales/en/stock.json";
+import enExpiry from "./locales/en/expiry.json";
 
 // Locale bundles — zh
 import zhCommon from "./locales/zh/common.json";
@@ -45,6 +46,7 @@ import zhInstances from "./locales/zh/instances.json";
 import zhErrors from "./locales/zh/errors.json";
 import zhDashboard from "./locales/zh/dashboard.json";
 import zhStock from "./locales/zh/stock.json";
+import zhExpiry from "./locales/zh/expiry.json";
 
 const NAMESPACES = [
   "common",
@@ -57,6 +59,7 @@ const NAMESPACES = [
   "errors",
   "dashboard",
   "stock",
+  "expiry",
 ] as const;
 
 i18next
@@ -80,6 +83,7 @@ i18next
         errors: enErrors,
         dashboard: enDashboard,
         stock: enStock,
+        expiry: enExpiry,
       },
       zh: {
         common: zhCommon,
@@ -92,6 +96,7 @@ i18next
         errors: zhErrors,
         dashboard: zhDashboard,
         stock: zhStock,
+        expiry: zhExpiry,
       },
     },
     detection: {

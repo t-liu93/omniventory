@@ -29,6 +29,7 @@
     "defaultLocationLabel": "Default location: ",
     "trackingModeLabel": "Tracking mode: ",
     "minStockLabel": "Min stock: ",
+    "defaultBestBeforeDaysLabel": "Default shelf life: ",
     "instancesTitle": "Instances",
     "registerInstanceBtn": "Register instance",
     "instanceSearchPlaceholder": "Search by serial, model, manufacturer…",
@@ -38,6 +39,7 @@
     "colLocation": "Location",
     "colManufacturer": "Manufacturer",
     "colWarranty": "Warranty",
+    "colBestBefore": "Best Before",
     "editInstanceAriaLabel": "Edit instance {{id}}",
     "deleteInstanceAriaLabel": "Delete instance {{id}}"
   },
@@ -60,6 +62,8 @@
     "trackingModeLabel": "Stock tracking mode",
     "minStockLabel": "Min stock (reorder point)",
     "minStockPlaceholder": "e.g. 4",
+    "defaultBestBeforeDaysLabel": "Default shelf life (days)",
+    "defaultBestBeforeDaysPlaceholder": "e.g. 7",
     "noneOption": "— None —"
   },
   "deleteDefModal": {

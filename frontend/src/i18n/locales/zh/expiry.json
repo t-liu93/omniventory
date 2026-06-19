@@ -1,0 +1,10 @@
+{
+  "bestBeforeLabel": "最佳食用期/到期日",
+  "expired": "已过期",
+  "expiresIn_one": "还有 {{count}} 天到期",
+  "expiresIn_other": "还有 {{count}} 天到期",
+  "expiresInDays": "还有 {{count}} 天到期",
+  "defaultHint": "如不填写将自动计算为 {{date}}（定义默认保质期：{{days}} 天）",
+  "shelfLifeLabel": "默认保质期",
+  "shelfLifeDisplay": "默认保质期：{{days}} 天"
+}

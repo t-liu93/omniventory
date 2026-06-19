@@ -26,6 +26,20 @@ import {
 import { AlertCircle } from "react-feather";
 import { useTranslation } from "react-i18next";
 import type { components } from "../api/schema";
+import { formatDate } from "../i18n/format";
+
+/**
+ * Compute today + N days as an ISO YYYY-MM-DD string (UTC).
+ * Used for the best_before_date pre-fill when the definition has a default.
+ */
+function computeDefaultBestBefore(days: number): string {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + days);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -40,6 +54,7 @@ export interface InstanceFormState {
   serial: string;
   model_number: string;
   manufacturer: string;
+  best_before_date: string; // ISO date string or "" (M3)
   warranty_expires: string;
   warranty_details: string;
   purchase_price: string;
@@ -73,6 +88,12 @@ export interface InstanceFormModalProps {
    * In exact mode: quantity is locked/disabled (changes go through ledger).
    */
   isEdit?: boolean;
+  /**
+   * The parent definition's default_best_before_days (M3).
+   * When set and best_before_date is empty on create, the form pre-fills the
+   * computed date (today + N) and shows a hint. Mode-independent.
+   */
+  definitionDefaultBestBeforeDays?: number | null;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -91,9 +112,19 @@ export function InstanceFormModal({
   lockDefinition,
   trackingMode = "exact",
   isEdit = false,
+  definitionDefaultBestBeforeDays,
 }: InstanceFormModalProps) {
   const { t } = useTranslation("instances");
   const { t: tStock } = useTranslation("stock");
+  const { t: tExpiry } = useTranslation("expiry");
+
+  // Pre-fill best_before_date when the form opens (create mode) with the computed
+  // default if the field is empty and the definition has a default shelf life.
+  // We call computeDefaultBestBefore only when needed; it is deterministic for a given day.
+  const computedDefaultDate =
+    !isEdit && definitionDefaultBestBeforeDays != null
+      ? computeDefaultBestBefore(definitionDefaultBestBeforeDays)
+      : null;
 
   // Client-side serial ⇒ quantity = 1 rule (§7.3, exact mode only):
   // When serial is non-empty, force quantity to "1" and disable the field.
@@ -225,6 +256,26 @@ export function InstanceFormModal({
           }}
           data-testid="inst-manufacturer-input"
         />
+        {/* Best-before date (M3) — mode-independent, shown for all modes */}
+        <TextInput
+          label={t("form.bestBeforeDateLabel")}
+          placeholder={t("form.bestBeforeDatePlaceholder")}
+          value={form.best_before_date}
+          onChange={(e) => {
+            const value = e.currentTarget.value;
+            setForm((f) => ({ ...f, best_before_date: value }));
+          }}
+          description={
+            !isEdit && computedDefaultDate && !form.best_before_date
+              ? tExpiry("defaultHint", {
+                  date: formatDate(computedDefaultDate),
+                  days: definitionDefaultBestBeforeDays,
+                })
+              : undefined
+          }
+          data-testid="inst-best-before-date-input"
+        />
+
         <TextInput
           label={t("form.warrantyExpiresLabel")}
           placeholder={t("form.warrantyExpiresPlaceholder")}

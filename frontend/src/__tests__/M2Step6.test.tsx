@@ -253,6 +253,7 @@ function InstanceFormModalWrapper(props: {
     serial: "",
     model_number: "",
     manufacturer: "",
+    best_before_date: "",
     warranty_expires: "",
     warranty_details: "",
     purchase_price: "",

@@ -48,6 +48,7 @@ import {
   InstanceFormModal,
   type InstanceFormState,
 } from "../components/InstanceFormModal";
+import { ExpiryBadge } from "../components/ExpiryBadge";
 import { formatDate, formatQuantity } from "../i18n/format";
 
 // ── Schema types ─────────────────────────────────────────────────────────────
@@ -66,6 +67,7 @@ function instToForm(inst: InstanceResponse): InstanceFormState {
     serial: inst.serial ?? "",
     model_number: inst.model_number ?? "",
     manufacturer: inst.manufacturer ?? "",
+    best_before_date: inst.best_before_date ?? "",
     warranty_expires: inst.warranty_expires ?? "",
     warranty_details: inst.warranty_details ?? "",
     purchase_price: inst.purchase_price ?? "",
@@ -82,6 +84,7 @@ const emptyForm: InstanceFormState = {
   serial: "",
   model_number: "",
   manufacturer: "",
+  best_before_date: "",
   warranty_expires: "",
   warranty_details: "",
   purchase_price: "",
@@ -230,6 +233,7 @@ export function InstanceDetail() {
           serial,
           model_number: form.model_number.trim() || null,
           manufacturer: form.manufacturer.trim() || null,
+          best_before_date: form.best_before_date.trim() || null,
           warranty_expires: form.warranty_expires.trim() || null,
           warranty_details: form.warranty_details.trim() || null,
           purchase_price: form.purchase_price.trim() || null,
@@ -490,6 +494,16 @@ export function InstanceDetail() {
           <DetailField label={t("detail.serialField")} value={inst.serial} />
           <DetailField label={t("detail.modelNumberField")} value={inst.model_number} />
           <DetailField label={t("detail.manufacturerField")} value={inst.manufacturer} />
+          {/* Best-before date with expiry badge (M3) */}
+          <Stack gap={2}>
+            <Text size="xs" c="dimmed" fw={500}>
+              {t("detail.bestBeforeDateField")}
+            </Text>
+            <Group gap={6} align="center">
+              <Text size="sm">{formatDate(inst.best_before_date) || "—"}</Text>
+              <ExpiryBadge bestBeforeDate={inst.best_before_date} />
+            </Group>
+          </Stack>
           <DetailField label={t("detail.warrantyExpiresField")} value={formatDate(inst.warranty_expires)} />
           <DetailField label={t("detail.warrantyDetailsField")} value={inst.warranty_details} />
           <DetailField label={t("detail.purchasePriceField")} value={inst.purchase_price} />
