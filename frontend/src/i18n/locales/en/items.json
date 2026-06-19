@@ -41,7 +41,10 @@
     "colWarranty": "Warranty",
     "colBestBefore": "Best Before",
     "editInstanceAriaLabel": "Edit instance {{id}}",
-    "deleteInstanceAriaLabel": "Delete instance {{id}}"
+    "deleteInstanceAriaLabel": "Delete instance {{id}}",
+    "lotRowAriaLabel": "Lot {{serial}}",
+    "lotRowAriaLabelBestBefore": "Lot best before {{date}}",
+    "lotRowAriaLabelId": "Lot #{{id}}"
   },
   "kinds": {
     "durable": "Durable",

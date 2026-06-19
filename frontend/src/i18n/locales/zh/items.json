@@ -41,7 +41,10 @@
     "colWarranty": "保修",
     "colBestBefore": "到期日",
     "editInstanceAriaLabel": "编辑实例 {{id}}",
-    "deleteInstanceAriaLabel": "删除实例 {{id}}"
+    "deleteInstanceAriaLabel": "删除实例 {{id}}",
+    "lotRowAriaLabel": "批次 {{serial}}",
+    "lotRowAriaLabelBestBefore": "批次最佳食用期 {{date}}",
+    "lotRowAriaLabelId": "批次 #{{id}}"
   },
   "kinds": {
     "durable": "耐用品",

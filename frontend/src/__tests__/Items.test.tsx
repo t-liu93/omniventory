@@ -653,8 +653,10 @@ describe("ItemDetail page — instance list renders", () => {
       });
     });
 
-    it("renders null warranty_expires as — (em-dash placeholder)", async () => {
-      // Override the mock to return an instance without warranty_expires
+    it("hides the Warranty column entirely when no lot has warranty_expires set", async () => {
+      // Override the mock to return an instance without warranty_expires.
+      // With data-driven column visibility the Warranty column is hidden (not
+      // shown with a "—" placeholder) when no lot has a warranty date.
       vi.mocked(client.GET).mockImplementation(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (path: any) => {
@@ -694,9 +696,10 @@ describe("ItemDetail page — instance list renders", () => {
       );
 
       await waitFor(() => {
-        // The — placeholder must appear in the warranty column
-        const dashes = screen.getAllByText("—");
-        expect(dashes.length).toBeGreaterThan(0);
+        // The Warranty column header must be absent (data-driven: no lot has warranty_expires).
+        expect(screen.queryByRole("columnheader", { name: /warranty/i })).toBeNull();
+        // The row itself still renders (Serial and Manufacturer are present in this lot).
+        expect(screen.getByText("SN-12345")).toBeDefined();
       });
     });
   });

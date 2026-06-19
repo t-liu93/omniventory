@@ -1169,6 +1169,13 @@ export function ItemDetail() {
       return total < parseFloat(def.min_stock);
     })();
 
+  // Data-driven column visibility: only show a column if at least one lot has a
+  // value for that field. Qty, Location, and the actions column are always shown.
+  const showSerial = instances.some((i) => !!i.serial);
+  const showManufacturer = instances.some((i) => !!i.manufacturer);
+  const showWarranty = instances.some((i) => !!i.warranty_expires);
+  const showBestBefore = instances.some((i) => !!i.best_before_date);
+
   const catName =
     def.category_id != null
       ? (categories.find((c) => c.id === def.category_id)?.name ?? "—")
@@ -1346,139 +1353,158 @@ export function ItemDetail() {
             <Table highlightOnHover verticalSpacing="sm">
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th>{t("detail.colSerial")}</Table.Th>
+                  {showSerial && <Table.Th>{t("detail.colSerial")}</Table.Th>}
                   <Table.Th>{t("detail.colQty")}</Table.Th>
                   <Table.Th>{t("detail.colLocation")}</Table.Th>
-                  <Table.Th>{t("detail.colManufacturer")}</Table.Th>
-                  <Table.Th>{t("detail.colWarranty")}</Table.Th>
-                  <Table.Th>{t("detail.colBestBefore")}</Table.Th>
+                  {showManufacturer && <Table.Th>{t("detail.colManufacturer")}</Table.Th>}
+                  {showWarranty && <Table.Th>{t("detail.colWarranty")}</Table.Th>}
+                  {showBestBefore && <Table.Th>{t("detail.colBestBefore")}</Table.Th>}
                   <Table.Th />
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
-                {instances.map((inst) => (
-                  <Table.Tr key={inst.id} data-testid={`inst-row-${inst.id}`}>
-                    <Table.Td>
-                      <Anchor
-                        component={Link}
-                        to={`/instances/${inst.id}`}
-                        size="sm"
-                        fw={500}
-                      >
-                        {inst.serial ?? (
-                          <Text span c="dimmed" size="sm">
-                            —
-                          </Text>
-                        )}
-                      </Anchor>
-                    </Table.Td>
-                    <Table.Td>
-                      {/* Render by mode: exact (or unset default) → quantity, level → badge, none → — */}
-                      {(def.stock_tracking_mode ?? "exact") !== "level" && (def.stock_tracking_mode ?? "exact") !== "none" ? (
-                        <Text size="sm" data-testid={`inst-qty-${inst.id}`}>{formatQuantity(inst.quantity)}</Text>
-                      ) : def.stock_tracking_mode === "level" && inst.stock_level ? (
-                        <Badge
-                          size="sm"
-                          color={inst.stock_level === "high" ? "green" : inst.stock_level === "medium" ? "yellow" : "red"}
-                          variant="light"
-                          data-testid={`inst-level-badge-${inst.id}`}
-                        >
-                          {tStock(`stockLevel.${inst.stock_level}`, { defaultValue: inst.stock_level })}
-                        </Badge>
-                      ) : (
-                        <Text size="sm" c="dimmed">—</Text>
+                {instances.map((inst) => {
+                  const rowAriaLabel = inst.serial
+                    ? t("detail.lotRowAriaLabel", { serial: inst.serial })
+                    : inst.best_before_date
+                      ? t("detail.lotRowAriaLabelBestBefore", { date: inst.best_before_date })
+                      : t("detail.lotRowAriaLabelId", { id: inst.id });
+                  return (
+                    <Table.Tr
+                      key={inst.id}
+                      data-testid={`inst-row-${inst.id}`}
+                      onClick={() => navigate(`/instances/${inst.id}`)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          if (e.key === " ") e.preventDefault();
+                          navigate(`/instances/${inst.id}`);
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={rowAriaLabel}
+                      style={{ cursor: "pointer" }}
+                    >
+                      {showSerial && (
+                        <Table.Td>
+                          <Text size="sm" fw={500}>{inst.serial ?? <Text span c="dimmed" size="sm">—</Text>}</Text>
+                        </Table.Td>
                       )}
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm" c="dimmed">
-                        {inst.location_id != null
-                          ? (locations.find((l) => l.id === inst.location_id)
-                              ?.name ?? inst.location_id)
-                          : "—"}
-                      </Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm">{inst.manufacturer ?? "—"}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm">{inst.warranty_expires ? formatDate(inst.warranty_expires) : "—"}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Group gap={4} align="center" wrap="nowrap">
-                        {inst.best_before_date ? (
-                          <Text size="sm">{formatDate(inst.best_before_date)}</Text>
+                      <Table.Td>
+                        {/* Render by mode: exact (or unset default) → quantity, level → badge, none → — */}
+                        {(def.stock_tracking_mode ?? "exact") !== "level" && (def.stock_tracking_mode ?? "exact") !== "none" ? (
+                          <Text size="sm" data-testid={`inst-qty-${inst.id}`}>{formatQuantity(inst.quantity)}</Text>
+                        ) : def.stock_tracking_mode === "level" && inst.stock_level ? (
+                          <Badge
+                            size="sm"
+                            color={inst.stock_level === "high" ? "green" : inst.stock_level === "medium" ? "yellow" : "red"}
+                            variant="light"
+                            data-testid={`inst-level-badge-${inst.id}`}
+                          >
+                            {tStock(`stockLevel.${inst.stock_level}`, { defaultValue: inst.stock_level })}
+                          </Badge>
                         ) : (
                           <Text size="sm" c="dimmed">—</Text>
                         )}
-                        <ExpiryBadge bestBeforeDate={inst.best_before_date} />
-                      </Group>
-                    </Table.Td>
-                    <Table.Td>
-                      <Group gap={4} justify="flex-end" wrap="nowrap">
-                        <ActionIcon
-                          size="sm"
-                          variant="subtle"
-                          aria-label={t("detail.editInstanceAriaLabel", { id: inst.id })}
-                          onClick={() => openEditInst(inst)}
-                          data-testid={`edit-inst-${inst.id}`}
-                        >
-                          <Edit2 size={14} />
-                        </ActionIcon>
-                        {/* Per-lot ledger action menu (exact mode only) */}
-                        {def.stock_tracking_mode === "exact" && (
-                          <Menu shadow="md" position="bottom-end" withinPortal>
-                            <Menu.Target>
-                              <ActionIcon
-                                size="sm"
-                                variant="subtle"
-                                aria-label={tInst("detail.actionsTitle")}
-                                data-testid={`lot-actions-${inst.id}`}
-                              >
-                                <MoreVertical size={14} />
-                              </ActionIcon>
-                            </Menu.Target>
-                            <Menu.Dropdown>
-                              <Menu.Item
-                                onClick={() => openLedgerAction("intake", inst.id)}
-                                data-testid={`lot-intake-${inst.id}`}
-                              >
-                                {tStock("actions.intake")}
-                              </Menu.Item>
-                              <Menu.Item
-                                onClick={() => openLedgerAction("adjust", inst.id)}
-                                data-testid={`lot-adjust-${inst.id}`}
-                              >
-                                {tStock("actions.adjust")}
-                              </Menu.Item>
-                              <Menu.Item
-                                onClick={() => openLedgerAction("discard", inst.id)}
-                                data-testid={`lot-discard-${inst.id}`}
-                              >
-                                {tStock("actions.discard")}
-                              </Menu.Item>
-                              <Menu.Item
-                                onClick={() => openLedgerAction("move", inst.id)}
-                                data-testid={`lot-move-${inst.id}`}
-                              >
-                                {tStock("actions.move")}
-                              </Menu.Item>
-                            </Menu.Dropdown>
-                          </Menu>
-                        )}
-                        <ActionIcon
-                          size="sm"
-                          variant="subtle"
-                          color="red"
-                          aria-label={t("detail.deleteInstanceAriaLabel", { id: inst.id })}
-                          onClick={() => openDeleteInst(inst)}
-                          data-testid={`delete-inst-${inst.id}`}
-                        >
-                          <Trash2 size={14} />
-                        </ActionIcon>
-                      </Group>
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm" c="dimmed">
+                          {inst.location_id != null
+                            ? (locations.find((l) => l.id === inst.location_id)
+                                ?.name ?? inst.location_id)
+                            : "—"}
+                        </Text>
+                      </Table.Td>
+                      {showManufacturer && (
+                        <Table.Td>
+                          <Text size="sm">{inst.manufacturer ?? "—"}</Text>
+                        </Table.Td>
+                      )}
+                      {showWarranty && (
+                        <Table.Td>
+                          <Text size="sm">{inst.warranty_expires ? formatDate(inst.warranty_expires) : "—"}</Text>
+                        </Table.Td>
+                      )}
+                      {showBestBefore && (
+                        <Table.Td>
+                          <Group gap={4} align="center" wrap="nowrap">
+                            {inst.best_before_date ? (
+                              <Text size="sm">{formatDate(inst.best_before_date)}</Text>
+                            ) : (
+                              <Text size="sm" c="dimmed">—</Text>
+                            )}
+                            <ExpiryBadge bestBeforeDate={inst.best_before_date} />
+                          </Group>
+                        </Table.Td>
+                      )}
+                      <Table.Td onClick={(e) => e.stopPropagation()}>
+                        <Group gap={4} justify="flex-end" wrap="nowrap">
+                          <ActionIcon
+                            size="sm"
+                            variant="subtle"
+                            aria-label={t("detail.editInstanceAriaLabel", { id: inst.id })}
+                            onClick={(e) => { e.stopPropagation(); openEditInst(inst); }}
+                            data-testid={`edit-inst-${inst.id}`}
+                          >
+                            <Edit2 size={14} />
+                          </ActionIcon>
+                          {/* Per-lot ledger action menu (exact mode only) */}
+                          {def.stock_tracking_mode === "exact" && (
+                            <Menu shadow="md" position="bottom-end" withinPortal>
+                              <Menu.Target>
+                                <ActionIcon
+                                  size="sm"
+                                  variant="subtle"
+                                  aria-label={tInst("detail.actionsTitle")}
+                                  data-testid={`lot-actions-${inst.id}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <MoreVertical size={14} />
+                                </ActionIcon>
+                              </Menu.Target>
+                              <Menu.Dropdown>
+                                <Menu.Item
+                                  onClick={(e) => { e.stopPropagation(); openLedgerAction("intake", inst.id); }}
+                                  data-testid={`lot-intake-${inst.id}`}
+                                >
+                                  {tStock("actions.intake")}
+                                </Menu.Item>
+                                <Menu.Item
+                                  onClick={(e) => { e.stopPropagation(); openLedgerAction("adjust", inst.id); }}
+                                  data-testid={`lot-adjust-${inst.id}`}
+                                >
+                                  {tStock("actions.adjust")}
+                                </Menu.Item>
+                                <Menu.Item
+                                  onClick={(e) => { e.stopPropagation(); openLedgerAction("discard", inst.id); }}
+                                  data-testid={`lot-discard-${inst.id}`}
+                                >
+                                  {tStock("actions.discard")}
+                                </Menu.Item>
+                                <Menu.Item
+                                  onClick={(e) => { e.stopPropagation(); openLedgerAction("move", inst.id); }}
+                                  data-testid={`lot-move-${inst.id}`}
+                                >
+                                  {tStock("actions.move")}
+                                </Menu.Item>
+                              </Menu.Dropdown>
+                            </Menu>
+                          )}
+                          <ActionIcon
+                            size="sm"
+                            variant="subtle"
+                            color="red"
+                            aria-label={t("detail.deleteInstanceAriaLabel", { id: inst.id })}
+                            onClick={(e) => { e.stopPropagation(); openDeleteInst(inst); }}
+                            data-testid={`delete-inst-${inst.id}`}
+                          >
+                            <Trash2 size={14} />
+                          </ActionIcon>
+                        </Group>
+                      </Table.Td>
+                    </Table.Tr>
+                  );
+                })}
               </Table.Tbody>
             </Table>
           </Table.ScrollContainer>
