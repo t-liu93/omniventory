@@ -42,6 +42,7 @@ All DB access goes through ``StockInstanceRepository`` and
 
 from __future__ import annotations
 
+from datetime import date, timedelta
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -264,6 +265,31 @@ class StockInstanceService:
             return None
         return defn.default_location_id
 
+    @staticmethod
+    def _resolve_best_before(
+        data: InstanceCreate,
+        definition: ItemDefinition,
+    ) -> date | None:
+        """Resolve the effective best_before_date for a new instance.
+
+        Precedence (M3 §4.2 — mode-independent):
+        1. If ``best_before_date`` is in ``data.model_fields_set`` (explicitly
+           provided, even if None or a past date) → return it verbatim.
+           Explicit always wins; auto-compute only fills an omitted value.
+        2. Elif the definition has a ``default_best_before_days`` (not None)
+           → return ``date.today() + timedelta(days=N)``.
+        3. Else → return ``None`` (no expiry tracked).
+
+        The reference "today" is the server date (``date.today()``).
+        This is computed in the service so it needs no post-flush DB read.
+        """
+        if "best_before_date" in data.model_fields_set:
+            # Explicit wins — even an explicit None or a past date.
+            return data.best_before_date
+        if definition.default_best_before_days is not None:
+            return date.today() + timedelta(days=definition.default_best_before_days)
+        return None
+
     # ---------------------------------------------------------------------- #
     # Ledger helpers                                                           #
     # ---------------------------------------------------------------------- #
@@ -300,6 +326,11 @@ class StockInstanceService:
 
         For ``none`` mode:
             Validate neither field present; create row with quantity=NULL.
+
+        In all modes:
+            best_before_date is resolved before the mode branch (mode-independent)
+            via ``_resolve_best_before``: explicit wins → definition default → NULL
+            (M3 Step 2 §4.2).
         """
         defn = self._get_definition_or_404(data.definition_id)
         mode = defn.stock_tracking_mode
@@ -317,6 +348,10 @@ class StockInstanceService:
             data.location_id,
             location_id_provided,
         )
+
+        # Resolve best_before_date BEFORE the mode branch — it is mode-independent.
+        # Precedence: explicit wins (even None / past date) → definition default → NULL.
+        resolved_best_before = self._resolve_best_before(data, defn)
 
         if mode == "exact":
             # Initial intake quantity — default to 1 when not supplied.
@@ -336,6 +371,7 @@ class StockInstanceService:
                 manufacturer=data.manufacturer,
                 warranty_expires=data.warranty_expires,
                 warranty_details=data.warranty_details,
+                best_before_date=resolved_best_before,
                 purchase_price=data.purchase_price,
                 purchase_date=data.purchase_date,
                 purchase_source=data.purchase_source,
@@ -366,6 +402,7 @@ class StockInstanceService:
                 manufacturer=data.manufacturer,
                 warranty_expires=data.warranty_expires,
                 warranty_details=data.warranty_details,
+                best_before_date=resolved_best_before,
                 purchase_price=data.purchase_price,
                 purchase_date=data.purchase_date,
                 purchase_source=data.purchase_source,
@@ -384,6 +421,7 @@ class StockInstanceService:
                 manufacturer=data.manufacturer,
                 warranty_expires=data.warranty_expires,
                 warranty_details=data.warranty_details,
+                best_before_date=resolved_best_before,
                 purchase_price=data.purchase_price,
                 purchase_date=data.purchase_date,
                 purchase_source=data.purchase_source,
@@ -455,6 +493,8 @@ class StockInstanceService:
             warranty_expires=data.warranty_expires,
             set_warranty_details="warranty_details" in data.model_fields_set,
             warranty_details=data.warranty_details,
+            set_best_before_date="best_before_date" in data.model_fields_set,
+            best_before_date=data.best_before_date,
             set_purchase_price="purchase_price" in data.model_fields_set,
             purchase_price=data.purchase_price,
             set_purchase_date="purchase_date" in data.model_fields_set,

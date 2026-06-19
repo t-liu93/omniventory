@@ -39,6 +39,13 @@ class InstanceCreate(BaseModel):
     ``stock_level`` — required for ``level``-mode lots; must be one of
     STOCK_LEVELS (validated by the service, not here).  Must not be provided
     for ``exact`` and ``none`` modes.
+
+    ``best_before_date`` — optional per-lot best-before date (M3 Step 2).
+    When omitted, the service auto-computes it from the definition's
+    ``default_best_before_days`` (``today + N``) if set, otherwise leaves it
+    NULL.  An explicit date (including a past date) always wins.  An explicit
+    ``None`` stays NULL even when a default exists.
+    Mode-independent (valid for ``exact``/``level``/``none`` lots alike).
     """
 
     definition_id: int
@@ -50,6 +57,7 @@ class InstanceCreate(BaseModel):
     manufacturer: str | None = None
     warranty_expires: date | None = None
     warranty_details: str | None = None
+    best_before_date: date | None = None
     purchase_price: Decimal | None = None
     purchase_date: date | None = None
     purchase_source: str | None = None
@@ -63,6 +71,11 @@ class InstanceUpdate(BaseModel):
     movement endpoints (intake / discard / adjust / consume / reverse).
 
     ``stock_level`` may be updated for ``level``-mode lots.
+
+    ``best_before_date`` — optional (M3 Step 2).  Uses the model_fields_set
+    convention: omitting the field leaves the stored date unchanged; supplying
+    ``null`` explicitly clears the date to NULL.  No auto-compute on update —
+    update is an explicit correction only.
     """
 
     location_id: int | None = None
@@ -72,6 +85,7 @@ class InstanceUpdate(BaseModel):
     manufacturer: str | None = None
     warranty_expires: date | None = None
     warranty_details: str | None = None
+    best_before_date: date | None = None
     purchase_price: Decimal | None = None
     purchase_date: date | None = None
     purchase_source: str | None = None
@@ -91,6 +105,7 @@ class InstanceResponse(BaseModel):
     manufacturer: str | None
     warranty_expires: date | None
     warranty_details: str | None
+    best_before_date: date | None  # nullable: NULL if no expiry tracked (M3)
     purchase_price: Decimal | None
     purchase_date: date | None
     purchase_source: str | None

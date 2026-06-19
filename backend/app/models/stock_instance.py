@@ -70,6 +70,10 @@ class StockInstance(Base):
     manufacturer     Durable identity field.
     warranty_expires Date of warranty expiry; stored only (reminders in M4).
     warranty_details Optional notes about the warranty.
+    best_before_date Per-lot best-before date (M3); NULL = no expiry tracked.
+                     Mode-independent (mirrors warranty_expires shape/lifecycle).
+                     Set explicitly or auto-computed on create from the
+                     definition's default_best_before_days; editable via PATCH.
     purchase_price   Numeric(18,2); currency from household.currency.
     purchase_date    Date of purchase.
     purchase_source  Where it was bought.
@@ -134,6 +138,7 @@ class StockInstance(Base):
     manufacturer: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
     warranty_expires: Mapped[date | None] = mapped_column(Date, nullable=True, default=None)
     warranty_details: Mapped[str | None] = mapped_column(String(1000), nullable=True, default=None)
+    best_before_date: Mapped[date | None] = mapped_column(Date, nullable=True, default=None)
     purchase_price: Mapped[Decimal | None] = mapped_column(
         Numeric(18, 2), nullable=True, default=None
     )

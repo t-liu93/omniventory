@@ -940,8 +940,17 @@ export interface components {
          *     ``stock_level`` — required for ``level``-mode lots; must be one of
          *     STOCK_LEVELS (validated by the service, not here).  Must not be provided
          *     for ``exact`` and ``none`` modes.
+         *
+         *     ``best_before_date`` — optional per-lot best-before date (M3 Step 2).
+         *     When omitted, the service auto-computes it from the definition's
+         *     ``default_best_before_days`` (``today + N``) if set, otherwise leaves it
+         *     NULL.  An explicit date (including a past date) always wins.  An explicit
+         *     ``None`` stays NULL even when a default exists.
+         *     Mode-independent (valid for ``exact``/``level``/``none`` lots alike).
          */
         InstanceCreate: {
+            /** Best Before Date */
+            best_before_date?: string | null;
             /** Definition Id */
             definition_id: number;
             /** Location Id */
@@ -972,6 +981,8 @@ export interface components {
          * @description Public representation of a StockInstance.
          */
         InstanceResponse: {
+            /** Best Before Date */
+            best_before_date: string | null;
             /**
              * Created At
              * Format: date-time
@@ -1015,8 +1026,15 @@ export interface components {
          *     movement endpoints (intake / discard / adjust / consume / reverse).
          *
          *     ``stock_level`` may be updated for ``level``-mode lots.
+         *
+         *     ``best_before_date`` — optional (M3 Step 2).  Uses the model_fields_set
+         *     convention: omitting the field leaves the stored date unchanged; supplying
+         *     ``null`` explicitly clears the date to NULL.  No auto-compute on update —
+         *     update is an explicit correction only.
          */
         InstanceUpdate: {
+            /** Best Before Date */
+            best_before_date?: string | null;
             /** Location Id */
             location_id?: number | null;
             /** Manufacturer */

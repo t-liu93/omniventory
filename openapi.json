@@ -692,8 +692,20 @@
         "type": "object"
       },
       "InstanceCreate": {
-        "description": "Body for POST /instances.\n\n``quantity`` \u2014 optional initial intake for ``exact``-mode lots (service\ndefaults to Decimal(\"1\") when omitted for exact mode).  Must be NULL / not\nprovided for ``level`` and ``none`` modes.\n\n``stock_level`` \u2014 required for ``level``-mode lots; must be one of\nSTOCK_LEVELS (validated by the service, not here).  Must not be provided\nfor ``exact`` and ``none`` modes.",
+        "description": "Body for POST /instances.\n\n``quantity`` \u2014 optional initial intake for ``exact``-mode lots (service\ndefaults to Decimal(\"1\") when omitted for exact mode).  Must be NULL / not\nprovided for ``level`` and ``none`` modes.\n\n``stock_level`` \u2014 required for ``level``-mode lots; must be one of\nSTOCK_LEVELS (validated by the service, not here).  Must not be provided\nfor ``exact`` and ``none`` modes.\n\n``best_before_date`` \u2014 optional per-lot best-before date (M3 Step 2).\nWhen omitted, the service auto-computes it from the definition's\n``default_best_before_days`` (``today + N``) if set, otherwise leaves it\nNULL.  An explicit date (including a past date) always wins.  An explicit\n``None`` stays NULL even when a default exists.\nMode-independent (valid for ``exact``/``level``/``none`` lots alike).",
         "properties": {
+          "best_before_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Best Before Date"
+          },
           "definition_id": {
             "title": "Definition Id",
             "type": "integer"
@@ -839,6 +851,18 @@
       "InstanceResponse": {
         "description": "Public representation of a StockInstance.",
         "properties": {
+          "best_before_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Best Before Date"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -1002,6 +1026,7 @@
           "manufacturer",
           "warranty_expires",
           "warranty_details",
+          "best_before_date",
           "purchase_price",
           "purchase_date",
           "purchase_source",
@@ -1011,8 +1036,20 @@
         "type": "object"
       },
       "InstanceUpdate": {
-        "description": "Body for PATCH /instances/{id} \u2014 all fields optional.\n\n``quantity`` is intentionally absent (M2 \u00a72 \"Create vs. movement\"):\nonce an ``exact`` lot is created its quantity changes only through\nmovement endpoints (intake / discard / adjust / consume / reverse).\n\n``stock_level`` may be updated for ``level``-mode lots.",
+        "description": "Body for PATCH /instances/{id} \u2014 all fields optional.\n\n``quantity`` is intentionally absent (M2 \u00a72 \"Create vs. movement\"):\nonce an ``exact`` lot is created its quantity changes only through\nmovement endpoints (intake / discard / adjust / consume / reverse).\n\n``stock_level`` may be updated for ``level``-mode lots.\n\n``best_before_date`` \u2014 optional (M3 Step 2).  Uses the model_fields_set\nconvention: omitting the field leaves the stored date unchanged; supplying\n``null`` explicitly clears the date to NULL.  No auto-compute on update \u2014\nupdate is an explicit correction only.",
         "properties": {
+          "best_before_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Best Before Date"
+          },
           "location_id": {
             "anyOf": [
               {

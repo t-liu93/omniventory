@@ -164,6 +164,7 @@ class StockInstanceRepository:
         manufacturer: str | None = None,
         warranty_expires: date | None = None,
         warranty_details: str | None = None,
+        best_before_date: date | None = None,
         purchase_price: Decimal | None = None,
         purchase_date: date | None = None,
         purchase_source: str | None = None,
@@ -174,6 +175,8 @@ class StockInstanceRepository:
         the service will set it via ledger recompute (exact-mode).
         ``stock_level`` is nullable: pass the validated level string for
         level-mode lots; None otherwise.
+        ``best_before_date`` is nullable: pass the resolved date (explicit or
+        auto-computed from the definition's default_best_before_days) or None.
         """
         instance = StockInstance(
             definition_id=definition_id,
@@ -185,6 +188,7 @@ class StockInstanceRepository:
             manufacturer=manufacturer,
             warranty_expires=warranty_expires,
             warranty_details=warranty_details,
+            best_before_date=best_before_date,
             purchase_price=purchase_price,
             purchase_date=purchase_date,
             purchase_source=purchase_source,
@@ -211,6 +215,8 @@ class StockInstanceRepository:
         warranty_expires: date | None = None,
         set_warranty_details: bool = False,
         warranty_details: str | None = None,
+        set_best_before_date: bool = False,
+        best_before_date: date | None = None,
         set_purchase_price: bool = False,
         purchase_price: Decimal | None = None,
         set_purchase_date: bool = False,
@@ -226,6 +232,9 @@ class StockInstanceRepository:
         Note: ``quantity`` is intentionally absent from this method (M2 §2).
         An ``exact`` lot's quantity is changed only through the movement
         ledger (``StockMovementService``, Step 4).
+        ``best_before_date`` uses the ``set_best_before_date`` flag so that
+        omitting the field on PATCH preserves the existing date while an
+        explicit ``None`` in the payload clears it to NULL (M3 Step 2).
         """
         if set_location_id:
             instance.location_id = location_id
@@ -241,6 +250,8 @@ class StockInstanceRepository:
             instance.warranty_expires = warranty_expires
         if set_warranty_details:
             instance.warranty_details = warranty_details
+        if set_best_before_date:
+            instance.best_before_date = best_before_date
         if set_purchase_price:
             instance.purchase_price = purchase_price
         if set_purchase_date:
