@@ -76,6 +76,19 @@ class Settings(BaseSettings):
         description="Name of the HttpOnly session cookie.",
     )
 
+    # ------------------------------------------------------------------ #
+    # Scheduler                                                             #
+    # ------------------------------------------------------------------ #
+    scheduler_enabled: bool = Field(
+        default=True,
+        description=(
+            "Enable the APScheduler background scheduler for daily reminder scans. "
+            "Set to false in CI or tests to prevent background threads from starting. "
+            "The scheduler is also suppressed when environment == 'test' regardless "
+            "of this flag."
+        ),
+    )
+
 
 @lru_cache
 def get_settings() -> Settings:

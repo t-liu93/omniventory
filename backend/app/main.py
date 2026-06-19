@@ -141,10 +141,33 @@ def _purge_expired_sessions() -> None:
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncGenerator[None]:
-    """FastAPI lifespan: resolve secret key and purge expired sessions on startup."""
+    """FastAPI lifespan: startup tasks and clean shutdown.
+
+    Startup order:
+    1. Resolve / persist the secret key (``app.state.secret_key``).
+    2. Purge any expired session rows (best-effort sweep).
+    3. Start the APScheduler daily reminder scan (no-op in test environment or
+       when ``scheduler_enabled=False``).
+
+    Shutdown (after ``yield``):
+    - Gracefully stop the scheduler if it was started (``wait=False`` so the
+      shutdown does not block for a currently-running job to complete; the
+      job is idempotent and safe to interrupt at the scan level).
+    """
+    from app.scheduler import start_scheduler
+
     _resolve_secret_key(app)
     _purge_expired_sessions()
+    start_scheduler(app)
     yield
+    # ---- Shutdown -----------------------------------------------------------
+    scheduler = getattr(app.state, "scheduler", None)
+    if scheduler is not None:
+        try:
+            scheduler.shutdown(wait=False)
+            logger.info("Scheduler shut down cleanly.")
+        except Exception:
+            logger.exception("Error during scheduler shutdown — ignoring.")
 
 
 def create_app() -> FastAPI:
