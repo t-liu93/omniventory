@@ -14,8 +14,10 @@
   },
   "dependencies": {
     "@mantine/core": "^9.3.2",
+    "@mantine/dates": "^9.3.2",
     "@mantine/hooks": "^9.3.2",
     "@mantine/notifications": "^9.3.2",
+    "dayjs": "^1.11.0",
     "i18next": "^26.3.1",
     "i18next-browser-languagedetector": "^8.2.1",
     "openapi-fetch": "^0.13.5",

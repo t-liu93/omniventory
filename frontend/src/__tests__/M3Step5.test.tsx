@@ -636,6 +636,176 @@ describe("InstanceDetail — best_before_date field with ExpiryBadge", () => {
   });
 });
 
+// ── Tests: DateInput calendar picker — wire format + clear ────────────────────
+
+/**
+ * Stateful wrapper that captures the submitted form so we can assert on its
+ * contents without going through the full ItemDetail page.
+ */
+function SubmittingFormWrapper(props: {
+  initialForm?: Partial<InstanceFormState>;
+  onSubmit?: (form: InstanceFormState) => void;
+}) {
+  const [form, setForm] = React.useState<InstanceFormState>({
+    definition_id: "99",
+    location_id: "",
+    quantity: "1",
+    stock_level: "",
+    serial: "",
+    model_number: "",
+    manufacturer: "",
+    best_before_date: "",
+    warranty_expires: "",
+    warranty_details: "",
+    purchase_price: "",
+    purchase_date: "",
+    purchase_source: "",
+    ...props.initialForm,
+  });
+  // Expose current form for assertions
+  const latestForm = React.useRef(form);
+  latestForm.current = form;
+  return (
+    <MantineProvider>
+      <InstanceFormModal
+        opened={true}
+        title="Test modal"
+        form={form}
+        setForm={setForm}
+        onSubmit={() => props.onSubmit?.(latestForm.current)}
+        onClose={vi.fn()}
+        busy={false}
+        error={null}
+        definitions={[defMilk as AnyResult]}
+        locations={[locationFridge as AnyResult]}
+        trackingMode="exact"
+        isEdit={false}
+        lockDefinition={false}
+      />
+    </MantineProvider>
+  );
+}
+
+describe("InstanceFormModal — DateInput calendar picker (walkthrough fix)", () => {
+  /**
+   * Confirms the best_before_date field renders as a DateInput (not a plain
+   * TextInput): the Mantine DateInput injects a clear button into the right
+   * section when clearable + value is set, which a plain TextInput never does.
+   * The Modal renders into a portal; query document.body, not the container.
+   */
+  it("best_before_date field has a clear button when value is set (DateInput affordance)", () => {
+    render(
+      <InstanceFormWrapper
+        initialForm={{ best_before_date: "2026-09-01" }}
+        trackingMode="exact"
+        isEdit={false}
+      />,
+    );
+    // DateInput injects a clear button (.mantine-InputClearButton-root) when
+    // clearable + value is set. Find it via the DateInput's wrapper div to
+    // avoid confusion with other clearable components (e.g. Select).
+    const bbInput = screen.getByTestId("inst-best-before-date-input");
+    const wrapper = bbInput.closest(".mantine-DateInput-wrapper");
+    const clearBtn = wrapper?.querySelector(".mantine-InputClearButton-root");
+    expect(clearBtn).not.toBeNull();
+  });
+
+  it("warranty_expires field renders with data-testid and a clear button when value is set", () => {
+    render(
+      <InstanceFormWrapper
+        initialForm={{ warranty_expires: "2027-12-31" }}
+        trackingMode="exact"
+        isEdit={false}
+      />,
+    );
+    // data-testid="inst-warranty-expires-input" must resolve (added in this fix)
+    const wxInput = screen.getByTestId("inst-warranty-expires-input");
+    expect(wxInput).toBeDefined();
+    // Find the clear button scoped to this DateInput's wrapper div
+    const wrapper = wxInput.closest(".mantine-DateInput-wrapper");
+    const clearBtn = wrapper?.querySelector(".mantine-InputClearButton-root");
+    expect(clearBtn).not.toBeNull();
+  });
+
+  /**
+   * Typing a YYYY-MM-DD date into the best_before_date DateInput and then
+   * blurring results in the form state holding that exact string — which the
+   * submit handler sends as-is to the POST body (wire format unchanged).
+   */
+  it("typed YYYY-MM-DD date is captured in the form state via DateInput onChange", async () => {
+    const onSubmit = vi.fn();
+    render(<SubmittingFormWrapper onSubmit={onSubmit} />);
+
+    const bbInput = screen.getByTestId("inst-best-before-date-input") as HTMLInputElement;
+
+    // data-testid is on the <input> itself in DateInput (confirmed via DOM probe)
+    fireEvent.change(bbInput, { target: { value: "2026-09-15" } });
+    fireEvent.blur(bbInput);
+
+    // Wait for state update to propagate, then submit
+    await waitFor(() => {
+      expect(bbInput.value).toBe("2026-09-15");
+    });
+
+    fireEvent.click(screen.getByTestId("inst-submit-btn"));
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalled();
+    });
+
+    const capturedForm = onSubmit.mock.calls[0][0] as InstanceFormState;
+    // The YYYY-MM-DD string is stored verbatim in the form state; the submit
+    // handler sends `.trim() || null`, which means "2026-09-15" → "2026-09-15".
+    expect(capturedForm.best_before_date).toBe("2026-09-15");
+  });
+
+  /**
+   * Clicking the clear button (rendered by DateInput when clearable + value set)
+   * calls onChange(null), which the form handler converts to "" — the submit
+   * handler then sends `"".trim() || null === null` to the POST body.
+   *
+   * NOTE: The Mantine Modal renders into a portal. Find the clear button via
+   * the DateInput's own wrapper div, not via document.body (which also contains
+   * other clear buttons from Select components).
+   */
+  it("clearing the best_before_date field leaves form state as empty string (→ null on submit)", async () => {
+    const onSubmit = vi.fn();
+    render(
+      <SubmittingFormWrapper
+        initialForm={{ best_before_date: "2026-09-01" }}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    const bbInput = screen.getByTestId("inst-best-before-date-input") as HTMLInputElement;
+    expect(bbInput.value).toBe("2026-09-01");
+
+    // The clear button is in the same .mantine-DateInput-wrapper as the input.
+    // Using the wrapper avoids confusing it with other clearable controls (e.g.
+    // location Select) that also render .mantine-InputClearButton-root buttons.
+    const wrapper = bbInput.closest(".mantine-DateInput-wrapper");
+    const clearBtn = wrapper?.querySelector(".mantine-InputClearButton-root") as HTMLElement | null;
+    expect(clearBtn).not.toBeNull();
+    fireEvent.click(clearBtn!);
+
+    // Wait for state update: the input should be empty after clearing
+    await waitFor(() => {
+      expect(bbInput.value).toBe("");
+    });
+
+    // Submit and verify the form has "" which the submit handler coerces to null
+    fireEvent.click(screen.getByTestId("inst-submit-btn"));
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalled();
+    });
+
+    const capturedForm = onSubmit.mock.calls[0][0] as InstanceFormState;
+    expect(capturedForm.best_before_date).toBe("");
+    // Verify the coercion: "".trim() || null === null (the wire-format rule)
+    expect(capturedForm.best_before_date.trim() || null).toBeNull();
+  });
+});
+
 // ── Tests: Instance creation — best_before_date pre-fill in ItemDetail ────────
 
 describe("ItemDetail — register instance modal pre-fills best_before_date", () => {

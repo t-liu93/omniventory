@@ -19,6 +19,8 @@ import i18n from "./i18n";
 
 // Mantine core styles — must come before component styles
 import "@mantine/core/styles.css";
+// Dates styles — date picker component styles
+import "@mantine/dates/styles.css";
 // Notifications styles — must come after core styles
 import "@mantine/notifications/styles.css";
 

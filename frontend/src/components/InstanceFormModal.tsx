@@ -23,6 +23,7 @@ import {
   Group,
   Alert,
 } from "@mantine/core";
+import { DateInput } from "@mantine/dates";
 import { AlertCircle } from "react-feather";
 import { useTranslation } from "react-i18next";
 import type { components } from "../api/schema";
@@ -257,14 +258,13 @@ export function InstanceFormModal({
           data-testid="inst-manufacturer-input"
         />
         {/* Best-before date (M3) — mode-independent, shown for all modes */}
-        <TextInput
+        <DateInput
           label={t("form.bestBeforeDateLabel")}
           placeholder={t("form.bestBeforeDatePlaceholder")}
-          value={form.best_before_date}
-          onChange={(e) => {
-            const value = e.currentTarget.value;
-            setForm((f) => ({ ...f, best_before_date: value }));
-          }}
+          value={form.best_before_date || null}
+          onChange={(value) => setForm((f) => ({ ...f, best_before_date: value ?? "" }))}
+          valueFormat="YYYY-MM-DD"
+          clearable
           description={
             !isEdit && computedDefaultDate && !form.best_before_date
               ? tExpiry("defaultHint", {
@@ -276,14 +276,14 @@ export function InstanceFormModal({
           data-testid="inst-best-before-date-input"
         />
 
-        <TextInput
+        <DateInput
           label={t("form.warrantyExpiresLabel")}
           placeholder={t("form.warrantyExpiresPlaceholder")}
-          value={form.warranty_expires}
-          onChange={(e) => {
-            const value = e.currentTarget.value;
-            setForm((f) => ({ ...f, warranty_expires: value }));
-          }}
+          value={form.warranty_expires || null}
+          onChange={(value) => setForm((f) => ({ ...f, warranty_expires: value ?? "" }))}
+          valueFormat="YYYY-MM-DD"
+          clearable
+          data-testid="inst-warranty-expires-input"
         />
         <Textarea
           label={t("form.warrantyDetailsLabel")}
