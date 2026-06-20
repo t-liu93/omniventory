@@ -1037,8 +1037,8 @@ class TestDecimalParams:
         assert Decimal(params["current"]) == Decimal("3.2")
         assert Decimal(params["threshold"]) == Decimal("5.5")
 
-    def test_level_mode_params_are_none(self, db_session: Session) -> None:
-        """level mode: current and threshold are None in params."""
+    def test_level_mode_params_carry_level_code(self, db_session: Session) -> None:
+        """level mode: params carry mode='level' and level='low'; no numeric current/threshold."""
         _hh, user, defn, _inst = _seed_minimal_level(db_session)
         engine = self._make_engine(db_session)
         today = date(2025, 6, 1)
@@ -1055,9 +1055,37 @@ class TestDecimalParams:
         notif = db_session.execute(stmt).scalar_one()
         assert notif.params is not None
         params = json.loads(notif.params)
-        # Level mode has no numeric values
-        assert params["current"] is None
-        assert params["threshold"] is None
+        # Level mode carries the qualitative level code, not blank numeric fields
+        assert params["mode"] == "level"
+        assert params["level"] == "low"
+        assert "current" not in params
+        assert "threshold" not in params
+
+    def test_level_mode_repeat_carries_level_and_offset(self, db_session: Session) -> None:
+        """level mode repeat: params carry mode='level', level='low', and offset; no numeric fields."""
+        _hh, user, defn, _inst = _seed_minimal_level(db_session)
+        engine = self._make_engine(db_session)
+        day0 = date(2025, 6, 1)
+        engine.run_scan(today_local=day0)
+
+        from app.models.notification import Notification
+        from app.services.reminder_engine import ReminderEngine
+
+        day1 = day0 + timedelta(days=1)
+        ReminderEngine(db_session).run_scan(today_local=day1)
+
+        stmt = select(Notification).where(
+            Notification.user_id == user.id,
+            Notification.source == "low_stock",
+            Notification.offset_days == 1,
+        )
+        repeat_notif = db_session.execute(stmt).scalar_one()
+        params = json.loads(repeat_notif.params)
+        assert params["mode"] == "level"
+        assert params["level"] == "low"
+        assert params["offset"] == 1
+        assert "current" not in params
+        assert "threshold" not in params
 
     def test_repeat_params_include_offset(self, db_session: Session) -> None:
         """Repeat notifications include the 'offset' key in params."""

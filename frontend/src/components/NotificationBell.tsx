@@ -37,6 +37,13 @@ const DROPDOWN_LIMIT = 10;
 /**
  * Localize a notification using its message_code and params.
  * Params come already parsed as a dict from the API.
+ *
+ * For level-mode low-stock notifications the backend stores a ``level`` code
+ * (e.g. ``"low"``) instead of numeric ``current``/``threshold``.  We resolve
+ * that code to a localized label and feed it into the existing
+ * ``reminder.low_stock`` / ``reminder.low_stock_repeat`` templates via the
+ * ``current`` and ``threshold`` interpolation slots, so that both modes share
+ * one template string and the wire/display split (M1.5) is respected.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function localizeNotification(n: Notification, t: TFunction<any, any>): string {
@@ -45,6 +52,15 @@ function localizeNotification(n: Notification, t: TFunction<any, any>): string {
   const formattedParams: Record<string, unknown> = { ...params };
   if (typeof formattedParams["date"] === "string") {
     formattedParams["date"] = formatDate(formattedParams["date"] as string);
+  }
+  // Level-mode low-stock: substitute the localized level label for current/threshold.
+  if (formattedParams["mode"] === "level") {
+    const levelCode = (formattedParams["level"] as string | undefined) ?? "";
+    const levelLabel = levelCode
+      ? (t(`level.${levelCode}`, { ns: "notifications" }) as string)
+      : levelCode;
+    formattedParams["current"] = levelLabel;
+    formattedParams["threshold"] = levelLabel;
   }
   return t(n.message_code, { ns: "notifications", ...formattedParams }) as string;
 }

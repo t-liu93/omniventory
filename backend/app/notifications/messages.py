@@ -38,6 +38,35 @@ from __future__ import annotations
 from typing import Any
 
 # ---------------------------------------------------------------------------
+# Bilingual level-label map (level mode low-stock rendering)
+# ---------------------------------------------------------------------------
+# Maps qualitative stock level codes to their localized display labels.
+# This is the sanctioned server-side bilingual catalog exception (same as the
+# existing best_before / warranty renderers): email/external-channel payloads
+# leave the system without going through the SPA, so the backend must render
+# human text.  In-app notifications are localized via the frontend catalog
+# (notifications.level.{low,medium,high}).
+
+_LEVEL_LABELS: dict[str, dict[str, str]] = {
+    "zh": {"low": "低", "medium": "中", "high": "高"},
+    "en": {"low": "low", "medium": "medium", "high": "high"},
+}
+
+
+def _localize_level(level: str | None, lang: str) -> str:
+    """Return the localized display label for a stock level code.
+
+    Falls back to the raw code (or empty string) when the level is missing
+    or unrecognised, so old notification rows without a ``level`` key render
+    gracefully rather than crashing.
+    """
+    if not level:
+        return ""
+    labels = _LEVEL_LABELS.get(lang, _LEVEL_LABELS["en"])
+    return labels.get(level, level)
+
+
+# ---------------------------------------------------------------------------
 # Per-code renderers: (params, lang) -> str
 # ---------------------------------------------------------------------------
 
@@ -83,9 +112,17 @@ def _render_warranty(params: dict[str, Any], lang: str) -> str:
 
 def _render_low_stock(params: dict[str, Any], lang: str) -> str:
     name = params.get("name", "")
+
+    if params.get("mode") == "level":
+        level_label = _localize_level(params.get("level"), lang)
+        if lang == "zh":
+            return f"【库存不足】{name} 当前：{level_label}，阈值：{level_label}"
+        else:
+            return f"[Low stock] {name} — current: {level_label}, threshold: {level_label}"
+
+    # exact / default: numeric current + threshold
     current = params.get("current", "")
     threshold = params.get("threshold", "")
-
     if lang == "zh":
         return f"【库存不足】{name} 当前库存 {current}，低于阈值 {threshold}"
     else:
@@ -94,10 +131,23 @@ def _render_low_stock(params: dict[str, Any], lang: str) -> str:
 
 def _render_low_stock_repeat(params: dict[str, Any], lang: str) -> str:
     name = params.get("name", "")
-    current = params.get("current", "")
-    threshold = params.get("threshold", "")
     offset = params.get("offset", "")
 
+    if params.get("mode") == "level":
+        level_label = _localize_level(params.get("level"), lang)
+        if lang == "zh":
+            return (
+                f"【库存不足·持续提醒+{offset}天】{name} 当前：{level_label}，阈值：{level_label}"
+            )
+        else:
+            return (
+                f"[Low stock +{offset}d] {name} — current: {level_label}, "
+                f"threshold: {level_label} (still low)"
+            )
+
+    # exact / default: numeric current + threshold
+    current = params.get("current", "")
+    threshold = params.get("threshold", "")
     if lang == "zh":
         return f"【库存不足·持续提醒+{offset}天】{name} 当前库存 {current}，仍低于阈值 {threshold}"
     else:

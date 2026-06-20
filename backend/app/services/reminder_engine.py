@@ -50,6 +50,7 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy.orm import Session
 
+from app.core.stock import LOW_STOCK_TRIGGER_LEVEL
 from app.models.notification import Notification
 from app.models.stock_instance import StockInstance
 from app.models.user import User
@@ -209,6 +210,50 @@ def _decimal_to_str(value: Decimal | None) -> str | None:
     if value is None:
         return None
     return str(value)
+
+
+def _build_low_stock_params(item: object, *, offset: int | None = None) -> dict[str, object]:
+    """Build the notification params dict for a low-stock notification.
+
+    For **exact** mode the params carry numeric ``current`` / ``threshold``
+    (as strings, per the Decimal-as-string wire convention).
+
+    For **level** mode the params carry ``level`` (the qualitative trigger
+    level code, currently always ``LOW_STOCK_TRIGGER_LEVEL = "low"``).
+    The meaningless numeric keys are omitted so that renderers — both the
+    server-side email catalog and the frontend i18n templates — never receive
+    ``None`` and produce blank output.
+
+    Parameters
+    ----------
+    item:
+        A ``LowStockItem`` (accessed via ``getattr`` to avoid a circular
+        import; the ``LowStockItem`` type is imported at call time inside
+        ``run_scan`` / ``evaluate_low_stock``).
+    offset:
+        When present, adds ``"offset": offset`` to the dict (repeat path).
+    """
+    mode: str = getattr(item, "mode", "exact")
+    name: object = getattr(item, "name", "")
+
+    if mode == "level":
+        params: dict[str, object] = {
+            "name": name,
+            "mode": mode,
+            "level": LOW_STOCK_TRIGGER_LEVEL,
+        }
+    else:
+        params = {
+            "name": name,
+            "current": _decimal_to_str(getattr(item, "current", None)),
+            "threshold": _decimal_to_str(getattr(item, "threshold", None)),
+            "mode": mode,
+        }
+
+    if offset is not None:
+        params["offset"] = offset
+
+    return params
 
 
 # ---------------------------------------------------------------------------
@@ -497,12 +542,7 @@ class ReminderEngine:
 
             if opener is None:
                 # No open episode -- open a new one (opener row, offset_days=0).
-                params = {
-                    "name": item.name,  # type: ignore[attr-defined]
-                    "current": _decimal_to_str(item.current),  # type: ignore[attr-defined]
-                    "threshold": _decimal_to_str(item.threshold),  # type: ignore[attr-defined]
-                    "mode": item.mode,  # type: ignore[attr-defined]
-                }
+                params = _build_low_stock_params(item)
                 dedup = f"low_stock:u{user.id}:d{def_id}:{today_local.isoformat()}:o0"
                 notification, created = self._notification_repo.create_if_absent(
                     user_id=user.id,
@@ -531,13 +571,7 @@ class ReminderEngine:
                         # (list is sorted), so break early.
                         break
                     # o <= elapsed: this repeat should have fired.
-                    params = {
-                        "name": item.name,  # type: ignore[attr-defined]
-                        "current": _decimal_to_str(item.current),  # type: ignore[attr-defined]
-                        "threshold": _decimal_to_str(item.threshold),  # type: ignore[attr-defined]
-                        "mode": item.mode,  # type: ignore[attr-defined]
-                        "offset": o,
-                    }
+                    params = _build_low_stock_params(item, offset=o)
                     dedup = (
                         f"low_stock:u{user.id}:d{def_id}"
                         f":{opener.episode_started_on.isoformat()}:o{o}"  # type: ignore[union-attr]

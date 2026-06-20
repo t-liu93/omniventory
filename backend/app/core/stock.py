@@ -22,6 +22,10 @@ STOCK_TRACKING_MODES: tuple[str, ...] = ("exact", "level", "none")
 # Qualitative stock levels for ``level``-mode instances (M2 §3.2 / §3.4).
 STOCK_LEVELS: tuple[str, ...] = ("high", "medium", "low")
 
+# The sole trigger level for the low-stock signal in level mode (M4 walkthrough fix #2).
+# A lot with stock_level == LOW_STOCK_TRIGGER_LEVEL is considered "low".
+LOW_STOCK_TRIGGER_LEVEL: str = "low"
+
 # The six movement types for the append-only stock ledger (M2 §3.3 / §4.3).
 # Validated app-layer (no DB CHECK — the set may grow; roadmap §2.11).
 #   intake     — stock received / added.

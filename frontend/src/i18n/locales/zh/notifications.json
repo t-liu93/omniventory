@@ -27,6 +27,11 @@
     "low_stock": "{{name}} 库存不足（当前：{{current}}，阈值：{{threshold}}）",
     "low_stock_repeat": "{{name}} 库存仍然不足（当前：{{current}}，阈值：{{threshold}}，已持续 {{offset}} 天）"
   },
+  "level": {
+    "low": "低",
+    "medium": "中",
+    "high": "高"
+  },
   "col": {
     "message": "消息",
     "subject": "关联对象",

@@ -51,6 +51,8 @@ import { MantineProvider } from "@mantine/core";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { Configuration } from "../pages/Configuration.js";
 import { Items, ItemDetail } from "../pages/Items.js";
+import { NotificationBell } from "../components/NotificationBell.js";
+import { Notifications } from "../pages/Notifications.js";
 import i18n from "../i18n/index.js";
 
 // ── Mock client ───────────────────────────────────────────────────────────────
@@ -891,6 +893,251 @@ describe("Configuration page — email encryption and from_name", () => {
 
     const resultAlert = screen.getByTestId("email-test-result");
     expect(resultAlert.textContent).toContain("Connection refused");
+  });
+});
+
+// ── Tests: level-mode low-stock notification rendering (walkthrough fix #2) ───
+
+describe("level-mode low-stock notification rendering", () => {
+  /**
+   * These tests validate the i18n catalog entries and template strings for
+   * level-mode params (mode='level', level='low'): they confirm that the
+   * catalog keys exist and that the templates produce the expected output when
+   * interpolated manually.  They do NOT exercise the localizeNotification /
+   * localizeMessage helpers in the real components — see the
+   * "level-mode low-stock — component mount" describe block below for that.
+   */
+
+  it("notifications:level.low is 'low' in en", () => {
+    expect(i18n.t("level.low", { ns: "notifications" })).toBe("low");
+  });
+
+  it("notifications:level.low is '低' in zh", async () => {
+    await i18n.changeLanguage("zh");
+    expect(i18n.t("level.low", { ns: "notifications" })).toBe("低");
+    await i18n.changeLanguage("en");
+  });
+
+  it("low_stock level-mode renders level label via existing template in en", () => {
+    // The template is: "{{name}} is running low (current: {{current}}, threshold: {{threshold}})"
+    // For level mode we supply the level label for both current and threshold.
+    const levelLabel = i18n.t("level.low", { ns: "notifications" });
+    const result = i18n.t("reminder.low_stock", {
+      ns: "notifications",
+      name: "Torx Screws",
+      current: levelLabel,
+      threshold: levelLabel,
+    });
+    expect(result).toContain("Torx Screws");
+    expect(result).toContain("low");
+    // Must not contain blank/undefined placeholders
+    expect(result).not.toContain("undefined");
+    expect(result).not.toContain("{{");
+  });
+
+  it("low_stock exact-mode rendering is unchanged (regression)", () => {
+    const result = i18n.t("reminder.low_stock", {
+      ns: "notifications",
+      name: "Coffee",
+      current: "0.5",
+      threshold: "1.0",
+    });
+    expect(result).toContain("Coffee");
+    expect(result).toContain("0.5");
+    expect(result).toContain("1.0");
+  });
+
+  it("low_stock_repeat level-mode renders level label and offset in en", () => {
+    const levelLabel = i18n.t("level.low", { ns: "notifications" });
+    const result = i18n.t("reminder.low_stock_repeat", {
+      ns: "notifications",
+      name: "Torx Screws",
+      current: levelLabel,
+      threshold: levelLabel,
+      offset: 7,
+    });
+    expect(result).toContain("Torx Screws");
+    expect(result).toContain("low");
+    expect(result).toContain("7");
+    expect(result).not.toContain("{{");
+  });
+
+  it("low_stock_repeat exact-mode rendering is unchanged (regression)", () => {
+    const result = i18n.t("reminder.low_stock_repeat", {
+      ns: "notifications",
+      name: "Coffee",
+      current: "0.5",
+      threshold: "1.0",
+      offset: 3,
+    });
+    expect(result).toContain("Coffee");
+    expect(result).toContain("0.5");
+    expect(result).toContain("3");
+  });
+});
+
+// ── Tests: level-mode low-stock — component mount ────────────────────────────
+//
+// These tests exercise the real localizeNotification (NotificationBell) and
+// localizeMessage (Notifications page) helpers by mounting the actual
+// components with a level-mode notification fixture.  Removing the
+// `mode === "level"` branch from either helper makes these tests FAIL.
+
+describe("level-mode low-stock — component mount", () => {
+  // level-mode fixture: no numeric current/threshold, just mode + level code
+  const notifLowStockLevel = {
+    id: 20,
+    source: "low_stock",
+    subject_type: "definition",
+    subject_id: 10,
+    message_code: "reminder.low_stock",
+    params: { name: "Torx M6x30", mode: "level", level: "low" },
+    offset_days: 0,
+    created_at: "2026-06-20T08:02:00Z",
+    read_at: null,
+  };
+
+  const notifLowStockLevelRepeat = {
+    id: 21,
+    source: "low_stock",
+    subject_type: "definition",
+    subject_id: 10,
+    message_code: "reminder.low_stock_repeat",
+    params: { name: "Torx M6x30", mode: "level", level: "low", offset: 3 },
+    offset_days: 3,
+    created_at: "2026-06-23T08:00:00Z",
+    read_at: null,
+  };
+
+  function renderBell() {
+    return render(
+      <MemoryRouter initialEntries={["/"]}>
+        <MantineProvider>
+          <NotificationBell />
+        </MantineProvider>
+      </MemoryRouter>,
+    );
+  }
+
+  function renderNotificationsPage() {
+    return render(
+      <MemoryRouter initialEntries={["/notifications"]}>
+        <MantineProvider>
+          <Routes>
+            <Route path="/notifications" element={<Notifications />} />
+          </Routes>
+        </MantineProvider>
+      </MemoryRouter>,
+    );
+  }
+
+  it("NotificationBell: level-mode low_stock renders localized level in dropdown", async () => {
+    vi.mocked(client.GET).mockImplementation(async (path: AnyResult) => {
+      if (path === "/api/notifications/unread-count") {
+        return { data: { count: 1 }, response: new Response(null, { status: 200 }) };
+      }
+      if (path === "/api/notifications") {
+        return { data: [notifLowStockLevel], response: new Response(null, { status: 200 }) };
+      }
+      return { data: null, error: {}, response: new Response(null, { status: 404 }) };
+    });
+
+    await act(async () => {
+      renderBell();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("notification-bell-btn"));
+    });
+
+    await waitFor(() => {
+      const msg = screen.getByTestId("notification-message-20");
+      // Must contain item name
+      expect(msg.textContent).toContain("Torx M6x30");
+      // Must contain the localized level label ("low" in en)
+      expect(msg.textContent).toContain("low");
+      // Must NOT contain blank/undefined placeholders
+      expect(msg.textContent).not.toContain("undefined");
+      expect(msg.textContent).not.toContain("null");
+      expect(msg.textContent).not.toContain("{{");
+      expect(msg.textContent).not.toContain("None");
+    });
+  });
+
+  it("NotificationBell: level-mode low_stock_repeat renders localized level and offset", async () => {
+    vi.mocked(client.GET).mockImplementation(async (path: AnyResult) => {
+      if (path === "/api/notifications/unread-count") {
+        return { data: { count: 1 }, response: new Response(null, { status: 200 }) };
+      }
+      if (path === "/api/notifications") {
+        return { data: [notifLowStockLevelRepeat], response: new Response(null, { status: 200 }) };
+      }
+      return { data: null, error: {}, response: new Response(null, { status: 404 }) };
+    });
+
+    await act(async () => {
+      renderBell();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("notification-bell-btn"));
+    });
+
+    await waitFor(() => {
+      const msg = screen.getByTestId("notification-message-21");
+      expect(msg.textContent).toContain("Torx M6x30");
+      expect(msg.textContent).toContain("low");
+      expect(msg.textContent).not.toContain("undefined");
+      expect(msg.textContent).not.toContain("null");
+      expect(msg.textContent).not.toContain("{{");
+    });
+  });
+
+  it("Notifications page: level-mode low_stock renders localized level", async () => {
+    vi.mocked(client.GET).mockImplementation(async (path: AnyResult) => {
+      if (path === "/api/notifications") {
+        return { data: [notifLowStockLevel], response: new Response(null, { status: 200 }) };
+      }
+      return { data: null, error: {}, response: new Response(null, { status: 404 }) };
+    });
+
+    await act(async () => {
+      renderNotificationsPage();
+    });
+
+    await waitFor(() => {
+      // Notifications page uses data-testid="notification-page-message-{id}"
+      const msg = screen.getByTestId("notification-page-message-20");
+      expect(msg.textContent).toContain("Torx M6x30");
+      expect(msg.textContent).toContain("low");
+      expect(msg.textContent).not.toContain("undefined");
+      expect(msg.textContent).not.toContain("null");
+      expect(msg.textContent).not.toContain("{{");
+      expect(msg.textContent).not.toContain("None");
+    });
+  });
+
+  it("Notifications page: level-mode low_stock_repeat renders localized level and offset", async () => {
+    vi.mocked(client.GET).mockImplementation(async (path: AnyResult) => {
+      if (path === "/api/notifications") {
+        return { data: [notifLowStockLevelRepeat], response: new Response(null, { status: 200 }) };
+      }
+      return { data: null, error: {}, response: new Response(null, { status: 404 }) };
+    });
+
+    await act(async () => {
+      renderNotificationsPage();
+    });
+
+    await waitFor(() => {
+      // Notifications page uses data-testid="notification-page-message-{id}"
+      const msg = screen.getByTestId("notification-page-message-21");
+      expect(msg.textContent).toContain("Torx M6x30");
+      expect(msg.textContent).toContain("low");
+      expect(msg.textContent).not.toContain("undefined");
+      expect(msg.textContent).not.toContain("null");
+      expect(msg.textContent).not.toContain("{{");
+    });
   });
 });
 

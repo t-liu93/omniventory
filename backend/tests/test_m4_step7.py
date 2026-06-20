@@ -586,6 +586,102 @@ class TestMessagesCatalog:
         assert "大米" in result
         assert "3" in result
 
+    # --- level-mode low_stock rendering (walkthrough fix #2) ---
+
+    def test_render_low_stock_level_mode_en(self) -> None:
+        """level-mode low_stock in EN shows localized level label, not blank."""
+        from app.notifications.messages import render_line
+
+        result = render_line(
+            "reminder.low_stock",
+            {"name": "Torx Screws", "mode": "level", "level": "low"},
+            "en",
+        )
+        assert "Torx Screws" in result
+        assert "low" in result
+        assert "None" not in result
+        assert result != ""
+
+    def test_render_low_stock_level_mode_zh(self) -> None:
+        """level-mode low_stock in ZH shows localized level label '低', not blank."""
+        from app.notifications.messages import render_line
+
+        result = render_line(
+            "reminder.low_stock",
+            {"name": "Torx螺丝M6x30", "mode": "level", "level": "low"},
+            "zh",
+        )
+        assert "Torx螺丝M6x30" in result
+        assert "低" in result
+        assert "None" not in result
+
+    def test_render_low_stock_repeat_level_mode_en(self) -> None:
+        """level-mode low_stock_repeat in EN shows localized level label and offset."""
+        from app.notifications.messages import render_line
+
+        result = render_line(
+            "reminder.low_stock_repeat",
+            {"name": "Torx Screws", "mode": "level", "level": "low", "offset": 7},
+            "en",
+        )
+        assert "Torx Screws" in result
+        assert "low" in result
+        assert "7" in result
+        assert "None" not in result
+
+    def test_render_low_stock_repeat_level_mode_zh(self) -> None:
+        """level-mode low_stock_repeat in ZH shows localized level label '低' and offset."""
+        from app.notifications.messages import render_line
+
+        result = render_line(
+            "reminder.low_stock_repeat",
+            {"name": "Torx螺丝M6x30", "mode": "level", "level": "low", "offset": 7},
+            "zh",
+        )
+        assert "Torx螺丝M6x30" in result
+        assert "低" in result
+        assert "7" in result
+        assert "None" not in result
+
+    def test_render_low_stock_level_mode_missing_level_key_no_crash(self) -> None:
+        """level-mode with missing 'level' key falls back gracefully, does not crash."""
+        from app.notifications.messages import render_line
+
+        # Old row in DB that has mode='level' but no 'level' key
+        result = render_line(
+            "reminder.low_stock",
+            {"name": "Widget", "mode": "level"},
+            "en",
+        )
+        assert isinstance(result, str)
+        assert "Widget" in result
+
+    def test_render_low_stock_exact_mode_unchanged_en(self) -> None:
+        """Regression: exact-mode low_stock rendering in EN is unchanged."""
+        from app.notifications.messages import render_line
+
+        result = render_line(
+            "reminder.low_stock",
+            {"name": "Rice", "current": "0.5", "threshold": "1.0", "mode": "exact"},
+            "en",
+        )
+        assert "Rice" in result
+        assert "0.5" in result
+        assert "1.0" in result
+
+    def test_render_low_stock_repeat_exact_mode_unchanged_zh(self) -> None:
+        """Regression: exact-mode low_stock_repeat rendering in ZH is unchanged."""
+        from app.notifications.messages import render_line
+
+        result = render_line(
+            "reminder.low_stock_repeat",
+            {"name": "大米", "current": "0.5", "threshold": "1.0", "offset": 3, "mode": "exact"},
+            "zh",
+        )
+        assert "大米" in result
+        assert "3" in result
+        assert "0.5" in result
+
     def test_render_unknown_code_no_exception(self) -> None:
         """Unknown codes return a fallback string without raising."""
         from app.notifications.messages import render_line

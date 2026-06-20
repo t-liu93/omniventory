@@ -27,6 +27,11 @@
     "low_stock": "{{name}} is running low (current: {{current}}, threshold: {{threshold}})",
     "low_stock_repeat": "{{name}} is still running low (current: {{current}}, threshold: {{threshold}}, since {{offset}} days ago)"
   },
+  "level": {
+    "low": "low",
+    "medium": "medium",
+    "high": "high"
+  },
   "col": {
     "message": "Message",
     "subject": "Subject",
