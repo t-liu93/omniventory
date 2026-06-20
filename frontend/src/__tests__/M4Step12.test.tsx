@@ -1141,6 +1141,88 @@ describe("level-mode low-stock — component mount", () => {
   });
 });
 
+// ── Tests: MQTT test button (Walkthrough Fix 4) ───────────────────────────────
+
+describe("Configuration page — MQTT test button", () => {
+  it("test-mqtt-btn exists in the MQTT section", async () => {
+    mockSettingsAndMe();
+
+    await act(async () => {
+      renderConfiguration();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("test-mqtt-btn")).toBeDefined();
+    });
+  });
+
+  it("clicking test-mqtt-btn POSTs /api/settings/mqtt/test", async () => {
+    mockSettingsAndMe();
+
+    vi.mocked(client.POST).mockImplementation(async (path: AnyResult) => {
+      if (path === "/api/settings/mqtt/test") {
+        return {
+          data: { ok: true, detail: null, topic: "omniventory/test" },
+          response: new Response(null, { status: 200 }),
+        };
+      }
+      return { data: null, error: {}, response: new Response(null, { status: 404 }) };
+    });
+
+    await act(async () => {
+      renderConfiguration();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("test-mqtt-btn")).toBeDefined();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("test-mqtt-btn"));
+    });
+
+    await waitFor(() => {
+      expect(client.POST).toHaveBeenCalledWith("/api/settings/mqtt/test");
+    });
+
+    // On success, no error alert should be shown
+    expect(screen.queryByTestId("mqtt-test-result")).toBeNull();
+  });
+
+  it("test-mqtt-btn shows error alert on ok=false with detail", async () => {
+    mockSettingsAndMe();
+
+    vi.mocked(client.POST).mockImplementation(async (path: AnyResult) => {
+      if (path === "/api/settings/mqtt/test") {
+        return {
+          data: { ok: false, detail: "MQTT host is not configured", topic: "" },
+          response: new Response(null, { status: 200 }),
+        };
+      }
+      return { data: null, error: {}, response: new Response(null, { status: 404 }) };
+    });
+
+    await act(async () => {
+      renderConfiguration();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("test-mqtt-btn")).toBeDefined();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("test-mqtt-btn"));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("mqtt-test-result")).toBeDefined();
+    });
+
+    const resultAlert = screen.getByTestId("mqtt-test-result");
+    expect(resultAlert.textContent).toContain("MQTT host is not configured");
+  });
+});
+
 // ── Tests: en+zh catalog via i18n ─────────────────────────────────────────────
 
 describe("i18n configuration namespace", () => {

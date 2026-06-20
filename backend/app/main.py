@@ -142,18 +142,13 @@ def _purge_expired_sessions() -> None:
 def _start_mqtt_bridge(app: FastAPI) -> None:
     """Start the MQTT bridge if configured and not in test mode.
 
-    Guard conditions (same as the scheduler — either skips the bridge):
-    - ``settings.environment == "test"`` — no real connections in CI/pytest.
-    - ``channels.mqtt.enabled`` is False — master on/off switch.
-
-    The bridge instance (from ``get_mqtt_bridge()``) is stored on
-    ``app.state.mqtt_bridge`` for the shutdown hook.  It is also accessible
-    globally via ``get_mqtt_bridge()`` from any call site (scheduler, routes).
+    Delegates to ``reload_mqtt_bridge`` so that the lifespan startup and the
+    settings-save path share identical logic.  ``app.state.mqtt_bridge`` is
+    set to the singleton (or None in test mode) for the shutdown hook.
     """
     from app.config import get_settings
     from app.db.base import get_session_factory
-    from app.notifications.mqtt import MqttBridgeConfig, get_mqtt_bridge
-    from app.services.settings import SettingsService
+    from app.notifications.mqtt import get_mqtt_bridge, reload_mqtt_bridge
 
     settings = get_settings()
     if settings.environment == "test":
@@ -164,44 +159,31 @@ def _start_mqtt_bridge(app: FastAPI) -> None:
     factory = get_session_factory()
     db = factory()
     try:
-        cfg = SettingsService(db).mqtt_channel_config()
+        reload_mqtt_bridge(db, environment=settings.environment)
     finally:
         db.close()
 
-    if not cfg.enabled:
-        logger.info("_start_mqtt_bridge: channels.mqtt.enabled=False — MQTT bridge suppressed.")
-        app.state.mqtt_bridge = None
-        return
+    # The singleton is always the live bridge after reload; store it on
+    # app.state so _stop_mqtt_bridge can reach it at shutdown.
+    app.state.mqtt_bridge = get_mqtt_bridge()
 
-    host = cfg.host or ""
-    port = cfg.port or 1883
 
-    bridge_cfg = MqttBridgeConfig(
-        host=host,
-        port=port,
-        username=cfg.username,
-        password=cfg.password,
-        topic_prefix=cfg.topic_prefix or "omniventory",
-        use_tls=cfg.use_tls,
-        discovery_enabled=cfg.discovery_enabled,
-        commands_enabled=cfg.commands_enabled,
-    )
+def _stop_mqtt_bridge(app: FastAPI) -> None:  # noqa: ARG001
+    """Stop the MQTT bridge at application shutdown.
+
+    Always stops the process-level singleton via ``get_mqtt_bridge()`` so
+    that a settings-save reload (which mutates the singleton in place) is
+    also covered, even if ``app.state.mqtt_bridge`` was set before the
+    reload happened.
+    """
+    from app.notifications.mqtt import get_mqtt_bridge
 
     bridge = get_mqtt_bridge()
-    bridge.start(bridge_cfg)
-    app.state.mqtt_bridge = bridge
-    logger.info("MQTT bridge started (host=%s, port=%d).", host, port)
-
-
-def _stop_mqtt_bridge(app: FastAPI) -> None:
-    """Stop the MQTT bridge if it was started during lifespan startup."""
-    bridge = getattr(app.state, "mqtt_bridge", None)
-    if bridge is not None:
-        try:
-            bridge.stop()
-            logger.info("MQTT bridge stopped cleanly.")
-        except Exception:
-            logger.exception("Error during MQTT bridge shutdown — ignoring.")
+    try:
+        bridge.stop()
+        logger.info("MQTT bridge stopped cleanly.")
+    except Exception:
+        logger.exception("Error during MQTT bridge shutdown — ignoring.")
 
 
 @asynccontextmanager

@@ -142,12 +142,32 @@ class MqttBridge:
         -----
         paho's ``loop_start()`` spawns a daemon thread that handles
         PING/ACK and automatic reconnection.  This method returns as soon
-        as ``connect()`` completes (or raises); the thread keeps running.
+        as ``connect_async()`` is called; the paho background thread
+        performs the actual connection and sets ``is_connected`` via the
+        ``on_connect`` callback.  Using ``connect_async`` (non-blocking)
+        ensures that neither startup nor a settings-save reload can hang
+        if the broker is unreachable.
+
+        If a previous client is already running (safe to call repeatedly),
+        it is stopped first so that no client/thread is leaked.
 
         On connect callback (``on_connect``) we publish HA discovery
         configs when ``config.discovery_enabled`` is True.
         """
         import paho.mqtt.client as mqtt
+
+        with self._lock:
+            # Stop any previously running client to avoid leaking threads.
+            old_client = self._client
+            self._client = None
+            self._connected = False
+
+        if old_client is not None:
+            try:
+                old_client.loop_stop()
+                old_client.disconnect()
+            except Exception:
+                logger.exception("MqttBridge: error stopping previous client — ignoring.")
 
         with self._lock:
             self._config = config
@@ -204,12 +224,13 @@ class MqttBridge:
                 client.on_message = on_message
 
             try:
-                client.connect(config.host, config.port)
+                client.connect_async(config.host, config.port)
                 client.loop_start()
                 self._client = client
             except Exception:
                 logger.exception(
-                    "MqttBridge: failed to connect to %s:%d — MQTT disabled for this session.",
+                    "MqttBridge: failed to initiate connection to %s:%d"
+                    " — MQTT disabled for this session.",
                     config.host,
                     config.port,
                 )
@@ -603,3 +624,168 @@ def _reset_bridge_for_testing() -> None:
     """
     global _bridge  # noqa: PLW0603
     _bridge = MqttBridge()
+
+
+# ---------------------------------------------------------------------------
+# reload_mqtt_bridge — shared reload helper (lifespan + settings-save path)
+# ---------------------------------------------------------------------------
+
+
+def reload_mqtt_bridge(db: object, *, environment: str) -> None:
+    """Stop the current bridge and restart it from the latest DB settings.
+
+    This is the single function that both the FastAPI lifespan startup and
+    the settings-save route use so that an MQTT config change takes effect
+    immediately without requiring an app restart.
+
+    Guard conditions (same as the lifespan):
+    - ``environment == "test"`` — no-op; never open real connections in CI/pytest.
+    - ``channels.mqtt.enabled`` is False or host is not set — stops the bridge
+      and leaves it stopped (does not start a new connection).
+
+    Parameters
+    ----------
+    db:
+        An open SQLAlchemy session used only to read ``SettingsService`` values.
+        The caller is responsible for its lifecycle (open/close).
+    environment:
+        Value from ``get_settings().environment``.  Passed explicitly so this
+        function has no import-time dependency on the global settings cache.
+
+    Notes
+    -----
+    This function is **best-effort**: any exception is caught and logged so
+    that a reload failure never propagates into the calling request or scan.
+    """
+    if environment == "test":
+        logger.debug("reload_mqtt_bridge: environment=test — MQTT reload suppressed.")
+        return
+
+    try:
+        from app.services.settings import SettingsService
+
+        cfg = SettingsService(db).mqtt_channel_config()  # type: ignore[arg-type]
+        bridge = get_mqtt_bridge()
+
+        if not cfg.enabled or not cfg.host:
+            # Disabled or unconfigured — just stop whatever is running.
+            bridge.stop()
+            logger.info("reload_mqtt_bridge: MQTT disabled or unconfigured — bridge stopped.")
+            return
+
+        port = cfg.port or 1883
+        bridge_cfg = MqttBridgeConfig(
+            host=cfg.host,
+            port=port,
+            username=cfg.username,
+            password=cfg.password,
+            topic_prefix=cfg.topic_prefix or "omniventory",
+            use_tls=cfg.use_tls,
+            discovery_enabled=cfg.discovery_enabled,
+            commands_enabled=cfg.commands_enabled,
+        )
+        bridge.start(bridge_cfg)
+        logger.info(
+            "reload_mqtt_bridge: MQTT bridge reloaded (host=%s, port=%d).",
+            cfg.host,
+            port,
+        )
+    except Exception:
+        logger.exception(
+            "reload_mqtt_bridge: unexpected error during reload — ignored (best-effort)."
+        )
+
+
+# ---------------------------------------------------------------------------
+# mqtt_send_test — one-shot connectivity test (independent of long-lived bridge)
+# ---------------------------------------------------------------------------
+
+
+def mqtt_send_test(config: MqttBridgeConfig) -> str:
+    """Publish a single retained test message and return the topic on success.
+
+    This helper creates a **fresh, independent** paho client (client_id
+    ``omniventory-test``) that is distinct from the long-lived bridge
+    singleton.  It connects with a bounded timeout, publishes one retained
+    message to ``{prefix}/test``, waits for publish hand-off, then always
+    disconnects in a ``finally`` block.
+
+    Parameters
+    ----------
+    config:
+        MQTT connection parameters (host, port, credentials, TLS, prefix).
+
+    Returns
+    -------
+    str
+        The test topic string on success (``"{prefix}/test"``).
+
+    Raises
+    ------
+    TimeoutError
+        If the broker does not accept the connection within ~5 seconds.
+    RuntimeError
+        If the broker refuses the connection (``rc != 0``).
+    Exception
+        Any other paho or OS-level error is re-raised directly.
+
+    Notes
+    -----
+    ``wait_for_publish`` may raise ``RuntimeError`` if the message was never
+    queued (e.g. client disconnected before publish) — that is also
+    propagated.  The route handler catches all exceptions and converts them
+    to a diagnostic ``ok=false`` response.
+    """
+    import datetime
+    import threading
+
+    import paho.mqtt.client as mqtt
+
+    topic = f"{config.topic_prefix}/test"
+    connect_event = threading.Event()
+    connect_rc: list[int] = []  # mutable container to share rc from callback
+
+    client = mqtt.Client(client_id="omniventory-test")
+
+    if config.username:
+        client.username_pw_set(config.username, config.password)
+    if config.use_tls:
+        client.tls_set()
+
+    def _on_connect(_client: Any, _userdata: Any, _flags: Any, rc: int) -> None:
+        connect_rc.append(rc)
+        connect_event.set()
+
+    client.on_connect = _on_connect
+
+    try:
+        client.connect_async(config.host, config.port)
+        client.loop_start()
+
+        if not connect_event.wait(timeout=5.0):
+            raise TimeoutError(
+                f"MQTT connection to {config.host}:{config.port} timed out after 5 s"
+            )
+
+        rc = connect_rc[0] if connect_rc else -1
+        if rc != 0:
+            raise RuntimeError(
+                f"MQTT broker at {config.host}:{config.port} refused connection (rc={rc})"
+            )
+
+        payload = json.dumps(
+            {
+                "status": "ok",
+                "ts": datetime.datetime.now(datetime.UTC).isoformat(),
+            }
+        )
+        msg_info = client.publish(topic, payload, retain=True)
+        msg_info.wait_for_publish(timeout=5.0)
+        logger.info("mqtt_send_test: test message published to %s.", topic)
+        return topic
+    finally:
+        try:
+            client.loop_stop()
+            client.disconnect()
+        except Exception:
+            logger.exception("mqtt_send_test: error during cleanup — ignoring.")

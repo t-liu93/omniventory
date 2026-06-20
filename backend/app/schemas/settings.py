@@ -209,6 +209,14 @@ class MqttChannelUpdate(BaseModel):
     commands_enabled: bool | None = None
 
 
+class MqttTestResult(BaseModel):
+    """Result of a POST /settings/mqtt/test request."""
+
+    ok: bool
+    detail: str | None
+    topic: str
+
+
 # ---------------------------------------------------------------------------
 # Channels container sub-schemas
 # ---------------------------------------------------------------------------

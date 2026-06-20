@@ -218,6 +218,8 @@ export function Configuration() {
   const [mqttCommandsEnabled, setMqttCommandsEnabled] = useState(false);
   const [mqttBusy, setMqttBusy] = useState(false);
   const [mqttError, setMqttError] = useState<string | null>(null);
+  const [mqttTestBusy, setMqttTestBusy] = useState(false);
+  const [mqttTestResult, setMqttTestResult] = useState<{ ok: boolean; detail: string | null; topic: string } | null>(null);
 
   // ── Run scan ──
   const [scanBusy, setScanBusy] = useState(false);
@@ -297,6 +299,7 @@ export function Configuration() {
       setMqttUseTls(mq.use_tls);
       setMqttDiscoveryEnabled(mq.discovery_enabled);
       setMqttCommandsEnabled(mq.commands_enabled);
+      setMqttTestResult(null);
     } finally {
       setLoading(false);
     }
@@ -519,6 +522,26 @@ export function Configuration() {
       await loadAll();
     } finally {
       setMqttBusy(false);
+    }
+  }
+
+  async function handleTestMqtt() {
+    setMqttTestBusy(true);
+    setMqttTestResult(null);
+    try {
+      const { data, error } = await client.POST("/api/settings/mqtt/test");
+      if (error || !data) {
+        // Network-level failure (no diagnostic payload). Store the raw reason in
+        // `detail`; the render wraps it once with t("mqtt.testFailed", ...).
+        setMqttTestResult({ ok: false, detail: t("mqtt.testUnknownError"), topic: "" });
+        return;
+      }
+      if (data.ok) {
+        notifySuccess(t("mqtt.testSuccess", { topic: data.topic }));
+      }
+      setMqttTestResult(data);
+    } finally {
+      setMqttTestBusy(false);
     }
   }
 
@@ -995,7 +1018,25 @@ export function Configuration() {
               </Text>
             </Stack>
 
+            {mqttTestResult && !mqttTestResult.ok && (
+              <Alert icon={<AlertCircle size={16} />} color="red" variant="light" data-testid="mqtt-test-result">
+                {t("mqtt.testFailed", { detail: mqttTestResult.detail ?? "" })}
+              </Alert>
+            )}
+
+            <Text size="xs" c="dimmed">
+              {t("mqtt.testHint")}
+            </Text>
+
             <Group justify="flex-end">
+              <Button
+                variant="outline"
+                onClick={() => void handleTestMqtt()}
+                loading={mqttTestBusy}
+                data-testid="test-mqtt-btn"
+              >
+                {t("mqtt.testButton")}
+              </Button>
               <Button
                 onClick={() => void handleSaveMqtt()}
                 loading={mqttBusy}

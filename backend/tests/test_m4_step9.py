@@ -277,8 +277,8 @@ def _make_mock_paho_client() -> MagicMock:
 class TestMqttBridgeLifecycle:
     """Tests for MqttBridge.start() and stop() lifecycle."""
 
-    def test_start_calls_connect_and_loop_start(self) -> None:
-        """start() calls client.connect(host, port) and client.loop_start()."""
+    def test_start_calls_connect_async_and_loop_start(self) -> None:
+        """start() calls client.connect_async(host, port) and client.loop_start() (non-blocking)."""
         from app.notifications.mqtt import MqttBridge, MqttBridgeConfig
 
         bridge = MqttBridge()
@@ -289,7 +289,8 @@ class TestMqttBridgeLifecycle:
                 MqttBridgeConfig(host="broker.example", port=1883, topic_prefix="omniventory")
             )
 
-        mock_client.connect.assert_called_once_with("broker.example", 1883)
+        mock_client.connect_async.assert_called_once_with("broker.example", 1883)
+        mock_client.connect.assert_not_called()
         mock_client.loop_start.assert_called_once()
 
     def test_start_sets_username_password_when_provided(self) -> None:
@@ -474,13 +475,13 @@ class TestMqttBridgeLifecycle:
         bridge.stop()
         assert not bridge.is_connected
 
-    def test_connect_exception_is_swallowed(self) -> None:
-        """If paho connect() raises, bridge is silent (best-effort)."""
+    def test_connect_async_exception_is_swallowed(self) -> None:
+        """If paho connect_async() raises, bridge is silent (best-effort)."""
         from app.notifications.mqtt import MqttBridge, MqttBridgeConfig
 
         bridge = MqttBridge()
         mock_client = MagicMock()
-        mock_client.connect.side_effect = OSError("connection refused")
+        mock_client.connect_async.side_effect = OSError("connection refused")
 
         with patch("paho.mqtt.client.Client", return_value=mock_client):
             bridge.start(MqttBridgeConfig(host="localhost", port=1883, topic_prefix="omniventory"))

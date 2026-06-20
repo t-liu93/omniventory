@@ -97,6 +97,11 @@
     "discoveryEnabledLabel": "Home Assistant auto-discovery",
     "commandsEnabledLabel": "Accept inbound commands",
     "commandsEnabledDescription": "When enabled, the bridge subscribes to {prefix}/command/# and executes stock operations (consume/intake/adjust).",
+    "testButton": "Send test message",
+    "testHint": "Publishes a retained test message to {prefix}/test to verify the broker connection.",
+    "testSuccess": "Test message sent to {{topic}}.",
+    "testFailed": "Test failed: {{detail}}",
+    "testUnknownError": "Unknown error",
     "save": "Save MQTT settings",
     "saved": "MQTT settings saved."
   },

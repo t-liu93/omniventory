@@ -97,6 +97,11 @@
     "discoveryEnabledLabel": "Home Assistant 自动发现",
     "commandsEnabledLabel": "接受入站命令",
     "commandsEnabledDescription": "启用后，bridge 将订阅 {prefix}/command/# 并执行库存操作（consume/intake/adjust）。",
+    "testButton": "发送测试消息",
+    "testHint": "向 {prefix}/test 发送一条保留的测试消息以验证连接。",
+    "testSuccess": "测试消息已发送至 {{topic}}。",
+    "testFailed": "测试失败：{{detail}}",
+    "testUnknownError": "未知错误",
     "save": "保存 MQTT 设置",
     "saved": "MQTT 设置已保存。"
   },

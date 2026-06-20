@@ -2431,6 +2431,37 @@
         "title": "MqttChannelUpdate",
         "type": "object"
       },
+      "MqttTestResult": {
+        "description": "Result of a POST /settings/mqtt/test request.",
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "topic": {
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "detail",
+          "topic"
+        ],
+        "title": "MqttTestResult",
+        "type": "object"
+      },
       "NotificationResponse": {
         "description": "Public shape of a single in-app notification row.\n\nFields\n------\nid              Surrogate PK.\nsource          ``best_before`` / ``warranty`` / ``low_stock``.\nsubject_type    ``instance`` / ``definition``.\nsubject_id      PK of the referenced lot or definition.\nmessage_code    i18n code \u2014 frontend localises with ``t(message_code, params)``.\nparams          Deserialized render params (dict) or ``None``.\n                The backend stores params as a JSON text blob; this schema\n                surfaces the parsed dict so the frontend does not need to\n                JSON-parse again.\noffset_days     Low-stock only: which repeat offset this row represents.\n                ``None`` for date sources.\ncreated_at      Row-creation timestamp (UTC).\nread_at         When the notification was first marked read; ``None`` if\n                still unread.",
         "properties": {
@@ -6163,7 +6194,7 @@
         ]
       },
       "patch": {
-        "description": "Apply a partial update to the reminders and channels configuration.\n\nOnly fields explicitly supplied in the payload are changed; omitted\nfields are left at their current value.  Validation errors are handled\nby the existing ``RequestValidationError`` handler (\u2192 ``validation.invalid_input``).\n\nTo set a secret supply the new value; to clear it supply an explicit\nempty string (``\"\"``) or ``null``.",
+        "description": "Apply a partial update to the reminders and channels configuration.\n\nOnly fields explicitly supplied in the payload are changed; omitted\nfields are left at their current value.  Validation errors are handled\nby the existing ``RequestValidationError`` handler (\u2192 ``validation.invalid_input``).\n\nTo set a secret supply the new value; to clear it supply an explicit\nempty string (``\"\"``) or ``null``.\n\n**Live MQTT reconnect**: when the update touches any ``channels.mqtt.*``\nfield, the MQTT bridge is reloaded after the settings are committed so\nthe new config takes effect without an app restart.  This is best-effort\n\u2014 a reload failure does not fail the save.",
         "operationId": "patch_settings_api_settings_patch",
         "requestBody": {
           "content": {
@@ -6240,6 +6271,38 @@
           }
         },
         "summary": "Test Email",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/settings/mqtt/test": {
+      "post": {
+        "description": "Publish a test message to the MQTT broker using currently-saved settings.\n\n**Diagnostic semantics \u2014 always returns HTTP 200 when authenticated.**\nA failed MQTT connection is an expected diagnostic outcome, not an API\nerror.  The ``ok`` field in the response indicates success or failure.\n\nThe test uses the currently-saved MQTT settings and **ignores the\n``enabled`` flag** \u2014 this allows the user to verify the broker settings\nbefore enabling the channel.  Only ``host`` is required.\n\nThe helper creates an independent short-lived paho client (distinct from\nthe long-lived bridge singleton) and publishes a retained test message\nto ``{prefix}/test``.",
+        "operationId": "test_mqtt_api_settings_mqtt_test_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MqttTestResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Test Mqtt",
         "tags": [
           "settings"
         ]

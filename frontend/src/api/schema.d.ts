@@ -928,6 +928,11 @@ export interface paths {
          *
          *     To set a secret supply the new value; to clear it supply an explicit
          *     empty string (``""``) or ``null``.
+         *
+         *     **Live MQTT reconnect**: when the update touches any ``channels.mqtt.*``
+         *     field, the MQTT bridge is reloaded after the settings are committed so
+         *     the new config takes effect without an app restart.  This is best-effort
+         *     — a reload failure does not fail the save.
          */
         patch: operations["patch_settings_api_settings_patch"];
         trace?: never;
@@ -956,6 +961,38 @@ export interface paths {
          *     The test email is sent in the user's preferred language (or EN if unset).
          */
         post: operations["test_email_api_settings_email_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/settings/mqtt/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test Mqtt
+         * @description Publish a test message to the MQTT broker using currently-saved settings.
+         *
+         *     **Diagnostic semantics — always returns HTTP 200 when authenticated.**
+         *     A failed MQTT connection is an expected diagnostic outcome, not an API
+         *     error.  The ``ok`` field in the response indicates success or failure.
+         *
+         *     The test uses the currently-saved MQTT settings and **ignores the
+         *     ``enabled`` flag** — this allows the user to verify the broker settings
+         *     before enabling the channel.  Only ``host`` is required.
+         *
+         *     The helper creates an independent short-lived paho client (distinct from
+         *     the long-lived bridge singleton) and publishes a retained test message
+         *     to ``{prefix}/test``.
+         */
+        post: operations["test_mqtt_api_settings_mqtt_test_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1749,6 +1786,18 @@ export interface components {
             use_tls?: boolean | null;
             /** Username */
             username?: string | null;
+        };
+        /**
+         * MqttTestResult
+         * @description Result of a POST /settings/mqtt/test request.
+         */
+        MqttTestResult: {
+            /** Detail */
+            detail: string | null;
+            /** Ok */
+            ok: boolean;
+            /** Topic */
+            topic: string;
         };
         /**
          * NotificationResponse
@@ -4572,6 +4621,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EmailTestResult"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    test_mqtt_api_settings_mqtt_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MqttTestResult"];
                 };
             };
             /** @description Unauthorized */
