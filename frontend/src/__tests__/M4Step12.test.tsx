@@ -1141,10 +1141,28 @@ describe("level-mode low-stock — component mount", () => {
   });
 });
 
-// ── Tests: MQTT test button (Walkthrough Fix 4) ───────────────────────────────
+// ── Tests: MQTT section shelved / temporarily disabled (walkthrough wrap-up) ──
+// MQTT was shelved pending a future rewrite: the whole section is disabled and
+// an "unsupported" note is shown. The Fix-4 test/save endpoints still exist on
+// the backend but are unreachable from the (disabled) UI.
 
-describe("Configuration page — MQTT test button", () => {
-  it("test-mqtt-btn exists in the MQTT section", async () => {
+describe("Configuration page — MQTT shelved (temporarily disabled)", () => {
+  it("shows the MQTT unsupported note", async () => {
+    mockSettingsAndMe();
+
+    await act(async () => {
+      renderConfiguration();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("mqtt-unsupported-note")).toBeDefined();
+    });
+    expect(screen.getByTestId("mqtt-unsupported-note").textContent).toContain(
+      "temporarily unavailable",
+    );
+  });
+
+  it("disables the MQTT enable switch, test and save buttons", async () => {
     mockSettingsAndMe();
 
     await act(async () => {
@@ -1154,9 +1172,18 @@ describe("Configuration page — MQTT test button", () => {
     await waitFor(() => {
       expect(screen.getByTestId("test-mqtt-btn")).toBeDefined();
     });
+
+    expect((screen.getByTestId("test-mqtt-btn") as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByTestId("save-mqtt-btn") as HTMLButtonElement).disabled).toBe(true);
+
+    const switchEl = screen.getByTestId("mqtt-enabled-switch");
+    const switchInput = (
+      switchEl.tagName === "INPUT" ? switchEl : switchEl.querySelector("input")
+    ) as HTMLInputElement | null;
+    expect(switchInput?.disabled).toBe(true);
   });
 
-  it("clicking test-mqtt-btn POSTs /api/settings/mqtt/test", async () => {
+  it("clicking the disabled test button does not POST /api/settings/mqtt/test", async () => {
     mockSettingsAndMe();
 
     vi.mocked(client.POST).mockImplementation(async (path: AnyResult) => {
@@ -1181,45 +1208,7 @@ describe("Configuration page — MQTT test button", () => {
       fireEvent.click(screen.getByTestId("test-mqtt-btn"));
     });
 
-    await waitFor(() => {
-      expect(client.POST).toHaveBeenCalledWith("/api/settings/mqtt/test");
-    });
-
-    // On success, no error alert should be shown
-    expect(screen.queryByTestId("mqtt-test-result")).toBeNull();
-  });
-
-  it("test-mqtt-btn shows error alert on ok=false with detail", async () => {
-    mockSettingsAndMe();
-
-    vi.mocked(client.POST).mockImplementation(async (path: AnyResult) => {
-      if (path === "/api/settings/mqtt/test") {
-        return {
-          data: { ok: false, detail: "MQTT host is not configured", topic: "" },
-          response: new Response(null, { status: 200 }),
-        };
-      }
-      return { data: null, error: {}, response: new Response(null, { status: 404 }) };
-    });
-
-    await act(async () => {
-      renderConfiguration();
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId("test-mqtt-btn")).toBeDefined();
-    });
-
-    await act(async () => {
-      fireEvent.click(screen.getByTestId("test-mqtt-btn"));
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId("mqtt-test-result")).toBeDefined();
-    });
-
-    const resultAlert = screen.getByTestId("mqtt-test-result");
-    expect(resultAlert.textContent).toContain("MQTT host is not configured");
+    expect(client.POST).not.toHaveBeenCalledWith("/api/settings/mqtt/test");
   });
 });
 

@@ -84,6 +84,7 @@
   },
   "mqtt": {
     "enabledLabel": "启用 MQTT",
+    "unsupportedNote": "MQTT 暂时不支持。",
     "hostLabel": "Broker 主机",
     "portLabel": "Broker 端口",
     "usernameLabel": "用户名",

@@ -103,6 +103,7 @@ function SecretField({
   onNewValueChange,
   onClear,
   testIdPrefix,
+  disabled,
 }: {
   label: string;
   isSet: boolean;
@@ -112,6 +113,7 @@ function SecretField({
   onNewValueChange: (v: string) => void;
   onClear: () => void;
   testIdPrefix: string;
+  disabled?: boolean;
 }) {
   const { t } = useTranslation("configuration");
   return (
@@ -137,6 +139,7 @@ function SecretField({
           value={newValue}
           onChange={(e) => onNewValueChange(e.currentTarget.value)}
           data-testid={`${testIdPrefix}-input`}
+          disabled={disabled}
         />
         <Button
           size="xs"
@@ -144,6 +147,7 @@ function SecretField({
           color="red"
           onClick={onClear}
           data-testid={`${testIdPrefix}-clear-btn`}
+          disabled={disabled}
         >
           {clearLabel}
         </Button>
@@ -151,6 +155,14 @@ function SecretField({
     </Stack>
   );
 }
+
+/**
+ * MQTT is shelved pending a future rewrite (see M4 walkthrough). The whole
+ * MQTT section in the Configuration UI is disabled while this flag is true;
+ * flip to false (and drop the "unsupported" note) when MQTT is reworked.
+ * Annotated `: boolean` so the constant doesn't trip no-unnecessary-condition.
+ */
+const MQTT_TEMPORARILY_DISABLED: boolean = true;
 
 // ── Configuration page ────────────────────────────────────────────────────────
 
@@ -950,12 +962,17 @@ export function Configuration() {
               checked={mqttEnabled}
               onChange={(e) => setMqttEnabled(e.currentTarget.checked)}
               data-testid="mqtt-enabled-switch"
+              disabled={MQTT_TEMPORARILY_DISABLED}
             />
+            <Text size="sm" c="dimmed" data-testid="mqtt-unsupported-note">
+              {t("mqtt.unsupportedNote")}
+            </Text>
             <TextInput
               label={t("mqtt.hostLabel")}
               value={mqttHost}
               onChange={(e) => setMqttHost(e.currentTarget.value)}
               data-testid="mqtt-host-input"
+              disabled={MQTT_TEMPORARILY_DISABLED}
             />
             <NumberInput
               label={t("mqtt.portLabel")}
@@ -965,12 +982,14 @@ export function Configuration() {
               max={65535}
               allowDecimal={false}
               data-testid="mqtt-port-input"
+              disabled={MQTT_TEMPORARILY_DISABLED}
             />
             <TextInput
               label={t("mqtt.usernameLabel")}
               value={mqttUsername}
               onChange={(e) => setMqttUsername(e.currentTarget.value)}
               data-testid="mqtt-username-input"
+              disabled={MQTT_TEMPORARILY_DISABLED}
             />
             <SecretField
               label={t("mqtt.passwordLabel")}
@@ -987,24 +1006,28 @@ export function Configuration() {
                 setMqttNewPassword("");
               }}
               testIdPrefix="mqtt-password"
+              disabled={MQTT_TEMPORARILY_DISABLED}
             />
             <TextInput
               label={t("mqtt.topicPrefixLabel")}
               value={mqttTopicPrefix}
               onChange={(e) => setMqttTopicPrefix(e.currentTarget.value)}
               data-testid="mqtt-topic-prefix-input"
+              disabled={MQTT_TEMPORARILY_DISABLED}
             />
             <Checkbox
               label={t("mqtt.useTlsLabel")}
               checked={mqttUseTls}
               onChange={(e) => setMqttUseTls(e.currentTarget.checked)}
               data-testid="mqtt-use-tls-checkbox"
+              disabled={MQTT_TEMPORARILY_DISABLED}
             />
             <Checkbox
               label={t("mqtt.discoveryEnabledLabel")}
               checked={mqttDiscoveryEnabled}
               onChange={(e) => setMqttDiscoveryEnabled(e.currentTarget.checked)}
               data-testid="mqtt-discovery-checkbox"
+              disabled={MQTT_TEMPORARILY_DISABLED}
             />
             <Stack gap={4}>
               <Checkbox
@@ -1012,6 +1035,7 @@ export function Configuration() {
                 checked={mqttCommandsEnabled}
                 onChange={(e) => setMqttCommandsEnabled(e.currentTarget.checked)}
                 data-testid="mqtt-commands-checkbox"
+                disabled={MQTT_TEMPORARILY_DISABLED}
               />
               <Text size="xs" c="dimmed">
                 {t("mqtt.commandsEnabledDescription")}
@@ -1034,6 +1058,7 @@ export function Configuration() {
                 onClick={() => void handleTestMqtt()}
                 loading={mqttTestBusy}
                 data-testid="test-mqtt-btn"
+                disabled={MQTT_TEMPORARILY_DISABLED}
               >
                 {t("mqtt.testButton")}
               </Button>
@@ -1041,6 +1066,7 @@ export function Configuration() {
                 onClick={() => void handleSaveMqtt()}
                 loading={mqttBusy}
                 data-testid="save-mqtt-btn"
+                disabled={MQTT_TEMPORARILY_DISABLED}
               >
                 {t("mqtt.save")}
               </Button>

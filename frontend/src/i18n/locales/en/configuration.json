@@ -84,6 +84,7 @@
   },
   "mqtt": {
     "enabledLabel": "Enable MQTT",
+    "unsupportedNote": "MQTT is temporarily unavailable.",
     "hostLabel": "Broker host",
     "portLabel": "Broker port",
     "usernameLabel": "Username",
