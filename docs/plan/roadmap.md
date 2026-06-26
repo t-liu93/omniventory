@@ -84,7 +84,7 @@ Legend: ⬜ planned · 🟡 active · 🟢 done. **Active milestone = the single
 | **M2** | Stock ledger & consumables | ③ (in/out + low-stock) | 🟢 |
 | **M3** | Best-before / expiry & perishables | ① (data + listings) | 🟢 |
 | **M4** | Unified reminder & notification engine | ①②③ proactive alerts | 🟢 |
-| **M5** | Cross-cutting + barcode + data I/O | all | ⬜ |
+| **M5** | Cross-cutting + barcode + data export | all | 🟡 |
 | **M6** | Multi-user & roles | all | ⬜ |
 | **M7** | Shopping list & maintenance schedules | ③ / ② | ⬜ |
 | **M8** | Multi-unit conversion | ③ | ⬜ |
@@ -151,12 +151,14 @@ Legend: ⬜ planned · 🟡 active · 🟢 done. **Active milestone = the single
 
 > Locked: the detailed design doc (`docs/plan/milestones/M4.md`) is now written. It ratifies the **maximal scope**: lead times **global + per-item + per-user** (new nullable override columns on `item_definitions` + `users`, resolved per-item → per-user → global); **three new tables** — a user-facing **`settings`** KV store (distinct from `app_config` secrets and `household.settings`), **`notifications`** (in-app inbox + idempotent dedup + the low-stock **episode** model, opener-row-as-episode, no extra table), and **`notification_deliveries`** (delivery log); a single idempotent **`ReminderEngine.run_scan()`** (date sources fire once per recipient/lot/date; low-stock = immediate opener + repeat offsets `[1,3,7]` default + close-on-recovery) plus an **event hook** on movements; an **APScheduler** daily scan in `household.timezone` (resolving the M3 §12 "today" deferral) + `POST /reminders/run`; **four channels** behind a dispatcher — in-app (code+params, frontend-localized), **email digest** + **HTTP** + **full MQTT bridge** (rendered via a small **bilingual server catalog** in the recipient's language); **HTTP** = outbound webhook **and** a token-guarded **`GET /integrations/state`** for Home Assistant's RESTful sensor; a frontend **notification bell/inbox** + **Configuration page**. New backend deps: **apscheduler**, **paho-mqtt**, **httpx** (runtime). Two new error codes (`notification.not_found`, `integration.invalid_token`). Deferred to later: responsible-party routing + per-user channel/cadence (M6), SSRF/rate-limit hardening (M6), maintenance-due source (M7).
 
-### M5 — Cross-cutting capabilities + barcode + data I/O
+### M5 — Cross-cutting capabilities + barcode + data export
 **Goal:** the daily-use ergonomics and data portability of a real self-hosted app.
 - Generic attachments/photos, tags, notes, custom fields, global search.
 - **Barcode scanning + product lookup** on intake/identify.
 - **CSV import/export**; **backup/restore** (ZIP of DB + media).
 - 🟢 Attach a photo; scan a barcode to intake; import a CSV; export a backup and restore it into a clean instance.
+
+> Locked: the detailed design doc (`docs/plan/milestones/M5.md`) is now written. M5 planning **re-scoped** the bullet above: **backup/restore is deferred** (the bind-mounted `DATA_DIR` — SQLite file + `media/` — *is* the backup unit; operators copy it) and **CSV is export-only** (import is deferred to pair with the M9 LLM-assisted formatting backend, where free-form column mapping fits). What ships: **generic attachments** (filesystem, content-addressed by sha256, reference-counted, no orphans), **flat multi-entity tags**, **notes**, **JSON custom fields** (searchable as text) — all via the generic `model_type + model_id` (§2.8); **global LIKE search** across entities behind a `SearchProvider` seam (no SQLite FTS — §2.11); **client-side barcode scanning** + `GET /barcodes/lookup` behind a `ProductLookupProvider` seam shipping the **internal provider only** (external product DB / LLM = M9, §2.12). New deps: **python-multipart**, **pillow** (backend), **@zxing/browser** (frontend); a real `DATA_DIR` setting + a `/media` static mount; **eight** new error codes. **4 phases / 13 atomic steps.** Deferred to later: backup/restore UI, CSV import (+ external product lookup / LLM semantic search), server thumbnails, per-request media auth + sanitization (M6). See `M5.md` §1/§2/§12.
 
 ### M6 — Multi-user & roles
 **Goal:** real multi-user within the single household + hardening.

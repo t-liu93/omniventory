@@ -84,7 +84,7 @@
 | **M2** | 库存流水账 & 耗材 | ③(出入库 + 低库存) | 🟢 |
 | **M3** | 保质期/临期 & 易腐品 | ①(数据 + 清单) | 🟢 |
 | **M4** | 统一提醒与通知引擎 | ①②③ 主动提醒 | 🟢 |
-| **M5** | 横切 + 条码 + 数据进出 | 全部 | ⬜ |
+| **M5** | 横切 + 条码 + 数据导出 | 全部 | 🟡 |
 | **M6** | 多用户 & 角色 | 全部 | ⬜ |
 | **M7** | 购物清单 & 维护计划 | ③ / ② | ⬜ |
 | **M8** | 多单位换算 | ③ | ⬜ |
@@ -151,12 +151,14 @@
 
 > 已锁定:详细设计文档(`docs/plan/milestones/M4_zh.md`)已写成。它拍板了**最大范围**:提前天数 **全局 + 按物品 + 按用户**(在 `item_definitions` + `users` 上新增可空覆盖列,按 物品 → 用户 → 全局 解析);**三张新表**——面向用户的 **`settings`** KV 存储(与 `app_config` 密钥、`household.settings` 区分)、**`notifications`**(in-app 收件箱 + 幂等去重 + 低库存 **episode** 模型,opener-行-即-episode,无额外表)、**`notification_deliveries`**(投递日志);单一幂等的 **`ReminderEngine.run_scan()`**(日期来源对每收件人/批次/日期触发一次;低库存 = 立即 opener + 复提醒 offset 默认 `[1,3,7]` + 恢复即关闭)加出入库**事件钩子**;一个在 `household.timezone` 下的 **APScheduler** 每日扫描(落实 M3 §12 的「今天」推迟项)+ `POST /reminders/run`;dispatcher 后的**四个通道**——in-app(code+params,前端本地化)、**邮件摘要** + **HTTP** + **完整 MQTT 桥接**(经一个小的**双语服务端目录**按收件人语言渲染);**HTTP** = 出站 webhook **和**一个 token 守卫的 **`GET /integrations/state`** 供 Home Assistant RESTful sensor;一个前端**通知 bell/收件箱** + **Configuration 页面**。新后端依赖:**apscheduler**、**paho-mqtt**、**httpx**(运行时)。两个新错误码(`notification.not_found`、`integration.invalid_token`)。推迟到后续:责任人路由 + 每用户通道/节奏(M6)、SSRF/限流强化(M6)、维护到期来源(M7)。
 
-### M5 —— 横切能力 + 条码 + 数据进出
+### M5 —— 横切能力 + 条码 + 数据导出
 **目标:** 一个真正自托管应用的日常易用性与数据可移植性。
 - 通用附件/照片、标签、备注、自定义字段、全局搜索。
 - 入库/识别时的**条码扫描 + 商品查询**。
 - **CSV 导入导出**;**备份/恢复**(DB + 媒体 的 ZIP)。
 - 🟢 加一张照片;扫码入库;导入一个 CSV;导出备份并恢复到干净实例。
+
+> 已锁定:详细设计文档(`docs/plan/milestones/M5.md`)已写好。M5 规划**重新划定**了上面的条目:**备份/恢复延后**(bind-mount 的 `DATA_DIR`——SQLite 文件 + `media/`——*就是*备份单元;运维者复制它)、**CSV 仅导出**(导入延后到与 M9 的 LLM 辅助格式化后端一起做,自由格式列映射正合适)。最终交付:**通用附件**(文件系统、sha256 内容寻址、引用计数、无孤儿)、**扁平多实体标签**、**备注**、**JSON 自定义字段**(可作文本搜索)——全部走通用 `model_type + model_id`(§2.8);**全局 LIKE 搜索**跨实体,置于 `SearchProvider` 缝之后(不用 SQLite FTS——§2.11);**客户端条码扫描** + `GET /barcodes/lookup`,置于 `ProductLookupProvider` 缝之后,只装**内部 provider**(外部商品库 / LLM = M9,§2.12)。新依赖:**python-multipart**、**pillow**(后端)、**@zxing/browser**(前端);一个真正的 `DATA_DIR` 设置 + 一个 `/media` 静态挂载;**八**个新错误码。**4 相 / 13 个原子步骤。** 延后:备份/恢复 UI、CSV 导入(+ 外部商品查询 / LLM 语义搜索)、服务端缩略图、逐请求媒体鉴权 + 净化(M6)。见 `M5.md` §1/§2/§12。
 
 ### M6 —— 多用户 & 角色
 **目标:** 单「家」内的真正多用户 + 加固。
