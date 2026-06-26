@@ -266,6 +266,7 @@ class StockInstanceRepository:
         purchase_price: Decimal | None = None,
         purchase_date: date | None = None,
         purchase_source: str | None = None,
+        custom_fields: str | None = None,
     ) -> StockInstance:
         """Insert a new StockInstance and flush to get its PK.
 
@@ -275,6 +276,7 @@ class StockInstanceRepository:
         level-mode lots; None otherwise.
         ``best_before_date`` is nullable: pass the resolved date (explicit or
         auto-computed from the definition's default_best_before_days) or None.
+        ``custom_fields`` is nullable: pass the JSON-serialized string or None.
         """
         instance = StockInstance(
             definition_id=definition_id,
@@ -290,6 +292,7 @@ class StockInstanceRepository:
             purchase_price=purchase_price,
             purchase_date=purchase_date,
             purchase_source=purchase_source,
+            custom_fields=custom_fields,
         )
         self._db.add(instance)
         self._db.flush()
@@ -321,6 +324,8 @@ class StockInstanceRepository:
         purchase_date: date | None = None,
         set_purchase_source: bool = False,
         purchase_source: str | None = None,
+        set_custom_fields: bool = False,
+        custom_fields: str | None = None,
     ) -> StockInstance:
         """Apply partial field updates to a StockInstance.
 
@@ -333,6 +338,8 @@ class StockInstanceRepository:
         ``best_before_date`` uses the ``set_best_before_date`` flag so that
         omitting the field on PATCH preserves the existing date while an
         explicit ``None`` in the payload clears it to NULL (M3 Step 2).
+        ``custom_fields`` uses the ``set_custom_fields`` flag for the same
+        reason (M5 Step 4): omit = unchanged; explicit None = clear.
         """
         if set_location_id:
             instance.location_id = location_id
@@ -356,6 +363,8 @@ class StockInstanceRepository:
             instance.purchase_date = purchase_date
         if set_purchase_source:
             instance.purchase_source = purchase_source
+        if set_custom_fields:
+            instance.custom_fields = custom_fields
         self._db.flush()
         return instance
 

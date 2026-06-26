@@ -488,6 +488,37 @@
             ],
             "title": "Category Id"
           },
+          "custom_fields": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional flat key/value map for user-defined attributes (M5 Step 4). Keys: non-empty string \u2264 64 chars. Values: str (\u2264 1024 chars), int, float, bool, or null \u2014 no nesting. Maximum 50 fields. NULL = no custom fields.",
+            "title": "Custom Fields"
+          },
           "default_best_before_days": {
             "anyOf": [
               {
@@ -602,6 +633,36 @@
             "title": "Created At",
             "type": "string"
           },
+          "custom_fields": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Fields"
+          },
           "default_best_before_days": {
             "anyOf": [
               {
@@ -695,6 +756,7 @@
           "min_stock",
           "default_best_before_days",
           "reminder_lead_days",
+          "custom_fields",
           "created_at"
         ],
         "title": "DefinitionResponse",
@@ -713,6 +775,37 @@
               }
             ],
             "title": "Category Id"
+          },
+          "custom_fields": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional flat key/value map (M5 Step 4). When explicitly set to null in the PATCH body, custom fields are cleared. When omitted from the PATCH body, existing custom fields are unchanged. Use model_fields_set to distinguish 'omitted' from 'explicitly null'.",
+            "title": "Custom Fields"
           },
           "default_best_before_days": {
             "anyOf": [
@@ -1318,7 +1411,7 @@
         "type": "object"
       },
       "InstanceCreate": {
-        "description": "Body for POST /instances.\n\n``quantity`` \u2014 optional initial intake for ``exact``-mode lots (service\ndefaults to Decimal(\"1\") when omitted for exact mode).  Must be NULL / not\nprovided for ``level`` and ``none`` modes.\n\n``stock_level`` \u2014 required for ``level``-mode lots; must be one of\nSTOCK_LEVELS (validated by the service, not here).  Must not be provided\nfor ``exact`` and ``none`` modes.\n\n``best_before_date`` \u2014 optional per-lot best-before date (M3 Step 2).\nWhen omitted, the service auto-computes it from the definition's\n``default_best_before_days`` (``today + N``) if set, otherwise leaves it\nNULL.  An explicit date (including a past date) always wins.  An explicit\n``None`` stays NULL even when a default exists.\nMode-independent (valid for ``exact``/``level``/``none`` lots alike).",
+        "description": "Body for POST /instances.\n\n``quantity`` \u2014 optional initial intake for ``exact``-mode lots (service\ndefaults to Decimal(\"1\") when omitted for exact mode).  Must be NULL / not\nprovided for ``level`` and ``none`` modes.\n\n``stock_level`` \u2014 required for ``level``-mode lots; must be one of\nSTOCK_LEVELS (validated by the service, not here).  Must not be provided\nfor ``exact`` and ``none`` modes.\n\n``best_before_date`` \u2014 optional per-lot best-before date (M3 Step 2).\nWhen omitted, the service auto-computes it from the definition's\n``default_best_before_days`` (``today + N``) if set, otherwise leaves it\nNULL.  An explicit date (including a past date) always wins.  An explicit\n``None`` stays NULL even when a default exists.\nMode-independent (valid for ``exact``/``level``/``none`` lots alike).\n\n``custom_fields`` \u2014 optional flat key/value map (M5 Step 4).  NULL = none.",
         "properties": {
           "best_before_date": {
             "anyOf": [
@@ -1331,6 +1424,37 @@
               }
             ],
             "title": "Best Before Date"
+          },
+          "custom_fields": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional flat key/value map for user-defined attributes (M5 Step 4). Keys: non-empty string \u2264 64 chars. Values: str (\u2264 1024 chars), int, float, bool, or null \u2014 no nesting. Maximum 50 fields. NULL = no custom fields.",
+            "title": "Custom Fields"
           },
           "definition_id": {
             "title": "Definition Id",
@@ -1494,6 +1618,36 @@
             "title": "Created At",
             "type": "string"
           },
+          "custom_fields": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Fields"
+          },
           "definition_id": {
             "title": "Definition Id",
             "type": "integer"
@@ -1656,13 +1810,14 @@
           "purchase_price",
           "purchase_date",
           "purchase_source",
+          "custom_fields",
           "created_at"
         ],
         "title": "InstanceResponse",
         "type": "object"
       },
       "InstanceUpdate": {
-        "description": "Body for PATCH /instances/{id} \u2014 all fields optional.\n\n``quantity`` is intentionally absent (M2 \u00a72 \"Create vs. movement\"):\nonce an ``exact`` lot is created its quantity changes only through\nmovement endpoints (intake / discard / adjust / consume / reverse).\n\n``stock_level`` may be updated for ``level``-mode lots.\n\n``best_before_date`` \u2014 optional (M3 Step 2).  Uses the model_fields_set\nconvention: omitting the field leaves the stored date unchanged; supplying\n``null`` explicitly clears the date to NULL.  No auto-compute on update \u2014\nupdate is an explicit correction only.",
+        "description": "Body for PATCH /instances/{id} \u2014 all fields optional.\n\n``quantity`` is intentionally absent (M2 \u00a72 \"Create vs. movement\"):\nonce an ``exact`` lot is created its quantity changes only through\nmovement endpoints (intake / discard / adjust / consume / reverse).\n\n``stock_level`` may be updated for ``level``-mode lots.\n\n``best_before_date`` \u2014 optional (M3 Step 2).  Uses the model_fields_set\nconvention: omitting the field leaves the stored date unchanged; supplying\n``null`` explicitly clears the date to NULL.  No auto-compute on update \u2014\nupdate is an explicit correction only.\n\n``custom_fields`` \u2014 optional (M5 Step 4).  Uses the model_fields_set\nconvention: omitting leaves stored custom fields unchanged; supplying\n``null`` explicitly clears them.",
         "properties": {
           "best_before_date": {
             "anyOf": [
@@ -1675,6 +1830,37 @@
               }
             ],
             "title": "Best Before Date"
+          },
+          "custom_fields": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional flat key/value map (M5 Step 4). Omitting leaves existing custom fields unchanged. Explicitly supplying null clears custom fields.",
+            "title": "Custom Fields"
           },
           "location_id": {
             "anyOf": [

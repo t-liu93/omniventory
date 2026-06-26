@@ -82,6 +82,7 @@ class ItemDefinitionRepository:
         min_stock: Decimal | None = None,
         default_best_before_days: int | None = None,
         reminder_lead_days: int | None = None,
+        custom_fields: str | None = None,
     ) -> ItemDefinition:
         """Insert a new ItemDefinition and flush to get its PK."""
         defn = ItemDefinition(
@@ -95,6 +96,7 @@ class ItemDefinitionRepository:
             min_stock=min_stock,
             default_best_before_days=default_best_before_days,
             reminder_lead_days=reminder_lead_days,
+            custom_fields=custom_fields,
         )
         self._db.add(defn)
         self._db.flush()
@@ -119,6 +121,8 @@ class ItemDefinitionRepository:
         default_best_before_days: int | None = None,
         set_reminder_lead_days: bool = False,
         reminder_lead_days: int | None = None,
+        set_custom_fields: bool = False,
+        custom_fields: str | None = None,
     ) -> ItemDefinition:
         """Apply partial field updates to an ItemDefinition.
 
@@ -126,9 +130,10 @@ class ItemDefinitionRepository:
         explicit ``set_*`` flag to distinguish "don't change" from "set to
         NULL" — the same pattern as the Location/Category repositories.
 
-        ``min_stock``, ``default_best_before_days``, and ``reminder_lead_days``
-        also use explicit ``set_*`` flags for the same reason (can legitimately
-        be set to NULL to remove the threshold / shelf-life default / lead override).
+        ``min_stock``, ``default_best_before_days``, ``reminder_lead_days``,
+        and ``custom_fields`` also use explicit ``set_*`` flags for the same
+        reason (can legitimately be set to NULL to remove the threshold /
+        shelf-life default / lead override / custom fields).
         """
         if name is not None:
             defn.name = name
@@ -150,6 +155,8 @@ class ItemDefinitionRepository:
             defn.default_best_before_days = default_best_before_days
         if set_reminder_lead_days:
             defn.reminder_lead_days = reminder_lead_days
+        if set_custom_fields:
+            defn.custom_fields = custom_fields
         self._db.flush()
         return defn
 

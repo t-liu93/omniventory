@@ -25,8 +25,15 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
+
+from app.schemas.custom_fields import (
+    CustomFieldsDict,
+    CustomFieldsMap,
+    deserialize_custom_fields,
+)
 
 
 class InstanceCreate(BaseModel):
@@ -46,6 +53,8 @@ class InstanceCreate(BaseModel):
     NULL.  An explicit date (including a past date) always wins.  An explicit
     ``None`` stays NULL even when a default exists.
     Mode-independent (valid for ``exact``/``level``/``none`` lots alike).
+
+    ``custom_fields`` — optional flat key/value map (M5 Step 4).  NULL = none.
     """
 
     definition_id: int
@@ -61,6 +70,15 @@ class InstanceCreate(BaseModel):
     purchase_price: Decimal | None = None
     purchase_date: date | None = None
     purchase_source: str | None = None
+    custom_fields: CustomFieldsMap | None = Field(
+        default=None,
+        description=(
+            "Optional flat key/value map for user-defined attributes (M5 Step 4). "
+            "Keys: non-empty string ≤ 64 chars. "
+            "Values: str (≤ 1024 chars), int, float, bool, or null — no nesting. "
+            "Maximum 50 fields. NULL = no custom fields."
+        ),
+    )
 
 
 class InstanceUpdate(BaseModel):
@@ -76,6 +94,10 @@ class InstanceUpdate(BaseModel):
     convention: omitting the field leaves the stored date unchanged; supplying
     ``null`` explicitly clears the date to NULL.  No auto-compute on update —
     update is an explicit correction only.
+
+    ``custom_fields`` — optional (M5 Step 4).  Uses the model_fields_set
+    convention: omitting leaves stored custom fields unchanged; supplying
+    ``null`` explicitly clears them.
     """
 
     location_id: int | None = None
@@ -89,6 +111,14 @@ class InstanceUpdate(BaseModel):
     purchase_price: Decimal | None = None
     purchase_date: date | None = None
     purchase_source: str | None = None
+    custom_fields: CustomFieldsMap | None = Field(
+        default=None,
+        description=(
+            "Optional flat key/value map (M5 Step 4). "
+            "Omitting leaves existing custom fields unchanged. "
+            "Explicitly supplying null clears custom fields."
+        ),
+    )
 
 
 class InstanceResponse(BaseModel):
@@ -109,6 +139,23 @@ class InstanceResponse(BaseModel):
     purchase_price: Decimal | None
     purchase_date: date | None
     purchase_source: str | None
+    custom_fields: CustomFieldsDict | None  # M5: parsed dict (or None)
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+    @field_validator("custom_fields", mode="before")
+    @classmethod
+    def _parse_custom_fields(cls, v: Any) -> CustomFieldsDict | None:
+        """Parse a raw JSON string from the ORM column into a Python dict.
+
+        When ``model_validate(orm_obj)`` is called, Pydantic reads the
+        ``custom_fields`` attribute from the ORM object (a ``str | None``).
+        This validator converts that raw string to the expected dict shape.
+        A plain dict (e.g. from direct schema construction) is passed through.
+        """
+        if v is None or isinstance(v, dict):
+            return v
+        if isinstance(v, str):
+            return deserialize_custom_fields(v)
+        return None

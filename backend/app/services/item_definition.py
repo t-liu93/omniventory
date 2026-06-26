@@ -32,6 +32,7 @@ from app.repositories.item_definition import ItemDefinitionRepository
 from app.repositories.item_kind import ItemKindRepository
 from app.repositories.location import LocationRepository
 from app.repositories.stock_instance import StockInstanceRepository
+from app.schemas.custom_fields import serialize_custom_fields
 from app.schemas.item_definition import DefinitionCreate, DefinitionUpdate
 
 _DURABLE_CODE = "durable"
@@ -167,6 +168,7 @@ class ItemDefinitionService:
             min_stock=data.min_stock,
             default_best_before_days=data.default_best_before_days,
             reminder_lead_days=data.reminder_lead_days,
+            custom_fields=serialize_custom_fields(data.custom_fields),
         )
 
     def get(self, definition_id: int) -> ItemDefinition:
@@ -214,6 +216,7 @@ class ItemDefinitionService:
         min_stock_changed = "min_stock" in data.model_fields_set
         best_before_days_changed = "default_best_before_days" in data.model_fields_set
         reminder_lead_days_changed = "reminder_lead_days" in data.model_fields_set
+        custom_fields_changed = "custom_fields" in data.model_fields_set
 
         if category_id_changed and data.category_id is not None:
             self._assert_category_exists(data.category_id)
@@ -263,6 +266,10 @@ class ItemDefinitionService:
             default_best_before_days=data.default_best_before_days,
             set_reminder_lead_days=reminder_lead_days_changed,
             reminder_lead_days=data.reminder_lead_days,
+            set_custom_fields=custom_fields_changed,
+            custom_fields=serialize_custom_fields(data.custom_fields)
+            if custom_fields_changed
+            else None,
         )
 
     def delete(self, definition_id: int) -> list[Path]:

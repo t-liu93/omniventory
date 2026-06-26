@@ -1383,6 +1383,13 @@ export interface components {
             /** Category Id */
             category_id?: number | null;
             /**
+             * Custom Fields
+             * @description Optional flat key/value map for user-defined attributes (M5 Step 4). Keys: non-empty string ≤ 64 chars. Values: str (≤ 1024 chars), int, float, bool, or null — no nesting. Maximum 50 fields. NULL = no custom fields.
+             */
+            custom_fields?: {
+                [key: string]: string | number | boolean | null;
+            } | null;
+            /**
              * Default Best Before Days
              * @description Default shelf life in days (M3). ``NULL`` = no default. Must be ≥ 0 (0 = same-day expiry). Pydantic ge=0 is the sole validation; no DB CHECK constraint.
              */
@@ -1425,6 +1432,10 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Custom Fields */
+            custom_fields: {
+                [key: string]: string | number | boolean | null;
+            } | null;
             /** Default Best Before Days */
             default_best_before_days: number | null;
             /** Default Location Id */
@@ -1454,6 +1465,13 @@ export interface components {
         DefinitionUpdate: {
             /** Category Id */
             category_id?: number | null;
+            /**
+             * Custom Fields
+             * @description Optional flat key/value map (M5 Step 4). When explicitly set to null in the PATCH body, custom fields are cleared. When omitted from the PATCH body, existing custom fields are unchanged. Use model_fields_set to distinguish 'omitted' from 'explicitly null'.
+             */
+            custom_fields?: {
+                [key: string]: string | number | boolean | null;
+            } | null;
             /**
              * Default Best Before Days
              * @description Default shelf life in days (M3). ``NULL`` = remove the default. Must be ≥ 0 when provided.
@@ -1662,10 +1680,19 @@ export interface components {
          *     NULL.  An explicit date (including a past date) always wins.  An explicit
          *     ``None`` stays NULL even when a default exists.
          *     Mode-independent (valid for ``exact``/``level``/``none`` lots alike).
+         *
+         *     ``custom_fields`` — optional flat key/value map (M5 Step 4).  NULL = none.
          */
         InstanceCreate: {
             /** Best Before Date */
             best_before_date?: string | null;
+            /**
+             * Custom Fields
+             * @description Optional flat key/value map for user-defined attributes (M5 Step 4). Keys: non-empty string ≤ 64 chars. Values: str (≤ 1024 chars), int, float, bool, or null — no nesting. Maximum 50 fields. NULL = no custom fields.
+             */
+            custom_fields?: {
+                [key: string]: string | number | boolean | null;
+            } | null;
             /** Definition Id */
             definition_id: number;
             /** Location Id */
@@ -1703,6 +1730,10 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Custom Fields */
+            custom_fields: {
+                [key: string]: string | number | boolean | null;
+            } | null;
             /** Definition Id */
             definition_id: number;
             /** Id */
@@ -1746,10 +1777,21 @@ export interface components {
          *     convention: omitting the field leaves the stored date unchanged; supplying
          *     ``null`` explicitly clears the date to NULL.  No auto-compute on update —
          *     update is an explicit correction only.
+         *
+         *     ``custom_fields`` — optional (M5 Step 4).  Uses the model_fields_set
+         *     convention: omitting leaves stored custom fields unchanged; supplying
+         *     ``null`` explicitly clears them.
          */
         InstanceUpdate: {
             /** Best Before Date */
             best_before_date?: string | null;
+            /**
+             * Custom Fields
+             * @description Optional flat key/value map (M5 Step 4). Omitting leaves existing custom fields unchanged. Explicitly supplying null clears custom fields.
+             */
+            custom_fields?: {
+                [key: string]: string | number | boolean | null;
+            } | null;
             /** Location Id */
             location_id?: number | null;
             /** Manufacturer */

@@ -7,6 +7,10 @@
 # Implementation / review briefs are local working artifacts, never committed.
 review-notes/
 
+# ---- Local agent / tooling state (never committed) ----
+# Claude Code local state + orchestrator agent worktrees live here.
+.claude/
+
 # ---- Python / backend ----
 __pycache__/
 *.py[cod]

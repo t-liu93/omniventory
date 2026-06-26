@@ -27,7 +27,7 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, func
+from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -57,6 +57,10 @@ class ItemDefinition(Base):
                                for durables).  ``NULL`` = inherit — the engine falls through
                                to the per-user then global default (§4.3 resolution chain).
                                Editing is non-retroactive (no recompute of existing notifications).
+    custom_fields              Text; nullable; JSON object string holding a flat map
+                               ``str → (str|int|float|bool|null)``. NULL = none.
+                               (De)serialized + validated app-layer (M5 Step 4). No DB JSON
+                               functions (roadmap §2.11).
     created_at                 Row-creation timestamp (UTC, set by DB on insert).
     """
 
@@ -104,6 +108,11 @@ class ItemDefinition(Base):
     )
     reminder_lead_days: Mapped[int | None] = mapped_column(
         Integer,
+        nullable=True,
+        default=None,
+    )
+    custom_fields: Mapped[str | None] = mapped_column(
+        Text,
         nullable=True,
         default=None,
     )

@@ -9,9 +9,15 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
+from app.schemas.custom_fields import (
+    CustomFieldsDict,
+    CustomFieldsMap,
+    deserialize_custom_fields,
+)
 from app.schemas.item_kind import KindResponse
 
 
@@ -47,6 +53,15 @@ class DefinitionCreate(BaseModel):
             "Pydantic ge=0 is the sole validation; no DB CHECK constraint."
         ),
     )
+    custom_fields: CustomFieldsMap | None = Field(
+        default=None,
+        description=(
+            "Optional flat key/value map for user-defined attributes (M5 Step 4). "
+            "Keys: non-empty string ≤ 64 chars. "
+            "Values: str (≤ 1024 chars), int, float, bool, or null — no nesting. "
+            "Maximum 50 fields. NULL = no custom fields."
+        ),
+    )
 
 
 class DefinitionUpdate(BaseModel):
@@ -77,6 +92,15 @@ class DefinitionUpdate(BaseModel):
             "Must be ≥ 0 when provided."
         ),
     )
+    custom_fields: CustomFieldsMap | None = Field(
+        default=None,
+        description=(
+            "Optional flat key/value map (M5 Step 4). "
+            "When explicitly set to null in the PATCH body, custom fields are cleared. "
+            "When omitted from the PATCH body, existing custom fields are unchanged. "
+            "Use model_fields_set to distinguish 'omitted' from 'explicitly null'."
+        ),
+    )
 
 
 class DefinitionResponse(BaseModel):
@@ -94,6 +118,23 @@ class DefinitionResponse(BaseModel):
     min_stock: Decimal | None
     default_best_before_days: int | None  # M3: shelf-life default in days; NULL = no default
     reminder_lead_days: int | None  # M4: per-item lead override; NULL = inherit (§4.3)
+    custom_fields: CustomFieldsDict | None  # M5: parsed dict (or None)
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+    @field_validator("custom_fields", mode="before")
+    @classmethod
+    def _parse_custom_fields(cls, v: Any) -> CustomFieldsDict | None:
+        """Parse a raw JSON string from the ORM column into a Python dict.
+
+        When ``model_validate(orm_obj)`` is called, Pydantic reads the
+        ``custom_fields`` attribute from the ORM object (a ``str | None``).
+        This validator converts that raw string to the expected dict shape.
+        A plain dict (e.g. from direct schema construction) is passed through.
+        """
+        if v is None or isinstance(v, dict):
+            return v
+        if isinstance(v, str):
+            return deserialize_custom_fields(v)
+        return None

@@ -48,6 +48,7 @@ from sqlalchemy import (
     Integer,
     Numeric,
     String,
+    Text,
     func,
     text,
 )
@@ -81,6 +82,10 @@ class StockInstance(Base):
     purchase_price   Numeric(18,2); currency from household.currency.
     purchase_date    Date of purchase.
     purchase_source  Where it was bought.
+    custom_fields    Text; nullable; JSON object string holding a flat map
+                     ``str → (str|int|float|bool|null)``. NULL = none.
+                     (De)serialized + validated app-layer (M5 Step 4). No DB JSON
+                     functions (roadmap §2.11).
     created_at       Row-creation timestamp (UTC, set by DB on insert).
     """
 
@@ -148,6 +153,11 @@ class StockInstance(Base):
     )
     purchase_date: Mapped[date | None] = mapped_column(Date, nullable=True, default=None)
     purchase_source: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
+    custom_fields: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        default=None,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

@@ -57,6 +57,7 @@ from app.repositories.item_definition import ItemDefinitionRepository
 from app.repositories.location import LocationRepository
 from app.repositories.stock_instance import StockInstanceRepository
 from app.repositories.stock_movement import StockMovementRepository
+from app.schemas.custom_fields import serialize_custom_fields
 from app.schemas.stock_instance import InstanceCreate, InstanceUpdate
 
 _ONE = Decimal("1")
@@ -354,6 +355,9 @@ class StockInstanceService:
         # Precedence: explicit wins (even None / past date) → definition default → NULL.
         resolved_best_before = self._resolve_best_before(data, defn)
 
+        # Serialize custom_fields once for all branches.
+        serialized_custom_fields = serialize_custom_fields(data.custom_fields)
+
         if mode == "exact":
             # Initial intake quantity — default to 1 when not supplied.
             intake_qty = data.quantity if data.quantity is not None else _ONE
@@ -376,6 +380,7 @@ class StockInstanceService:
                 purchase_price=data.purchase_price,
                 purchase_date=data.purchase_date,
                 purchase_source=data.purchase_source,
+                custom_fields=serialized_custom_fields,
             )
             # Record the initial intake movement.
             self._movement_repo.append(
@@ -407,6 +412,7 @@ class StockInstanceService:
                 purchase_price=data.purchase_price,
                 purchase_date=data.purchase_date,
                 purchase_source=data.purchase_source,
+                custom_fields=serialized_custom_fields,
             )
             self._db.flush()
             return inst
@@ -426,6 +432,7 @@ class StockInstanceService:
                 purchase_price=data.purchase_price,
                 purchase_date=data.purchase_date,
                 purchase_source=data.purchase_source,
+                custom_fields=serialized_custom_fields,
             )
             self._db.flush()
             return inst
@@ -478,6 +485,7 @@ class StockInstanceService:
         if location_id_changed and data.location_id is not None:
             self._assert_location_exists(data.location_id)
 
+        custom_fields_changed = "custom_fields" in data.model_fields_set
         return self._repo.update(
             inst,
             set_location_id=location_id_changed,
@@ -502,6 +510,10 @@ class StockInstanceService:
             purchase_date=data.purchase_date,
             set_purchase_source="purchase_source" in data.model_fields_set,
             purchase_source=data.purchase_source,
+            set_custom_fields=custom_fields_changed,
+            custom_fields=(
+                serialize_custom_fields(data.custom_fields) if custom_fields_changed else None
+            ),
         )
 
     def delete(self, instance_id: int) -> list[Path]:
