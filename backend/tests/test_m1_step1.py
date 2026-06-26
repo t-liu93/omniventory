@@ -65,6 +65,7 @@ def _make_fresh_session() -> Session:
     import app.models.session as sess_mod
     import app.models.stock_instance as stock_instance_mod
     import app.models.stock_movement as stock_movement_mod
+    import app.models.tag as tag_mod
     import app.models.user as user_mod
 
     importlib.reload(db_base_mod)
@@ -80,6 +81,7 @@ def _make_fresh_session() -> Session:
     importlib.reload(loc_mod)
     importlib.reload(media_file_mod)
     importlib.reload(attachment_mod)
+    importlib.reload(tag_mod)
 
     from app.db.base import Base as _Base
 
@@ -157,6 +159,7 @@ def test_client(temp_db: Path) -> Generator[TestClient]:  # noqa: ARG001
     import app.models.session as sess_mod
     import app.models.stock_instance as stock_instance_mod
     import app.models.stock_movement as stock_movement_mod
+    import app.models.tag as tag_mod
     import app.models.user as user_mod
 
     importlib.reload(db_base_mod)
@@ -172,6 +175,7 @@ def test_client(temp_db: Path) -> Generator[TestClient]:  # noqa: ARG001
     importlib.reload(loc_mod)
     importlib.reload(media_file_mod)
     importlib.reload(attachment_mod)
+    importlib.reload(tag_mod)
 
     from app.db.base import Base, get_engine
     from app.main import create_app

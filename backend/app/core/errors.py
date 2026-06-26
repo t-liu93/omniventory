@@ -109,6 +109,10 @@ class ErrorCode:
     ATTACHMENT_FILE_TOO_LARGE = "attachment.file_too_large"
     ATTACHMENT_UNSUPPORTED_TYPE = "attachment.unsupported_type"
 
+    # --- Tags (M5 Step 2) ---
+    TAG_NOT_FOUND = "tag.not_found"
+    TAG_DUPLICATE_NAME = "tag.duplicate_name"
+
     # --- Internal / catch-all ---
     INTERNAL_ERROR = "internal.error"
 
@@ -153,6 +157,8 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     ErrorCode.ATTACHMENT_NOT_FOUND: "Attachment not found.",
     ErrorCode.ATTACHMENT_FILE_TOO_LARGE: "Uploaded file exceeds the maximum allowed size.",
     ErrorCode.ATTACHMENT_UNSUPPORTED_TYPE: "File type is not supported.",
+    ErrorCode.TAG_NOT_FOUND: "Tag not found.",
+    ErrorCode.TAG_DUPLICATE_NAME: "A tag with that name already exists.",
     ErrorCode.INTERNAL_ERROR: "An internal error occurred.",
 }
 

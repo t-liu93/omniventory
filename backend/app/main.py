@@ -324,6 +324,7 @@ def create_app() -> FastAPI:
     from app.api.routes.notifications import router as notifications_router
     from app.api.routes.reminders import router as reminders_router
     from app.api.routes.settings import router as settings_router
+    from app.api.routes.tags import router as tags_router
 
     root_router = APIRouter()
     root_router.include_router(health.router)
@@ -341,6 +342,7 @@ def create_app() -> FastAPI:
     root_router.include_router(notifications_router)
     root_router.include_router(integrations_router)
     root_router.include_router(attachments_router)
+    root_router.include_router(tags_router)
 
     app.include_router(root_router, prefix=settings.api_prefix)
 

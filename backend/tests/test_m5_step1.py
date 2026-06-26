@@ -123,6 +123,7 @@ def test_client(
     import app.models.setting as setting_mod
     import app.models.stock_instance as stock_instance_mod
     import app.models.stock_movement as stock_movement_mod
+    import app.models.tag as tag_mod
     import app.models.user as user_mod
 
     # Re-register all models with a fresh Base so create_all() includes
@@ -142,6 +143,7 @@ def test_client(
     importlib.reload(notif_mod)
     importlib.reload(media_file_mod)
     importlib.reload(attachment_mod)
+    importlib.reload(tag_mod)
 
     from app.config import get_settings
     from app.db.base import Base, get_engine
@@ -827,6 +829,7 @@ class TestFailedUnlinkSilent:
         import app.models.setting as setting_mod
         import app.models.stock_instance as stock_instance_mod
         import app.models.stock_movement as stock_movement_mod
+        import app.models.tag as tag_mod
         import app.models.user as user_mod
 
         importlib.reload(db_base_mod)
@@ -844,6 +847,7 @@ class TestFailedUnlinkSilent:
         importlib.reload(notif_mod)
         importlib.reload(media_file_mod)
         importlib.reload(attachment_mod)
+        importlib.reload(tag_mod)
 
         from app.db.base import Base
 

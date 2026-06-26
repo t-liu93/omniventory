@@ -273,7 +273,8 @@ class LocationService(TreeServiceMixin):
     def delete(self, location_id: int) -> list[Path]:
         """Delete a location (guarded — 409 if it has children, instances, or is a container).
 
-        Cascades attachments (M5 Step 1) before removing the row.
+        Cascades attachments (M5 Step 1) and tag links (M5 Step 2) before
+        removing the row.
 
         Returns
         -------
@@ -281,6 +282,7 @@ class LocationService(TreeServiceMixin):
         """
         from app.config import get_settings
         from app.services.attachment import AttachmentService
+        from app.services.tag import TagService
 
         loc = self._get_or_404(location_id)
         self._assert_deletable_location(loc)
@@ -289,6 +291,7 @@ class LocationService(TreeServiceMixin):
         paths = AttachmentService(self._db, media_dir=media_dir).delete_for_owner(
             "location", location_id
         )
+        TagService(self._db).detach_all_for_owner("location", location_id)
         self._repo.delete(loc)
         return paths
 

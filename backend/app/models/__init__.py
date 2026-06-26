@@ -18,6 +18,7 @@ from app.models.session import Session
 from app.models.setting import Setting
 from app.models.stock_instance import StockInstance
 from app.models.stock_movement import StockMovement
+from app.models.tag import Tag, TagLink
 from app.models.user import User
 
 __all__ = [
@@ -35,5 +36,7 @@ __all__ = [
     "Setting",
     "StockInstance",
     "StockMovement",
+    "Tag",
+    "TagLink",
     "User",
 ]

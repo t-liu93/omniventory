@@ -505,9 +505,10 @@ class StockInstanceService:
         )
 
     def delete(self, instance_id: int) -> list[Path]:
-        """Delete a stock instance (cascade-deletes its movements and attachments).
+        """Delete a stock instance (cascade-deletes its movements, attachments, and tag links).
 
-        Cascades attachments (M5 Step 1) before removing the row.
+        Cascades attachments (M5 Step 1) and tag links (M5 Step 2) before
+        removing the row.
 
         Returns
         -------
@@ -515,6 +516,7 @@ class StockInstanceService:
         """
         from app.config import get_settings
         from app.services.attachment import AttachmentService
+        from app.services.tag import TagService
 
         inst = self._get_or_404(instance_id)
         settings = get_settings()
@@ -522,5 +524,6 @@ class StockInstanceService:
         paths = AttachmentService(self._db, media_dir=media_dir).delete_for_owner(
             "stock_instance", instance_id
         )
+        TagService(self._db).detach_all_for_owner("stock_instance", instance_id)
         self._repo.delete(inst)
         return paths
