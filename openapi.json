@@ -6011,6 +6011,78 @@
         ]
       }
     },
+    "/api/export/{entity}": {
+      "get": {
+        "description": "Stream item_definitions, stock_instances, or locations as a file download.\n\nForeign keys are exported as *id + resolved name* pairs (e.g.\n``category_id``, ``category_name``).  A NULL FK yields an empty name in\nCSV and ``null`` in JSON.  ``custom_fields`` is a JSON string column.\nTags are comma-joined into a single ``tags`` column.\n\nBad *entity* or *format* \u2192 422 ``validation.invalid_input``.",
+        "operationId": "export_entity_api_export__entity__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity",
+            "required": true,
+            "schema": {
+              "title": "Entity",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Output format: ``csv`` or ``json``. Defaults to ``csv`` when omitted.",
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "csv",
+              "description": "Output format: ``csv`` or ``json``. Defaults to ``csv`` when omitted.",
+              "title": "Format",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Streamed file download (CSV or JSON)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Export Entity",
+        "tags": [
+          "export"
+        ]
+      }
+    },
     "/api/health": {
       "get": {
         "description": "Return service health.\n\n``status``      always ``\"ok\"`` while the process is running.\n``version``     application release version.\n``api_version`` integer compatibility number from Settings.\n``db``          ``\"ok\"`` if ``SELECT 1`` succeeds; propagates exception\n                on DB failure (FastAPI returns 500).",

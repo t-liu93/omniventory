@@ -316,6 +316,7 @@ def create_app() -> FastAPI:
     from app.api.routes.categories import router as categories_router
     from app.api.routes.definitions import router as definitions_router
     from app.api.routes.expiry import router as expiry_router
+    from app.api.routes.export import router as export_router
     from app.api.routes.instances import router as instances_router
     from app.api.routes.integrations import router as integrations_router
     from app.api.routes.kinds import router as kinds_router
@@ -349,6 +350,7 @@ def create_app() -> FastAPI:
     root_router.include_router(notes_router)
     root_router.include_router(barcodes_router)
     root_router.include_router(search_router)
+    root_router.include_router(export_router)
 
     app.include_router(root_router, prefix=settings.api_prefix)
 

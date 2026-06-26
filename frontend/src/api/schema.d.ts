@@ -494,6 +494,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/export/{entity}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Entity
+         * @description Stream item_definitions, stock_instances, or locations as a file download.
+         *
+         *     Foreign keys are exported as *id + resolved name* pairs (e.g.
+         *     ``category_id``, ``category_name``).  A NULL FK yields an empty name in
+         *     CSV and ``null`` in JSON.  ``custom_fields`` is a JSON string column.
+         *     Tags are comma-joined into a single ``tags`` column.
+         *
+         *     Bad *entity* or *format* → 422 ``validation.invalid_input``.
+         */
+        get: operations["export_entity_api_export__entity__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -4443,6 +4470,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_entity_api_export__entity__get: {
+        parameters: {
+            query?: {
+                /** @description Output format: ``csv`` or ``json``. Defaults to ``csv`` when omitted. */
+                format?: string;
+            };
+            header?: never;
+            path: {
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Streamed file download (CSV or JSON). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                    "text/csv": string;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
