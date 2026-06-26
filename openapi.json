@@ -46,6 +46,149 @@
         "title": "AdjustRequest",
         "type": "object"
       },
+      "AttachmentResponse": {
+        "description": "Public representation of an Attachment (with embedded media metadata).",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "media": {
+            "$ref": "#/components/schemas/MediaSummary"
+          },
+          "model_id": {
+            "title": "Model Id",
+            "type": "integer"
+          },
+          "model_type": {
+            "title": "Model Type",
+            "type": "string"
+          },
+          "original_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Filename"
+          },
+          "sort_order": {
+            "title": "Sort Order",
+            "type": "integer"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "uploaded_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uploaded By"
+          }
+        },
+        "required": [
+          "id",
+          "model_type",
+          "model_id",
+          "original_filename",
+          "title",
+          "sort_order",
+          "uploaded_by",
+          "created_at",
+          "media"
+        ],
+        "title": "AttachmentResponse",
+        "type": "object"
+      },
+      "AttachmentUpdate": {
+        "description": "Body for PATCH /attachments/{id} \u2014 all fields optional.",
+        "properties": {
+          "sort_order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Order"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "AttachmentUpdate",
+        "type": "object"
+      },
+      "Body_upload_attachment_api_attachments_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "description": "File to upload.",
+            "title": "File",
+            "type": "string"
+          },
+          "model_id": {
+            "description": "Owner PK.",
+            "title": "Model Id",
+            "type": "integer"
+          },
+          "model_type": {
+            "description": "Owner type: item_definition / stock_instance / location",
+            "title": "Model Type",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional caption.",
+            "title": "Title"
+          }
+        },
+        "required": [
+          "model_type",
+          "model_id",
+          "file"
+        ],
+        "title": "Body_upload_attachment_api_attachments_post",
+        "type": "object"
+      },
       "CategoryCreate": {
         "description": "Body for POST /categories.",
         "properties": {
@@ -2088,6 +2231,59 @@
         "title": "MeResponse",
         "type": "object"
       },
+      "MediaSummary": {
+        "description": "Embedded media metadata within an AttachmentResponse.\n\n``url`` is the capability URL for the media file: ``/media/<sha256[:2]>/<sha256>``.\nThe path matches the StaticFiles mount at ``/media``.",
+        "properties": {
+          "byte_size": {
+            "title": "Byte Size",
+            "type": "integer"
+          },
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width"
+          }
+        },
+        "required": [
+          "sha256",
+          "content_type",
+          "byte_size",
+          "width",
+          "height",
+          "url"
+        ],
+        "title": "MediaSummary",
+        "type": "object"
+      },
       "MessageResponse": {
         "description": "Generic message response (used for logout).",
         "properties": {
@@ -2945,6 +3141,353 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/attachments": {
+      "get": {
+        "description": "List all attachments for a given owner (model_type + model_id).",
+        "operationId": "list_attachments_api_attachments_get",
+        "parameters": [
+          {
+            "description": "Owner type.",
+            "in": "query",
+            "name": "model_type",
+            "required": true,
+            "schema": {
+              "description": "Owner type.",
+              "title": "Model Type",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Owner PK.",
+            "in": "query",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "description": "Owner PK.",
+              "title": "Model Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AttachmentResponse"
+                  },
+                  "title": "Response List Attachments Api Attachments Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unsupported Media Type"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "List Attachments",
+        "tags": [
+          "attachments"
+        ]
+      },
+      "post": {
+        "description": "Upload a file and attach it to an owner entity.\n\nReturns 422 if model_type is invalid, 404 if the owner is missing,\n413 if the file exceeds the size limit, 415 if the type is unsupported.",
+        "operationId": "upload_attachment_api_attachments_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_attachment_api_attachments_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unsupported Media Type"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Upload Attachment",
+        "tags": [
+          "attachments"
+        ]
+      }
+    },
+    "/api/attachments/{attachment_id}": {
+      "delete": {
+        "description": "Remove an attachment reference.\n\nIf this was the last reference to the underlying media file, the\nmedia_files row and the physical file are also deleted (best-effort).\nReturns 404 if the attachment does not exist.",
+        "operationId": "delete_attachment_api_attachments__attachment_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "title": "Attachment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unsupported Media Type"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Delete Attachment",
+        "tags": [
+          "attachments"
+        ]
+      },
+      "patch": {
+        "description": "Update the title and/or sort_order of an attachment.",
+        "operationId": "update_attachment_api_attachments__attachment_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "title": "Attachment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttachmentUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unsupported Media Type"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Update Attachment",
+        "tags": [
+          "attachments"
+        ]
+      }
+    },
     "/api/auth/login": {
       "post": {
         "description": "Authenticate with email + password and return a session cookie.\n\nOn success: creates a server-side session row and sets the ``HttpOnly``\nsession cookie.  Returns the public user object.\n\nOn failure: returns 401 (email not found or wrong password).  The same\nerror is returned for both cases to prevent user-enumeration attacks.",

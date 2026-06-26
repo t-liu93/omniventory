@@ -21,6 +21,8 @@ All DB access goes through ``LocationRepository`` (and
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -268,11 +270,27 @@ class LocationService(TreeServiceMixin):
             item_instance_id=data.item_instance_id,
         )
 
-    def delete(self, location_id: int) -> None:
-        """Delete a location (guarded — 409 if it has children, instances, or is a container)."""
+    def delete(self, location_id: int) -> list[Path]:
+        """Delete a location (guarded — 409 if it has children, instances, or is a container).
+
+        Cascades attachments (M5 Step 1) before removing the row.
+
+        Returns
+        -------
+        List of on-disk media paths to unlink after ``db.commit()`` (best-effort).
+        """
+        from app.config import get_settings
+        from app.services.attachment import AttachmentService
+
         loc = self._get_or_404(location_id)
         self._assert_deletable_location(loc)
+        settings = get_settings()
+        media_dir = Path(settings.data_dir) / "media"
+        paths = AttachmentService(self._db, media_dir=media_dir).delete_for_owner(
+            "location", location_id
+        )
         self._repo.delete(loc)
+        return paths
 
     # ---------------------------------------------------------------------- #
     # Tree                                                                     #

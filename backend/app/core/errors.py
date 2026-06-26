@@ -104,6 +104,11 @@ class ErrorCode:
     # --- Integrations (M4 Step 8) ---
     INTEGRATION_INVALID_TOKEN = "integration.invalid_token"
 
+    # --- Attachments (M5 Step 1) ---
+    ATTACHMENT_NOT_FOUND = "attachment.not_found"
+    ATTACHMENT_FILE_TOO_LARGE = "attachment.file_too_large"
+    ATTACHMENT_UNSUPPORTED_TYPE = "attachment.unsupported_type"
+
     # --- Internal / catch-all ---
     INTERNAL_ERROR = "internal.error"
 
@@ -145,6 +150,9 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     ErrorCode.STOCK_REVERSE_WOULD_GO_NEGATIVE: "Reversing this movement would drive the lot quantity below zero.",
     ErrorCode.NOTIFICATION_NOT_FOUND: "Notification not found or does not belong to the current user.",
     ErrorCode.INTEGRATION_INVALID_TOKEN: "Missing or invalid integration token.",
+    ErrorCode.ATTACHMENT_NOT_FOUND: "Attachment not found.",
+    ErrorCode.ATTACHMENT_FILE_TOO_LARGE: "Uploaded file exceeds the maximum allowed size.",
+    ErrorCode.ATTACHMENT_UNSUPPORTED_TYPE: "File type is not supported.",
     ErrorCode.INTERNAL_ERROR: "An internal error occurred.",
 }
 

@@ -44,6 +44,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 from decimal import Decimal
+from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -503,7 +504,23 @@ class StockInstanceService:
             purchase_source=data.purchase_source,
         )
 
-    def delete(self, instance_id: int) -> None:
-        """Delete a stock instance (cascade-deletes its movements)."""
+    def delete(self, instance_id: int) -> list[Path]:
+        """Delete a stock instance (cascade-deletes its movements and attachments).
+
+        Cascades attachments (M5 Step 1) before removing the row.
+
+        Returns
+        -------
+        List of on-disk media paths to unlink after ``db.commit()`` (best-effort).
+        """
+        from app.config import get_settings
+        from app.services.attachment import AttachmentService
+
         inst = self._get_or_404(instance_id)
+        settings = get_settings()
+        media_dir = Path(settings.data_dir) / "media"
+        paths = AttachmentService(self._db, media_dir=media_dir).delete_for_owner(
+            "stock_instance", instance_id
+        )
         self._repo.delete(inst)
+        return paths

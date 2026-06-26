@@ -55,11 +55,13 @@ def _make_fresh_session() -> Session:
 
     import app.db.base as db_base_mod
     import app.models.app_config as app_config_mod
+    import app.models.attachment as attachment_mod
     import app.models.category as cat_mod
     import app.models.household as hh_mod
     import app.models.item_definition as idef_mod
     import app.models.item_kind as ikind_mod
     import app.models.location as loc_mod
+    import app.models.media_file as media_file_mod
     import app.models.session as sess_mod
     import app.models.stock_instance as stock_instance_mod
     import app.models.stock_movement as stock_movement_mod
@@ -76,6 +78,8 @@ def _make_fresh_session() -> Session:
     importlib.reload(stock_instance_mod)
     importlib.reload(stock_movement_mod)
     importlib.reload(loc_mod)
+    importlib.reload(media_file_mod)
+    importlib.reload(attachment_mod)
 
     from app.db.base import Base as _Base
 
@@ -139,7 +143,36 @@ def temp_db(monkeypatch: pytest.MonkeyPatch) -> Generator[Path]:
 @pytest.fixture()
 def test_client(temp_db: Path) -> Generator[TestClient]:  # noqa: ARG001
     """TestClient with a temp-file SQLite, full schema, and an authenticated session."""
-    import app.models  # noqa: F401 — ensure all models are registered with Base
+    import importlib
+
+    import app.db.base as db_base_mod
+    import app.models.app_config as app_config_mod
+    import app.models.attachment as attachment_mod
+    import app.models.category as cat_mod
+    import app.models.household as hh_mod
+    import app.models.item_definition as idef_mod
+    import app.models.item_kind as ikind_mod
+    import app.models.location as loc_mod
+    import app.models.media_file as media_file_mod
+    import app.models.session as sess_mod
+    import app.models.stock_instance as stock_instance_mod
+    import app.models.stock_movement as stock_movement_mod
+    import app.models.user as user_mod
+
+    importlib.reload(db_base_mod)
+    importlib.reload(hh_mod)
+    importlib.reload(user_mod)
+    importlib.reload(sess_mod)
+    importlib.reload(app_config_mod)
+    importlib.reload(cat_mod)
+    importlib.reload(ikind_mod)
+    importlib.reload(idef_mod)
+    importlib.reload(stock_instance_mod)
+    importlib.reload(stock_movement_mod)
+    importlib.reload(loc_mod)
+    importlib.reload(media_file_mod)
+    importlib.reload(attachment_mod)
+
     from app.db.base import Base, get_engine
     from app.main import create_app
 

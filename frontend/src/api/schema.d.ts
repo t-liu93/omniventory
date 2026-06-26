@@ -4,6 +4,61 @@
  */
 
 export interface paths {
+    "/api/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Attachments
+         * @description List all attachments for a given owner (model_type + model_id).
+         */
+        get: operations["list_attachments_api_attachments_get"];
+        put?: never;
+        /**
+         * Upload Attachment
+         * @description Upload a file and attach it to an owner entity.
+         *
+         *     Returns 422 if model_type is invalid, 404 if the owner is missing,
+         *     413 if the file exceeds the size limit, 415 if the type is unsupported.
+         */
+        post: operations["upload_attachment_api_attachments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/attachments/{attachment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Attachment
+         * @description Remove an attachment reference.
+         *
+         *     If this was the last reference to the underlying media file, the
+         *     media_files row and the physical file are also deleted (best-effort).
+         *     Returns 404 if the attachment does not exist.
+         */
+        delete: operations["delete_attachment_api_attachments__attachment_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Attachment
+         * @description Update the title and/or sort_order of an attachment.
+         */
+        patch: operations["update_attachment_api_attachments__attachment_id__patch"];
+        trace?: never;
+    };
     "/api/auth/login": {
         parameters: {
             query?: never;
@@ -1019,6 +1074,65 @@ export interface components {
             quantity: number | string;
         };
         /**
+         * AttachmentResponse
+         * @description Public representation of an Attachment (with embedded media metadata).
+         */
+        AttachmentResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: number;
+            media: components["schemas"]["MediaSummary"];
+            /** Model Id */
+            model_id: number;
+            /** Model Type */
+            model_type: string;
+            /** Original Filename */
+            original_filename: string | null;
+            /** Sort Order */
+            sort_order: number;
+            /** Title */
+            title: string | null;
+            /** Uploaded By */
+            uploaded_by: number | null;
+        };
+        /**
+         * AttachmentUpdate
+         * @description Body for PATCH /attachments/{id} — all fields optional.
+         */
+        AttachmentUpdate: {
+            /** Sort Order */
+            sort_order?: number | null;
+            /** Title */
+            title?: string | null;
+        };
+        /** Body_upload_attachment_api_attachments_post */
+        Body_upload_attachment_api_attachments_post: {
+            /**
+             * File
+             * @description File to upload.
+             */
+            file: string;
+            /**
+             * Model Id
+             * @description Owner PK.
+             */
+            model_id: number;
+            /**
+             * Model Type
+             * @description Owner type: item_definition / stock_instance / location
+             */
+            model_type: string;
+            /**
+             * Title
+             * @description Optional caption.
+             */
+            title?: string | null;
+        };
+        /**
          * CategoryCreate
          * @description Body for POST /categories.
          */
@@ -1683,6 +1797,27 @@ export interface components {
             user: components["schemas"]["UserResponse"];
         };
         /**
+         * MediaSummary
+         * @description Embedded media metadata within an AttachmentResponse.
+         *
+         *     ``url`` is the capability URL for the media file: ``/media/<sha256[:2]>/<sha256>``.
+         *     The path matches the StaticFiles mount at ``/media``.
+         */
+        MediaSummary: {
+            /** Byte Size */
+            byte_size: number;
+            /** Content Type */
+            content_type: string;
+            /** Height */
+            height: number | null;
+            /** Sha256 */
+            sha256: string;
+            /** Url */
+            url: string;
+            /** Width */
+            width: number | null;
+        };
+        /**
          * MessageResponse
          * @description Generic message response (used for logout).
          */
@@ -2060,6 +2195,281 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_attachments_api_attachments_get: {
+        parameters: {
+            query: {
+                /** @description Owner type. */
+                model_type: string;
+                /** @description Owner PK. */
+                model_id: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentResponse"][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Content Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    upload_attachment_api_attachments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_attachment_api_attachments_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Content Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_attachment_api_attachments__attachment_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attachment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Content Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_attachment_api_attachments__attachment_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attachment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttachmentUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Content Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     login_api_auth_login_post: {
         parameters: {
             query?: never;

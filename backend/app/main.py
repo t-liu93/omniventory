@@ -311,6 +311,7 @@ def create_app() -> FastAPI:
     # Root API router — all routes live under settings.api_prefix          #
     # ------------------------------------------------------------------ #
     from app.api.routes import auth, health
+    from app.api.routes.attachments import router as attachments_router
     from app.api.routes.categories import router as categories_router
     from app.api.routes.definitions import router as definitions_router
     from app.api.routes.expiry import router as expiry_router
@@ -339,8 +340,68 @@ def create_app() -> FastAPI:
     root_router.include_router(reminders_router)
     root_router.include_router(notifications_router)
     root_router.include_router(integrations_router)
+    root_router.include_router(attachments_router)
 
     app.include_router(root_router, prefix=settings.api_prefix)
+
+    # ------------------------------------------------------------------ #
+    # Media file serving route (M5 Step 1)                                 #
+    # Must be registered BEFORE the SPA catch-all route below so that      #
+    # /media/* paths are handled here and not swallowed by the catch-all.  #
+    #                                                                      #
+    # Design (§4.2):                                                       #
+    #   - Returns the stored validated content_type from media_files.      #
+    #   - Sets X-Content-Type-Options: nosniff on every response.          #
+    #   - Sets Content-Disposition: attachment for non-image types.        #
+    #   - Returns 404 for an unknown/missing hash or missing on-disk file. #
+    #   - Uses FileResponse (Range/conditional-GET/caching handled by      #
+    #     Starlette).                                                       #
+    #   - include_in_schema=False — never appears in the OpenAPI spec.     #
+    # ------------------------------------------------------------------ #
+    _media_dir = Path(settings.data_dir) / "media"
+    _media_dir.mkdir(parents=True, exist_ok=True)
+
+    from typing import Annotated
+
+    from fastapi import Depends
+    from sqlalchemy.orm import Session as _Session
+
+    from app.db.session import get_db as _get_db
+    from app.repositories.media_file import MediaFileRepository as _MFRepo
+
+    @app.get("/media/{shard}/{digest}", include_in_schema=False)
+    def serve_media_file(
+        shard: str,
+        digest: str,
+        db: Annotated[_Session, Depends(_get_db)],
+    ) -> FileResponse:
+        """Serve a media file by its content-addressed sha256 path.
+
+        Looks up ``media_files.content_type`` from the DB, applies safe
+        response headers, and delegates range/caching to Starlette
+        ``FileResponse``.  Returns 404 for unknown hashes or missing files.
+        """
+        # Basic path-traversal guard: shard must be the first two chars of digest.
+        if len(digest) < 2 or not digest.startswith(shard):
+            raise HTTPException(status_code=404)
+
+        mf = _MFRepo(db).get_by_hash(digest)
+        if mf is None:
+            raise HTTPException(status_code=404)
+
+        file_path = _media_dir / shard / digest
+        if not file_path.is_file():
+            raise HTTPException(status_code=404)
+
+        resp_headers: dict[str, str] = {"X-Content-Type-Options": "nosniff"}
+        if not mf.content_type.startswith("image/"):
+            resp_headers["Content-Disposition"] = "attachment"
+
+        return FileResponse(
+            path=str(file_path),
+            media_type=mf.content_type,
+            headers=resp_headers,
+        )
 
     # ------------------------------------------------------------------ #
     # Static SPA serving (Step 7)                                          #

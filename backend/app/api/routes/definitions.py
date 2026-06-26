@@ -29,6 +29,7 @@ from app.notifications.dispatcher import build_dispatcher, publish_mqtt_state
 from app.schemas.item_definition import DefinitionCreate, DefinitionResponse, DefinitionUpdate
 from app.schemas.stock_instance import InstanceResponse
 from app.schemas.stock_movement_ops import ConsumeRequest
+from app.services.attachment import unlink_post_commit
 from app.services.item_definition import ItemDefinitionService
 from app.services.stock_movement import StockMovementService
 
@@ -131,8 +132,9 @@ def delete_definition(
     db: Session = Depends(get_db),
 ) -> None:
     """Delete an item definition."""
-    service.delete(definition_id)
+    paths = service.delete(definition_id)
     db.commit()
+    unlink_post_commit(paths)
 
 
 # --------------------------------------------------------------------------- #

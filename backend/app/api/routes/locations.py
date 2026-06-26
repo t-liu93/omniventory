@@ -30,6 +30,7 @@ from app.schemas.location import (
     LocationTreeNode,
     LocationUpdate,
 )
+from app.services.attachment import unlink_post_commit
 from app.services.location import LocationService
 
 _ERROR_RESPONSES: dict[int | str, dict[str, object]] = {
@@ -133,5 +134,6 @@ def delete_location(
 
     Returns 409 if the location still has child locations.
     """
-    service.delete(location_id)
+    paths = service.delete(location_id)
     db.commit()
+    unlink_post_commit(paths)

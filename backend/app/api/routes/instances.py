@@ -40,6 +40,7 @@ from app.notifications.dispatcher import build_dispatcher, publish_mqtt_state
 from app.schemas.stock_instance import InstanceCreate, InstanceResponse, InstanceUpdate
 from app.schemas.stock_movement import MovementResponse
 from app.schemas.stock_movement_ops import AdjustRequest, DiscardRequest, IntakeRequest, MoveRequest
+from app.services.attachment import unlink_post_commit
 from app.services.stock_instance import StockInstanceService
 from app.services.stock_movement import StockMovementService
 
@@ -147,8 +148,9 @@ def delete_instance(
     db: Session = Depends(get_db),
 ) -> None:
     """Delete a stock instance."""
-    service.delete(instance_id)
+    paths = service.delete(instance_id)
     db.commit()
+    unlink_post_commit(paths)
 
 
 # --------------------------------------------------------------------------- #

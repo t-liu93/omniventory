@@ -19,6 +19,8 @@ All DB access goes through the repositories; no raw queries in this layer.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from sqlalchemy.orm import Session
 
 from app.core.errors import AppError, ErrorCode
@@ -263,14 +265,23 @@ class ItemDefinitionService:
             reminder_lead_days=data.reminder_lead_days,
         )
 
-    def delete(self, definition_id: int) -> None:
+    def delete(self, definition_id: int) -> list[Path]:
         """Delete an item definition.
 
         Blocked (HTTP 409) if any stock instance still references this
         definition — symmetric to the location delete-guard (M1.md §2
         "Tree delete semantics").  An instance must always have a definition;
         orphaning one is forbidden.
+
+        Cascades attachments (M5 Step 1) before removing the row.
+
+        Returns
+        -------
+        List of on-disk media paths to unlink after ``db.commit()`` (best-effort).
         """
+        from app.config import get_settings
+        from app.services.attachment import AttachmentService
+
         defn = self._get_or_404(definition_id)
         if self._inst_repo.has_instances_for_definition(definition_id):
             raise AppError(
@@ -283,4 +294,10 @@ class ItemDefinitionService:
                     "Delete or reassign the instances first."
                 ),
             )
+        settings = get_settings()
+        media_dir = Path(settings.data_dir) / "media"
+        paths = AttachmentService(self._db, media_dir=media_dir).delete_for_owner(
+            "item_definition", definition_id
+        )
         self._repo.delete(defn)
+        return paths

@@ -67,6 +67,14 @@ class Settings(BaseSettings):
         default="sqlite:///./data/omniventory.db",
         description="SQLAlchemy database URL.",
     )
+    data_dir: str = Field(
+        default="./data",
+        description=(
+            "Root data directory for persistent storage.  SQLite DB lives here by default.  "
+            "Media files are stored under ``<data_dir>/media/``.  "
+            "Maps to the bind-mounted ``DATA_DIR`` in the Docker Compose setup."
+        ),
+    )
 
     # ------------------------------------------------------------------ #
     # Session cookie                                                        #
