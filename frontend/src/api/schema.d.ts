@@ -1083,6 +1083,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Global Search
+         * @description Search across all entity types and return grouped, capped results.
+         *
+         *     An empty or whitespace-only ``q`` returns an empty response immediately
+         *     (no DB queries).  The ``types`` filter restricts which entity groups are
+         *     populated; unrecognised type identifiers are silently ignored.
+         */
+        get: operations["global_search_api_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/settings": {
         parameters: {
             query?: never;
@@ -1465,6 +1489,16 @@ export interface components {
             parent_id: number | null;
         };
         /**
+         * CategorySearchHit
+         * @description Lightweight category hit for the search response.
+         */
+        CategorySearchHit: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+        };
+        /**
          * CategoryTreeNode
          * @description Recursive tree node for GET /categories/tree.
          */
@@ -1615,6 +1649,16 @@ export interface components {
             stock_tracking_mode: string;
             /** Unit */
             unit: string;
+        };
+        /**
+         * DefinitionSearchHit
+         * @description Lightweight item-definition hit for the search response.
+         */
+        DefinitionSearchHit: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
         };
         /**
          * DefinitionSummaryResponse
@@ -1935,6 +1979,24 @@ export interface components {
             warranty_expires: string | null;
         };
         /**
+         * InstanceSearchHit
+         * @description Lightweight stock-instance hit for the search response.
+         */
+        InstanceSearchHit: {
+            /** Definition Id */
+            definition_id: number;
+            /** Definition Name */
+            definition_name: string;
+            /** Id */
+            id: number;
+            /** Manufacturer */
+            manufacturer?: string | null;
+            /** Model Number */
+            model_number?: string | null;
+            /** Serial */
+            serial?: string | null;
+        };
+        /**
          * InstanceUpdate
          * @description Body for PATCH /instances/{id} — all fields optional.
          *
@@ -2071,6 +2133,16 @@ export interface components {
             name: string;
             /** Parent Id */
             parent_id: number | null;
+        };
+        /**
+         * LocationSearchHit
+         * @description Lightweight location hit for the search response.
+         */
+        LocationSearchHit: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
         };
         /**
          * LocationTreeNode
@@ -2456,6 +2528,89 @@ export interface components {
             note?: string | null;
         };
         /**
+         * SearchResponse
+         * @description Grouped response for ``GET /search?q=&types=&limit=``.
+         *
+         *     Results are grouped by entity type.  Each list is independently capped at
+         *     ``limit`` (default 20).  ``totals`` holds the true match count for each
+         *     type — which may be larger than the capped list.
+         *
+         *     Types not included in the ``types`` query-parameter filter have empty lists
+         *     and zero totals.  An empty or whitespace-only ``q`` returns all-empty lists
+         *     with zero totals (no error).
+         */
+        SearchResponse: {
+            /**
+             * Categories
+             * @default []
+             */
+            categories: components["schemas"]["CategorySearchHit"][];
+            /**
+             * Item Definitions
+             * @default []
+             */
+            item_definitions: components["schemas"]["DefinitionSearchHit"][];
+            /**
+             * Locations
+             * @default []
+             */
+            locations: components["schemas"]["LocationSearchHit"][];
+            /**
+             * Stock Instances
+             * @default []
+             */
+            stock_instances: components["schemas"]["InstanceSearchHit"][];
+            /**
+             * Tags
+             * @default []
+             */
+            tags: components["schemas"]["TagSearchHit"][];
+            /**
+             * @default {
+             *       "categories": 0,
+             *       "item_definitions": 0,
+             *       "locations": 0,
+             *       "stock_instances": 0,
+             *       "tags": 0
+             *     }
+             */
+            totals: components["schemas"]["SearchTotals"];
+        };
+        /**
+         * SearchTotals
+         * @description True match count per type (may exceed the capped result list length).
+         *
+         *     All fields default to 0 so that a response that only searched a subset of
+         *     types (via the ``types`` query parameter) still has a well-formed totals object.
+         */
+        SearchTotals: {
+            /**
+             * Categories
+             * @default 0
+             */
+            categories: number;
+            /**
+             * Item Definitions
+             * @default 0
+             */
+            item_definitions: number;
+            /**
+             * Locations
+             * @default 0
+             */
+            locations: number;
+            /**
+             * Stock Instances
+             * @default 0
+             */
+            stock_instances: number;
+            /**
+             * Tags
+             * @default 0
+             */
+            tags: number;
+        };
+        /**
          * SettingsResponse
          * @description Full settings payload returned by GET /settings.
          */
@@ -2534,6 +2689,18 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+        };
+        /**
+         * TagSearchHit
+         * @description Lightweight tag hit for the search response.
+         */
+        TagSearchHit: {
+            /** Color */
+            color?: string | null;
             /** Id */
             id: number;
             /** Name */
@@ -5847,6 +6014,51 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    global_search_api_search_get: {
+        parameters: {
+            query: {
+                /** @description Search query string. */
+                q: string;
+                /** @description Comma-separated subset of entity types to search: item_definition, stock_instance, location, category, tag. Defaults to all types when omitted. */
+                types?: string | null;
+                /** @description Per-type result cap (default 20, max 100). */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

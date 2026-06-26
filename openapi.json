@@ -405,6 +405,25 @@
         "title": "CategoryResponse",
         "type": "object"
       },
+      "CategorySearchHit": {
+        "description": "Lightweight category hit for the search response.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "CategorySearchHit",
+        "type": "object"
+      },
       "CategoryTreeNode": {
         "description": "Recursive tree node for GET /categories/tree.",
         "properties": {
@@ -891,6 +910,25 @@
           "created_at"
         ],
         "title": "DefinitionResponse",
+        "type": "object"
+      },
+      "DefinitionSearchHit": {
+        "description": "Lightweight item-definition hit for the search response.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "DefinitionSearchHit",
         "type": "object"
       },
       "DefinitionSummaryResponse": {
@@ -1966,6 +2004,63 @@
         "title": "InstanceResponse",
         "type": "object"
       },
+      "InstanceSearchHit": {
+        "description": "Lightweight stock-instance hit for the search response.",
+        "properties": {
+          "definition_id": {
+            "title": "Definition Id",
+            "type": "integer"
+          },
+          "definition_name": {
+            "title": "Definition Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "manufacturer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manufacturer"
+          },
+          "model_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Number"
+          },
+          "serial": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Serial"
+          }
+        },
+        "required": [
+          "id",
+          "definition_id",
+          "definition_name"
+        ],
+        "title": "InstanceSearchHit",
+        "type": "object"
+      },
       "InstanceUpdate": {
         "description": "Body for PATCH /instances/{id} \u2014 all fields optional.\n\n``quantity`` is intentionally absent (M2 \u00a72 \"Create vs. movement\"):\nonce an ``exact`` lot is created its quantity changes only through\nmovement endpoints (intake / discard / adjust / consume / reverse).\n\n``stock_level`` may be updated for ``level``-mode lots.\n\n``best_before_date`` \u2014 optional (M3 Step 2).  Uses the model_fields_set\nconvention: omitting the field leaves the stored date unchanged; supplying\n``null`` explicitly clears the date to NULL.  No auto-compute on update \u2014\nupdate is an explicit correction only.\n\n``custom_fields`` \u2014 optional (M5 Step 4).  Uses the model_fields_set\nconvention: omitting leaves stored custom fields unchanged; supplying\n``null`` explicitly clears them.",
         "properties": {
@@ -2347,6 +2442,25 @@
           "created_at"
         ],
         "title": "LocationResponse",
+        "type": "object"
+      },
+      "LocationSearchHit": {
+        "description": "Lightweight location hit for the search response.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "LocationSearchHit",
         "type": "object"
       },
       "LocationTreeNode": {
@@ -3313,6 +3427,95 @@
         "title": "ReverseRequest",
         "type": "object"
       },
+      "SearchResponse": {
+        "description": "Grouped response for ``GET /search?q=&types=&limit=``.\n\nResults are grouped by entity type.  Each list is independently capped at\n``limit`` (default 20).  ``totals`` holds the true match count for each\ntype \u2014 which may be larger than the capped list.\n\nTypes not included in the ``types`` query-parameter filter have empty lists\nand zero totals.  An empty or whitespace-only ``q`` returns all-empty lists\nwith zero totals (no error).",
+        "properties": {
+          "categories": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/CategorySearchHit"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "item_definitions": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DefinitionSearchHit"
+            },
+            "title": "Item Definitions",
+            "type": "array"
+          },
+          "locations": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/LocationSearchHit"
+            },
+            "title": "Locations",
+            "type": "array"
+          },
+          "stock_instances": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/InstanceSearchHit"
+            },
+            "title": "Stock Instances",
+            "type": "array"
+          },
+          "tags": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/TagSearchHit"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/SearchTotals",
+            "default": {
+              "categories": 0,
+              "item_definitions": 0,
+              "locations": 0,
+              "stock_instances": 0,
+              "tags": 0
+            }
+          }
+        },
+        "title": "SearchResponse",
+        "type": "object"
+      },
+      "SearchTotals": {
+        "description": "True match count per type (may exceed the capped result list length).\n\nAll fields default to 0 so that a response that only searched a subset of\ntypes (via the ``types`` query parameter) still has a well-formed totals object.",
+        "properties": {
+          "categories": {
+            "default": 0,
+            "title": "Categories",
+            "type": "integer"
+          },
+          "item_definitions": {
+            "default": 0,
+            "title": "Item Definitions",
+            "type": "integer"
+          },
+          "locations": {
+            "default": 0,
+            "title": "Locations",
+            "type": "integer"
+          },
+          "stock_instances": {
+            "default": 0,
+            "title": "Stock Instances",
+            "type": "integer"
+          },
+          "tags": {
+            "default": 0,
+            "title": "Tags",
+            "type": "integer"
+          }
+        },
+        "title": "SearchTotals",
+        "type": "object"
+      },
       "SettingsResponse": {
         "description": "Full settings payload returned by GET /settings.",
         "properties": {
@@ -3492,6 +3695,36 @@
           "created_at"
         ],
         "title": "TagResponse",
+        "type": "object"
+      },
+      "TagSearchHit": {
+        "description": "Lightweight tag hit for the search response.",
+        "properties": {
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "TagSearchHit",
         "type": "object"
       },
       "TagSetRequest": {
@@ -7862,6 +8095,93 @@
         "summary": "Run Reminders",
         "tags": [
           "reminders"
+        ]
+      }
+    },
+    "/api/search": {
+      "get": {
+        "description": "Search across all entity types and return grouped, capped results.\n\nAn empty or whitespace-only ``q`` returns an empty response immediately\n(no DB queries).  The ``types`` filter restricts which entity groups are\npopulated; unrecognised type identifiers are silently ignored.",
+        "operationId": "global_search_api_search_get",
+        "parameters": [
+          {
+            "description": "Search query string.",
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "description": "Search query string.",
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comma-separated subset of entity types to search: item_definition, stock_instance, location, category, tag. Defaults to all types when omitted.",
+            "in": "query",
+            "name": "types",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma-separated subset of entity types to search: item_definition, stock_instance, location, category, tag. Defaults to all types when omitted.",
+              "title": "Types"
+            }
+          },
+          {
+            "description": "Per-type result cap (default 20, max 100).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Per-type result cap (default 20, max 100).",
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Global Search",
+        "tags": [
+          "search"
         ]
       }
     },
