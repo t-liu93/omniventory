@@ -49,6 +49,7 @@ import {
   type InstanceFormState,
 } from "../components/InstanceFormModal";
 import { ExpiryBadge } from "../components/ExpiryBadge";
+import { AttachmentPanel } from "../components/AttachmentPanel";
 import { formatDate, formatQuantity } from "../i18n/format";
 
 // ── Schema types ─────────────────────────────────────────────────────────────
@@ -654,6 +655,10 @@ export function InstanceDetail() {
           </Stack>
         </>
       )}
+
+      {/* Attachments */}
+      <Divider />
+      <AttachmentPanel modelType="stock_instance" modelId={instId} />
 
       {/* Edit modal */}
       <InstanceFormModal

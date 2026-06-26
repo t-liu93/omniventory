@@ -27,6 +27,7 @@ import enStock from "../i18n/locales/en/stock.json";
 import enExpiry from "../i18n/locales/en/expiry.json";
 import enNotifications from "../i18n/locales/en/notifications.json";
 import enConfiguration from "../i18n/locales/en/configuration.json";
+import enAttachments from "../i18n/locales/en/attachments.json";
 
 import zhCommon from "../i18n/locales/zh/common.json";
 import zhAuth from "../i18n/locales/zh/auth.json";
@@ -41,6 +42,7 @@ import zhStock from "../i18n/locales/zh/stock.json";
 import zhExpiry from "../i18n/locales/zh/expiry.json";
 import zhNotifications from "../i18n/locales/zh/notifications.json";
 import zhConfiguration from "../i18n/locales/zh/configuration.json";
+import zhAttachments from "../i18n/locales/zh/attachments.json";
 
 // ── Deep key extraction ───────────────────────────────────────────────────────
 
@@ -78,6 +80,7 @@ const namespacePairs: [string, unknown, unknown][] = [
   ["expiry", enExpiry, zhExpiry],
   ["notifications", enNotifications, zhNotifications],
   ["configuration", enConfiguration, zhConfiguration],
+  ["attachments", enAttachments, zhAttachments],
 ];
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

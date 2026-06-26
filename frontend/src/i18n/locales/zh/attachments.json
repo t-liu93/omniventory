@@ -1,0 +1,19 @@
+{
+  "sectionTitle": "附件",
+  "uploadBtn": "上传文件",
+  "emptyState": "暂无附件。",
+  "captionLabel": "标题",
+  "captionPlaceholder": "可选标题",
+  "captionSaveBtn": "保存",
+  "downloadLabel": "下载",
+  "deleteConfirm": {
+    "title": "删除附件",
+    "text": "确定要删除此附件吗？",
+    "confirmBtn": "删除"
+  },
+  "success": {
+    "uploaded": "文件已上传。",
+    "deleted": "附件已删除。",
+    "captionSaved": "标题已保存。"
+  }
+}

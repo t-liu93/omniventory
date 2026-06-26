@@ -49,6 +49,7 @@ import type { components } from "../api/schema";
 import { LoadingState } from "./LoadingState";
 import { ErrorState } from "./ErrorState";
 import { EmptyState } from "./EmptyState";
+import { AttachmentPanel } from "./AttachmentPanel";
 import { formatQuantity } from "../i18n/format";
 
 // ── Resource-specific types ──────────────────────────────────────────────────
@@ -934,6 +935,14 @@ export function TreeBrowser({ resource }: TreeBrowserProps) {
               </Button>
             )
           )}
+          {/* Attachments (locations only) */}
+          {isLocation && selectedId !== null && (
+            <>
+              <Divider my="xs" />
+              <AttachmentPanel modelType="location" modelId={selectedId} />
+            </>
+          )}
+
           {/* Instances at this location (Fix 3 — locations only) */}
           {isLocation && (
             <>

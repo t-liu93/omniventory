@@ -1,0 +1,19 @@
+{
+  "sectionTitle": "Attachments",
+  "uploadBtn": "Upload file",
+  "emptyState": "No attachments yet.",
+  "captionLabel": "Caption",
+  "captionPlaceholder": "Optional caption",
+  "captionSaveBtn": "Save",
+  "downloadLabel": "Download",
+  "deleteConfirm": {
+    "title": "Delete attachment",
+    "text": "Are you sure you want to delete this attachment?",
+    "confirmBtn": "Delete"
+  },
+  "success": {
+    "uploaded": "File uploaded.",
+    "deleted": "Attachment deleted.",
+    "captionSaved": "Caption saved."
+  }
+}
