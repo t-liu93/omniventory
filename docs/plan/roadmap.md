@@ -85,7 +85,7 @@ Legend: ⬜ planned · 🟡 active · 🟢 done. **Active milestone = the single
 | **M3** | Best-before / expiry & perishables | ① (data + listings) | 🟢 |
 | **M4** | Unified reminder & notification engine | ①②③ proactive alerts | 🟢 |
 | **M5** | Cross-cutting + barcode + data export | all | 🟢 |
-| **M6** | Multi-user & roles | all | ⬜ |
+| **M6** | Multi-user & roles | all | 🟡 |
 | **M7** | Shopping list & maintenance schedules | ③ / ② | ⬜ |
 | **M8** | Multi-unit conversion | ③ | ⬜ |
 | **M9** | Integrations & extensions (public API / LLM) | all | ⬜ |
@@ -166,6 +166,8 @@ Legend: ⬜ planned · 🟡 active · 🟢 done. **Active milestone = the single
 - Security hardening: input sanitization wherever content is rendered, SSRF guard on outbound notifiers/webhooks, rate limiting.
 - 🟢 Invite a second user; role enforcement blocks/permits correctly; assignment-based reminders reach the right person.
 
+> Locked: the detailed design doc (`docs/plan/milestones/M6.md`) is now written. It ratifies **three fixed roles** (admin / member / viewer) enforced by a **code-defined permission matrix** (`VIEW`/`EDIT`/`MANAGE_USERS`/`MANAGE_SETTINGS`/`VIEW_AUDIT`) via a `require_permission` dependency (no DB-driven roles — §2.11); **user administration** (list / role / activate / delete) behind a **last-admin guard**; **invitations** via a one-time hashed-token link (returned for copy **and** optionally SMTP-emailed — both share one token), plus **self change-password** and **admin password reset** — all backed by one `user_tokens` table; **responsible-party assignment** as a nullable `responsible_user_id` on **both** `item_definitions` (default) and `stock_instances` (override), routing `best_before`/`warranty` by the lot and `low_stock` by the definition, **falling back to all active users when unassigned** (zero-disruption migration of M4's broadcast); **minimal per-user notification prefs** (two opt-outs — in-app inbox + email digest — on `users`, via `PATCH /auth/me`); a security/admin **`audit_log`**; and the deferred **hardening pass** — auth-endpoint **rate limiting with exponential backoff**, a **lightweight always-on SSRF guard** that blocks loopback/link-local/cloud-metadata/reserved but **allows private LAN** (Home-Assistant-on-LAN stays first-class), **per-request session auth on `/media`**, and **sliding-window session expiry**. Eight new error codes; **5 phases / 13 atomic steps**; migrations `0028`–`0032`. **No new runtime deps.** Deferred to later: custom/fine-grained roles, per-user cadence/per-channel routing, SSRF strict modes + persistent rate-limit store, OIDC/SSO/2FA, audit retention. See `M6.md` §1/§2/§12.
+
 ### M7 — Shopping list & maintenance schedules
 **Goal:** close the consumable loop and the durable-care loop.
 - Shopping list auto-generated from low-stock (+ manual items; check-off → optional intake).
@@ -196,8 +198,8 @@ Not scheduled; revisit when the core is stable.
 - Postgres + RLS (only if true multi-tenant SaaS is ever wanted).
 
 ## 7. Open questions / to revisit
-- Exact role set & permission granularity for M6 (admin/member/viewer is the current assumption).
-- **M4 channel security is deferred to the M6 hardening pass:** SSRF guard on the outbound HTTP webhook, rate limiting, and tighter MQTT inbound-command auth/allow-listing (the broker is operator-trusted and `commands_enabled` defaults off in M4). Also open in M4: the **per-item vs per-user lead-time precedence** rule (M4 locks per-item > per-user; a "max-of-applicable" alternative may revisit) and the **low-stock repeat cadence** default (`[1,3,7]`). See `M4.md` §12.
+- ~~Exact role set & permission granularity for M6 (admin/member/viewer is the current assumption).~~ **Resolved in M6 planning:** three fixed roles (admin/member/viewer) + a code-defined permission matrix; custom/fine-grained roles are parking-lot (`M6.md` §2/§12).
+- **M4 channel security — addressed in the M6 hardening pass** (`M6.md` §4.6/§4.7): SSRF guard on the outbound HTTP webhook is a **lightweight, always-on** guard that blocks loopback/link-local/cloud-metadata/reserved but **allows private LAN** (Home Assistant on the LAN stays first-class); rate limiting is **auth-endpoints-only, in-memory, with exponential backoff**. **Still open / deferred from M6:** SSRF *strict* modes (block-private toggle, DNS-rebinding IP-pinning), a persistent/shared rate-limit store + `X-Forwarded-For` proxy-trust, and tighter **MQTT inbound-command** auth/allow-listing (the broker is operator-trusted and `commands_enabled` defaults off; MQTT is currently disabled). Also open from M4: the **per-item vs per-user lead-time precedence** rule (M4 locks per-item > per-user; a "max-of-applicable" alternative may revisit) and the **low-stock repeat cadence** default (`[1,3,7]`). See `M4.md` §12 / `M6.md` §12.
 - Whether multi-unit conversion (M8) earns its complexity for the household use case, or stays a thin opt-in.
 - **Stock-tracking modes `level` / `none` ergonomics:** in practice (M2) the author finds the current `level` (qualitative high/medium/low) and `none` (presence-only) modes not fully satisfying, but no concrete better design has emerged yet — revisit once real usage clarifies what's missing (relates to M2 §12's `level` granularity question).
 - Author noted "probably more capabilities not yet thought of" — additions get slotted here, then into the table.
