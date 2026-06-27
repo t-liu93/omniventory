@@ -56,6 +56,10 @@
   "notification": {
     "not_found": "未找到通知 #{{id}}。"
   },
+  "barcode": {
+    "not_found": "未找到条码 #{{id}}。",
+    "duplicate": "该条码已与另一个物品定义绑定。"
+  },
   "integration": {
     "invalid_token": "集成令牌无效或缺失。"
   },

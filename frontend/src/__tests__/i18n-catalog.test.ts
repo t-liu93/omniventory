@@ -31,6 +31,7 @@ import enAttachments from "../i18n/locales/en/attachments.json";
 import enTags from "../i18n/locales/en/tags.json";
 import enNotes from "../i18n/locales/en/notes.json";
 import enCustomFields from "../i18n/locales/en/customFields.json";
+import enBarcode from "../i18n/locales/en/barcode.json";
 
 import zhCommon from "../i18n/locales/zh/common.json";
 import zhAuth from "../i18n/locales/zh/auth.json";
@@ -49,6 +50,7 @@ import zhAttachments from "../i18n/locales/zh/attachments.json";
 import zhTags from "../i18n/locales/zh/tags.json";
 import zhNotes from "../i18n/locales/zh/notes.json";
 import zhCustomFields from "../i18n/locales/zh/customFields.json";
+import zhBarcode from "../i18n/locales/zh/barcode.json";
 
 // ── Deep key extraction ───────────────────────────────────────────────────────
 
@@ -90,6 +92,7 @@ const namespacePairs: [string, unknown, unknown][] = [
   ["tags", enTags, zhTags],
   ["notes", enNotes, zhNotes],
   ["customFields", enCustomFields, zhCustomFields],
+  ["barcode", enBarcode, zhBarcode],
 ];
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

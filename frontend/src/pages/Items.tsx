@@ -40,7 +40,7 @@ import {
   SimpleGrid,
   Menu,
 } from "@mantine/core";
-import { Plus, Edit2, Trash2, AlertCircle, ArrowLeft, Search, MoreVertical } from "react-feather";
+import { Plus, Edit2, Trash2, AlertCircle, ArrowLeft, Search, MoreVertical, Zap } from "react-feather";
 import { useTranslation, Trans } from "react-i18next";
 import { client } from "../api/client";
 import { mapApiError } from "../i18n/errors";
@@ -59,6 +59,8 @@ import { AttachmentPanel } from "../components/AttachmentPanel";
 import { TagPanel } from "../components/TagPanel";
 import { NotePanel } from "../components/NotePanel";
 import { CustomFieldsEditor } from "../components/CustomFieldsEditor";
+import { BarcodePanel } from "../components/BarcodePanel";
+import { BarcodeScanModal } from "../components/BarcodeScanModal";
 import { formatDate, formatQuantity } from "../i18n/format";
 
 // ── Schema types ─────────────────────────────────────────────────────────────
@@ -331,6 +333,11 @@ export function Items() {
   const [defBusy, setDefBusy] = useState(false);
   const [defError, setDefError] = useState<string | null>(null);
 
+  // Barcode scan modal state (items list scan entry point).
+  const [scanOpen, setScanOpen] = useState(false);
+  // Code to bind after a new definition is created via the scan-unknown flow.
+  const [pendingBarcode, setPendingBarcode] = useState<string | null>(null);
+
   // Load all reference data on mount
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -424,6 +431,15 @@ export function Items() {
   // ── Definition CRUD ──────────────────────────────────────────────────────────
 
   function openCreateDef() {
+    setPendingBarcode(null);
+    setDefForm(emptyDefForm());
+    setDefError(null);
+    setDefModal({ kind: "create" });
+  }
+
+  /** Open the create-definition modal with a scanned code pre-bound after save. */
+  function openCreateDefWithCode(code: string) {
+    setPendingBarcode(code);
     setDefForm(emptyDefForm());
     setDefError(null);
     setDefModal({ kind: "create" });
@@ -465,7 +481,7 @@ export function Items() {
     setDefBusy(true);
     setDefError(null);
     try {
-      const { error } = await client.POST("/api/definitions", {
+      const { data: newDef, error } = await client.POST("/api/definitions", {
         body: {
           name: defForm.name.trim(),
           description: defForm.description.trim() || null,
@@ -494,6 +510,15 @@ export function Items() {
       if (error) {
         setDefError(mapApiError(error));
         return;
+      }
+      // Bind the pending barcode (from scan-unknown flow) after the definition
+      // is created.  Failure is best-effort — we still close the modal.
+      if (pendingBarcode && newDef) {
+        await client.POST("/api/definitions/{definition_id}/barcodes", {
+          params: { path: { definition_id: newDef.id } },
+          body: { code: pendingBarcode, symbology: "unknown", label: null },
+        });
+        setPendingBarcode(null);
       }
       closeDefModal();
       notifySuccess(t("success.created"));
@@ -621,6 +646,14 @@ export function Items() {
             clearable
             data-testid="tag-filter-select"
           />
+          <Button
+            leftSection={<Zap size={14} />}
+            onClick={() => setScanOpen(true)}
+            variant="light"
+            data-testid="scan-barcode-btn"
+          >
+            {t("barcode:scanBtn")}
+          </Button>
           <Button
             leftSection={<Plus size={14} />}
             onClick={openCreateDef}
@@ -769,6 +802,13 @@ export function Items() {
           </Group>
         </Stack>
       </Modal>
+
+      {/* Barcode scan modal — scan entry point on the items list */}
+      <BarcodeScanModal
+        opened={scanOpen}
+        onClose={() => setScanOpen(false)}
+        onCreateWithCode={openCreateDefWithCode}
+      />
     </PageShell>
   );
 }
@@ -831,6 +871,9 @@ export function ItemDetail() {
   );
   const [instBusy, setInstBusy] = useState(false);
   const [instError, setInstError] = useState<string | null>(null);
+
+  // Barcode scan modal (intake scan entry point on the detail page)
+  const [detailScanOpen, setDetailScanOpen] = useState(false);
 
   // Consume (FIFO) modal
   const [consumeOpen, setConsumeOpen] = useState(false);
@@ -1464,6 +1507,11 @@ export function ItemDetail() {
 
       <Divider />
 
+      {/* Barcodes */}
+      <BarcodePanel definitionId={defId} />
+
+      <Divider />
+
       {/* Instances section */}
       <Stack gap="sm">
         <Group justify="space-between" wrap="nowrap">
@@ -1487,6 +1535,15 @@ export function ItemDetail() {
                 {tStock("actions.consume")}
               </Button>
             )}
+            <Button
+              size="xs"
+              leftSection={<Zap size={12} />}
+              variant="light"
+              onClick={() => setDetailScanOpen(true)}
+              data-testid="detail-scan-btn"
+            >
+              {t("barcode:scanBtn")}
+            </Button>
             <Button
               size="xs"
               leftSection={<Plus size={12} />}
@@ -1919,6 +1976,19 @@ export function ItemDetail() {
           </Group>
         </Stack>
       </Modal>
+
+      {/* Barcode scan modal — intake/instance-create scan entry point */}
+      <BarcodeScanModal
+        opened={detailScanOpen}
+        onClose={() => setDetailScanOpen(false)}
+        onAddLot={(definitionId) => {
+          if (definitionId === defId) {
+            openCreateInst();
+          } else {
+            navigate(`/items/${definitionId}`);
+          }
+        }}
+      />
     </Stack>
   );
 }

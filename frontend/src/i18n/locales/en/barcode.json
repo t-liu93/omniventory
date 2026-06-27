@@ -1,0 +1,41 @@
+{
+  "sectionTitle": "Barcodes",
+  "scanBtn": "Scan barcode",
+  "startCamera": "Start camera",
+  "stopCamera": "Stop camera",
+  "scanning": "Scanning…",
+  "manualEntry": "Or enter code manually",
+  "manualPlaceholder": "Type a barcode value…",
+  "manualSubmit": "Look up",
+  "permissionDenied": "Camera permission denied. Use manual entry below.",
+  "noCameraAvailable": "No camera available. Use manual entry below.",
+  "lookupKnown": {
+    "title": "Item found",
+    "message": "\"{{name}}\" matches this barcode.",
+    "viewItem": "View item",
+    "addLot": "Add a lot",
+    "scanAgain": "Scan again"
+  },
+  "lookupUnknown": {
+    "title": "Unknown barcode",
+    "message": "Code \"{{code}}\" is not bound to any item.",
+    "createItem": "Create item with this code",
+    "scanAgain": "Scan again"
+  },
+  "addCode": "Add barcode",
+  "codePlaceholder": "Barcode value",
+  "labelPlaceholder": "Label (optional)",
+  "addBtn": "Add",
+  "emptyState": "No barcodes yet.",
+  "removeBtn": "Remove",
+  "removeConfirm": {
+    "title": "Remove barcode",
+    "text": "Remove barcode \"{{code}}\"?",
+    "confirmBtn": "Remove",
+    "cancelBtn": "Cancel"
+  },
+  "success": {
+    "added": "Barcode added.",
+    "removed": "Barcode removed."
+  }
+}

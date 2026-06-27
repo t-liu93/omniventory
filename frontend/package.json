@@ -17,6 +17,8 @@
     "@mantine/dates": "^9.3.2",
     "@mantine/hooks": "^9.3.2",
     "@mantine/notifications": "^9.3.2",
+    "@zxing/browser": "^0.2.0",
+    "@zxing/library": "^0.23.0",
     "dayjs": "^1.11.0",
     "i18next": "^26.3.1",
     "i18next-browser-languagedetector": "^8.2.1",

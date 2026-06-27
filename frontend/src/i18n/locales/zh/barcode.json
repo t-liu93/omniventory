@@ -1,0 +1,41 @@
+{
+  "sectionTitle": "条形码",
+  "scanBtn": "扫描条码",
+  "startCamera": "打开摄像头",
+  "stopCamera": "关闭摄像头",
+  "scanning": "扫描中…",
+  "manualEntry": "或手动输入条码",
+  "manualPlaceholder": "输入条码值…",
+  "manualSubmit": "查找",
+  "permissionDenied": "摄像头权限被拒绝，请使用下方手动输入。",
+  "noCameraAvailable": "未检测到摄像头，请使用下方手动输入。",
+  "lookupKnown": {
+    "title": "找到物品",
+    "message": "「{{name}}」与此条码匹配。",
+    "viewItem": "查看物品",
+    "addLot": "添加批次",
+    "scanAgain": "重新扫描"
+  },
+  "lookupUnknown": {
+    "title": "未知条码",
+    "message": "条码「{{code}}」未与任何物品绑定。",
+    "createItem": "使用此条码创建物品",
+    "scanAgain": "重新扫描"
+  },
+  "addCode": "添加条码",
+  "codePlaceholder": "条码值",
+  "labelPlaceholder": "标签（可选）",
+  "addBtn": "添加",
+  "emptyState": "暂无条码。",
+  "removeBtn": "删除",
+  "removeConfirm": {
+    "title": "删除条码",
+    "text": "删除条码「{{code}}」？",
+    "confirmBtn": "删除",
+    "cancelBtn": "取消"
+  },
+  "success": {
+    "added": "条码已添加。",
+    "removed": "条码已删除。"
+  }
+}

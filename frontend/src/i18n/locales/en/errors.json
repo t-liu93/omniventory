@@ -56,6 +56,10 @@
   "notification": {
     "not_found": "Notification #{{id}} was not found."
   },
+  "barcode": {
+    "not_found": "Barcode #{{id}} was not found.",
+    "duplicate": "This barcode code is already bound to another item definition."
+  },
   "integration": {
     "invalid_token": "Invalid or missing integration token."
   },
