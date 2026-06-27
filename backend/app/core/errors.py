@@ -121,6 +121,10 @@ class ErrorCode:
     BARCODE_NOT_FOUND = "barcode.not_found"
     BARCODE_DUPLICATE = "barcode.duplicate"
 
+    # --- Users (M6 Step 2) ---
+    USER_NOT_FOUND = "user.not_found"
+    USER_LAST_ADMIN = "user.last_admin"
+
     # --- Internal / catch-all ---
     INTERNAL_ERROR = "internal.error"
 
@@ -171,6 +175,8 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     ErrorCode.NOTE_NOT_FOUND: "Note not found.",
     ErrorCode.BARCODE_NOT_FOUND: "Barcode not found.",
     ErrorCode.BARCODE_DUPLICATE: "A barcode with that code is already bound to a definition.",
+    ErrorCode.USER_NOT_FOUND: "User not found.",
+    ErrorCode.USER_LAST_ADMIN: "Cannot remove or demote the last active admin.",
     ErrorCode.INTERNAL_ERROR: "An internal error occurred.",
 }
 

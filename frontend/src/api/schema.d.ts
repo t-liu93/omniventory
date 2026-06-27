@@ -1329,6 +1329,72 @@ export interface paths {
         patch: operations["update_tag_api_tags__tag_id__patch"];
         trace?: never;
     };
+    "/api/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Users
+         * @description Return a list of all users (any authenticated user).
+         *
+         *     Returns id, email, role, and is_active for each user.  Used by the
+         *     admin user-management page and as the data source for responsible-party
+         *     pickers (M6 §4.1 / §4.9).
+         */
+        get: operations["list_users_api_users_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get User
+         * @description Return the full representation of a user (MANAGE_USERS only).
+         *
+         *     404 ``user.not_found`` when no user with that id exists.
+         */
+        get: operations["get_user_api_users__user_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete User
+         * @description Delete a user (MANAGE_USERS only).
+         *
+         *     Error codes:
+         *     - 404 ``user.not_found``  — no user with that id.
+         *     - 409 ``user.last_admin`` — cannot delete the last active admin.
+         */
+        delete: operations["delete_user_api_users__user_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update User
+         * @description Change a user's role and/or active status (MANAGE_USERS only).
+         *
+         *     PATCH semantics: only fields present in the request body are applied;
+         *     omitted fields are untouched.
+         *
+         *     Error codes:
+         *     - 404 ``user.not_found``    — no user with that id.
+         *     - 409 ``user.last_admin``   — operation would orphan the household.
+         *     - 422 ``validation.invalid_input`` — unknown role string.
+         */
+        patch: operations["update_user_api_users__user_id__patch"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2767,6 +2833,32 @@ export interface components {
             count: number;
         };
         /**
+         * UserAdminUpdate
+         * @description PATCH body for ``PATCH /users/{id}``.
+         *
+         *     PATCH semantics (null-vs-omitted)
+         *     ----------------------------------
+         *     All fields default to ``None``.  The route inspects ``model_fields_set``
+         *     to distinguish "field was omitted" from "field was explicitly set".
+         *     - **Omitted** field → no-op (existing value unchanged).
+         *     - **Non-null value** → validated + applied.
+         *     - **Null value** → treated as omitted (no semantic meaning for either
+         *       field; neither ``role=null`` nor ``is_active=null`` makes sense as a
+         *       target state and are therefore silently ignored).
+         *
+         *     Role validation
+         *     ---------------
+         *     When ``role`` is present and non-null it must be one of the three fixed
+         *     role strings (``admin`` / ``member`` / ``viewer``); an unknown value is
+         *     rejected with 422 ``validation.invalid_input``.
+         */
+        UserAdminUpdate: {
+            /** Is Active */
+            is_active?: boolean | null;
+            /** Role */
+            role?: string | null;
+        };
+        /**
          * UserPreferencesUpdate
          * @description Body for PATCH /api/auth/me — update per-user preferences.
          *
@@ -2838,6 +2930,24 @@ export interface components {
             reminder_best_before_lead_days?: number | null;
             /** Reminder Warranty Lead Days */
             reminder_warranty_lead_days?: number | null;
+            /** Role */
+            role: string;
+        };
+        /**
+         * UserSummary
+         * @description Lightweight user representation for list views and pickers.
+         *
+         *     Contains only the fields needed to display a user in a table row or
+         *     a picker dropdown.  Full details (timestamps, preferences) are on
+         *     ``UserResponse`` (``GET /users/{id}``).
+         */
+        UserSummary: {
+            /** Email */
+            email: string;
+            /** Id */
+            id: number;
+            /** Is Active */
+            is_active: boolean;
             /** Role */
             role: string;
         };
@@ -6590,6 +6700,274 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_users_api_users_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserSummary"][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_user_api_users__user_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_user_api_users__user_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_user_api_users__user_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserAdminUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

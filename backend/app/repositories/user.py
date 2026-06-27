@@ -11,6 +11,11 @@ Public methods
 ``create(email, hash, role, is_active)``                Insert a new user row.
 ``count()``                                             Return total user count (used by bootstrap guard).
 ``list_active()``                                       Return all active users (recipients for M4 §4.2).
+``list_all()``                                          Return ALL users incl. inactive, ordered by id (M6 §4.1).
+``set_role(user, role)``                                Set user.role and flush (M6 §4.1).
+``set_active(user, is_active)``                         Set user.is_active and flush (M6 §4.1).
+``delete(user)``                                        Delete the user row and flush (M6 §4.1).
+``count_active_admins()``                               Count users with role='admin' AND is_active=True (M6 §4.1).
 ``set_preferred_language(user, lang)``                  Update the user's preferred_language and flush.
 ``set_reminder_best_before_lead_days(user, days)``      Update the per-user best-before lead override and flush.
 ``set_reminder_warranty_lead_days(user, days)``         Update the per-user warranty lead override and flush.
@@ -76,6 +81,61 @@ class UserRepository:
         """
         stmt = select(User).where(User.is_active.is_(True)).order_by(User.id)
         return list(self._db.scalars(stmt).all())
+
+    def list_all(self) -> list[User]:
+        """Return ALL users including inactive, ordered by id.
+
+        Used by the admin user-management page (M6 §4.1) and as the source
+        for responsible-party pickers (all users, not just active ones).
+        """
+        stmt = select(User).order_by(User.id)
+        return list(self._db.scalars(stmt).all())
+
+    def set_role(self, user: User, role: str) -> User:
+        """Set ``user.role`` to *role* and flush.
+
+        DB access only — the caller is responsible for validating *role*
+        against ``VALID_ROLES`` (M6 §2.11 / §4.1).
+        The caller must commit (or rely on ``get_db``'s auto-commit).
+        """
+        user.role = role
+        self._db.flush()
+        return user
+
+    def set_active(self, user: User, is_active: bool) -> User:
+        """Set ``user.is_active`` to *is_active* and flush.
+
+        DB access only — no guard logic here; last-admin enforcement lives
+        in ``UserAdminService`` (M6 §4.1).
+        The caller must commit (or rely on ``get_db``'s auto-commit).
+        """
+        user.is_active = is_active
+        self._db.flush()
+        return user
+
+    def delete(self, user: User) -> None:
+        """Delete the user row and flush.
+
+        DB access only — last-admin guard must be enforced by the caller
+        before calling this method.
+        The caller must commit (or rely on ``get_db``'s auto-commit).
+        """
+        self._db.delete(user)
+        self._db.flush()
+
+    def count_active_admins(self) -> int:
+        """Return the count of users with ``role='admin'`` AND ``is_active=True``.
+
+        Used by ``UserAdminService`` to enforce the last-admin guard (M6 §4.1
+        / §5): the household must always retain at least one active admin.
+        """
+        stmt = (
+            select(func.count())
+            .select_from(User)
+            .where(User.role == "admin", User.is_active.is_(True))
+        )
+        value = self._db.execute(stmt).scalar()
+        return int(value) if value is not None else 0
 
     def set_preferred_language(self, user: User, language: str | None) -> User:
         """Update the user's preferred_language and flush.

@@ -3800,6 +3800,35 @@
         "title": "UnreadCountResponse",
         "type": "object"
       },
+      "UserAdminUpdate": {
+        "description": "PATCH body for ``PATCH /users/{id}``.\n\nPATCH semantics (null-vs-omitted)\n----------------------------------\nAll fields default to ``None``.  The route inspects ``model_fields_set``\nto distinguish \"field was omitted\" from \"field was explicitly set\".\n- **Omitted** field \u2192 no-op (existing value unchanged).\n- **Non-null value** \u2192 validated + applied.\n- **Null value** \u2192 treated as omitted (no semantic meaning for either\n  field; neither ``role=null`` nor ``is_active=null`` makes sense as a\n  target state and are therefore silently ignored).\n\nRole validation\n---------------\nWhen ``role`` is present and non-null it must be one of the three fixed\nrole strings (``admin`` / ``member`` / ``viewer``); an unknown value is\nrejected with 422 ``validation.invalid_input``.",
+        "properties": {
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          }
+        },
+        "title": "UserAdminUpdate",
+        "type": "object"
+      },
       "UserPreferencesUpdate": {
         "description": "Body for PATCH /api/auth/me \u2014 update per-user preferences.\n\nAll fields are optional and PATCH-style.  An omitted field is a no-op and\ndoes NOT overwrite an existing value.  Setting a field to ``null``\nexplicitly unsets it (clears the override, re-inheriting the next level in\nthe resolution chain).\n\nNull-vs-omitted semantics\n-------------------------\nPydantic v2's ``model_fields_set`` correctly tracks which fields were\nexplicitly present in the raw input, including when the value is ``null``.\nBecause all fields default to ``None``, an omitted key does *not* appear in\n``model_fields_set``, while ``{\"field\": null}`` *does* \u2014 allowing the route\nto distinguish omission from explicit null.\n\nThe route checks ``\"<field>\" in body.model_fields_set`` for each field:\n- **Omitted** \u2192 no-op (do not touch the stored value).\n- **Null** explicitly \u2192 write NULL to DB (remove the override, inherit up).\n- **Value** \u2192 validate + write.\n\nThis applies uniformly to:\n- ``preferred_language``: NULL \u2192 client resolves (localStorage \u2192 navigator \u2192 'en').\n- ``reminder_best_before_lead_days``: NULL \u2192 inherit per-user fallback chain (\u00a74.3).\n- ``reminder_warranty_lead_days``: NULL \u2192 inherit per-user fallback chain (\u00a74.3).",
         "examples": [
@@ -3917,6 +3946,35 @@
           "created_at"
         ],
         "title": "UserResponse",
+        "type": "object"
+      },
+      "UserSummary": {
+        "description": "Lightweight user representation for list views and pickers.\n\nContains only the fields needed to display a user in a table row or\na picker dropdown.  Full details (timestamps, preferences) are on\n``UserResponse`` (``GET /users/{id}``).",
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "role",
+          "is_active"
+        ],
+        "title": "UserSummary",
         "type": "object"
       },
       "ValidationError": {
@@ -8867,6 +8925,330 @@
         "summary": "Update Tag",
         "tags": [
           "tags"
+        ]
+      }
+    },
+    "/api/users": {
+      "get": {
+        "description": "Return a list of all users (any authenticated user).\n\nReturns id, email, role, and is_active for each user.  Used by the\nadmin user-management page and as the data source for responsible-party\npickers (M6 \u00a74.1 / \u00a74.9).",
+        "operationId": "list_users_api_users_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UserSummary"
+                  },
+                  "title": "Response List Users Api Users Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "List Users",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/users/{user_id}": {
+      "delete": {
+        "description": "Delete a user (MANAGE_USERS only).\n\nError codes:\n- 404 ``user.not_found``  \u2014 no user with that id.\n- 409 ``user.last_admin`` \u2014 cannot delete the last active admin.",
+        "operationId": "delete_user_api_users__user_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Delete User",
+        "tags": [
+          "users"
+        ]
+      },
+      "get": {
+        "description": "Return the full representation of a user (MANAGE_USERS only).\n\n404 ``user.not_found`` when no user with that id exists.",
+        "operationId": "get_user_api_users__user_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get User",
+        "tags": [
+          "users"
+        ]
+      },
+      "patch": {
+        "description": "Change a user's role and/or active status (MANAGE_USERS only).\n\nPATCH semantics: only fields present in the request body are applied;\nomitted fields are untouched.\n\nError codes:\n- 404 ``user.not_found``    \u2014 no user with that id.\n- 409 ``user.last_admin``   \u2014 operation would orphan the household.\n- 422 ``validation.invalid_input`` \u2014 unknown role string.",
+        "operationId": "update_user_api_users__user_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserAdminUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Update User",
+        "tags": [
+          "users"
         ]
       }
     }
