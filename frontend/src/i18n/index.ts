@@ -42,6 +42,7 @@ import enNotes from "./locales/en/notes.json";
 import enCustomFields from "./locales/en/customFields.json";
 import enBarcode from "./locales/en/barcode.json";
 import enSearch from "./locales/en/search.json";
+import enExport from "./locales/en/export.json";
 
 // Locale bundles — zh
 import zhCommon from "./locales/zh/common.json";
@@ -63,6 +64,7 @@ import zhNotes from "./locales/zh/notes.json";
 import zhCustomFields from "./locales/zh/customFields.json";
 import zhBarcode from "./locales/zh/barcode.json";
 import zhSearch from "./locales/zh/search.json";
+import zhExport from "./locales/zh/export.json";
 
 const NAMESPACES = [
   "common",
@@ -84,6 +86,7 @@ const NAMESPACES = [
   "customFields",
   "barcode",
   "search",
+  "export",
 ] as const;
 
 i18next
@@ -116,6 +119,7 @@ i18next
         customFields: enCustomFields,
         barcode: enBarcode,
         search: enSearch,
+        export: enExport,
       },
       zh: {
         common: zhCommon,
@@ -137,6 +141,7 @@ i18next
         customFields: zhCustomFields,
         barcode: zhBarcode,
         search: zhSearch,
+        export: zhExport,
       },
     },
     detection: {

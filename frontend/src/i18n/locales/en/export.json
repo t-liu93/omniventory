@@ -1,0 +1,10 @@
+{
+  "menuLabel": "Export",
+  "entityLabel": {
+    "item_definitions": "Export items",
+    "stock_instances": "Export instances",
+    "locations": "Export locations"
+  },
+  "csv": "Export CSV",
+  "json": "Export JSON"
+}

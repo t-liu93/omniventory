@@ -1,0 +1,10 @@
+{
+  "menuLabel": "导出",
+  "entityLabel": {
+    "item_definitions": "导出物品",
+    "stock_instances": "导出实例",
+    "locations": "导出位置"
+  },
+  "csv": "导出 CSV",
+  "json": "导出 JSON"
+}

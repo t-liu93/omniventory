@@ -61,6 +61,7 @@ import { NotePanel } from "../components/NotePanel";
 import { CustomFieldsEditor } from "../components/CustomFieldsEditor";
 import { BarcodePanel } from "../components/BarcodePanel";
 import { BarcodeScanModal } from "../components/BarcodeScanModal";
+import { ExportMenu } from "../components/ExportMenu";
 import { formatDate, formatQuantity } from "../i18n/format";
 
 // ── Schema types ─────────────────────────────────────────────────────────────
@@ -661,6 +662,12 @@ export function Items() {
           >
             {t("list.newItemBtn")}
           </Button>
+        </Group>
+
+        {/* Export — item definitions and stock instances (all) */}
+        <Group justify="flex-end" gap={8}>
+          <ExportMenu entity="item_definitions" />
+          <ExportMenu entity="stock_instances" />
         </Group>
 
         {/* Definition list */}
