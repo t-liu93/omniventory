@@ -11,6 +11,10 @@ export default defineConfig({
       /** Precache the app shell (entry points + assets). */
       workbox: {
         globPatterns: ["**/*.{js,css,html,png,svg,ico}"],
+        // Purge stale Workbox precaches when a new service worker activates.
+        // skipWaiting and clientsClaim are already injected by vite-plugin-pwa
+        // when registerType is 'autoUpdate', so we do not repeat them here.
+        cleanupOutdatedCaches: true,
       },
       manifest: {
         name: "Omniventory",

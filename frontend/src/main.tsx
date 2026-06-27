@@ -26,6 +26,7 @@ import "@mantine/notifications/styles.css";
 
 import { theme } from "./theme";
 import App from "./App";
+import { initServiceWorker } from "./registerServiceWorker";
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {
@@ -49,3 +50,8 @@ createRoot(rootElement).render(
     </I18nextProvider>
   </StrictMode>,
 );
+
+// Register the service worker with proactive update checks so new builds are
+// picked up automatically without a manual hard-refresh.  Must run after
+// render() to avoid blocking first paint.
+initServiceWorker();
