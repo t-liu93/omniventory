@@ -57,6 +57,7 @@ from app.repositories.item_definition import ItemDefinitionRepository
 from app.repositories.location import LocationRepository
 from app.repositories.stock_instance import StockInstanceRepository
 from app.repositories.stock_movement import StockMovementRepository
+from app.repositories.user import UserRepository
 from app.schemas.custom_fields import serialize_custom_fields
 from app.schemas.stock_instance import InstanceCreate, InstanceUpdate
 
@@ -73,6 +74,7 @@ class StockInstanceService:
         self._def_repo = ItemDefinitionRepository(db)
         self._loc_repo = LocationRepository(db)
         self._movement_repo = StockMovementRepository(db)
+        self._user_repo = UserRepository(db)
 
     # ---------------------------------------------------------------------- #
     # Private helpers                                                          #
@@ -110,6 +112,21 @@ class StockInstanceService:
                 status_code=404,
                 params={"id": location_id},
                 message=f"Location {location_id} not found.",
+            )
+
+    def _assert_user_exists(self, user_id: int) -> None:
+        """Raise 404 if the user does not exist (M6 Step 4).
+
+        Called when ``responsible_user_id`` is non-null on create or update.
+        A null value (clearing the per-lot override) is always allowed and
+        bypasses this check.
+        """
+        if self._user_repo.get_by_id(user_id) is None:
+            raise AppError(
+                ErrorCode.USER_NOT_FOUND,
+                status_code=404,
+                params={"id": user_id},
+                message=f"User {user_id} not found.",
             )
 
     def _assert_serial_unique(
@@ -355,6 +372,10 @@ class StockInstanceService:
         # Precedence: explicit wins (even None / past date) → definition default → NULL.
         resolved_best_before = self._resolve_best_before(data, defn)
 
+        # Validate responsible_user_id if provided (M6 Step 4).
+        if data.responsible_user_id is not None:
+            self._assert_user_exists(data.responsible_user_id)
+
         # Serialize custom_fields once for all branches.
         serialized_custom_fields = serialize_custom_fields(data.custom_fields)
 
@@ -381,6 +402,7 @@ class StockInstanceService:
                 purchase_date=data.purchase_date,
                 purchase_source=data.purchase_source,
                 custom_fields=serialized_custom_fields,
+                responsible_user_id=data.responsible_user_id,
             )
             # Record the initial intake movement.
             self._movement_repo.append(
@@ -413,6 +435,7 @@ class StockInstanceService:
                 purchase_date=data.purchase_date,
                 purchase_source=data.purchase_source,
                 custom_fields=serialized_custom_fields,
+                responsible_user_id=data.responsible_user_id,
             )
             self._db.flush()
             return inst
@@ -433,6 +456,7 @@ class StockInstanceService:
                 purchase_date=data.purchase_date,
                 purchase_source=data.purchase_source,
                 custom_fields=serialized_custom_fields,
+                responsible_user_id=data.responsible_user_id,
             )
             self._db.flush()
             return inst
@@ -485,6 +509,10 @@ class StockInstanceService:
         if location_id_changed and data.location_id is not None:
             self._assert_location_exists(data.location_id)
 
+        responsible_user_id_changed = "responsible_user_id" in data.model_fields_set
+        if responsible_user_id_changed and data.responsible_user_id is not None:
+            self._assert_user_exists(data.responsible_user_id)
+
         custom_fields_changed = "custom_fields" in data.model_fields_set
         return self._repo.update(
             inst,
@@ -514,6 +542,8 @@ class StockInstanceService:
             custom_fields=(
                 serialize_custom_fields(data.custom_fields) if custom_fields_changed else None
             ),
+            set_responsible_user_id=responsible_user_id_changed,
+            responsible_user_id=data.responsible_user_id,
         )
 
     def delete(self, instance_id: int) -> list[Path]:

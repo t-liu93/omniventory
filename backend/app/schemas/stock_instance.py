@@ -79,6 +79,15 @@ class InstanceCreate(BaseModel):
             "Maximum 50 fields. NULL = no custom fields."
         ),
     )
+    responsible_user_id: int | None = Field(
+        default=None,
+        description=(
+            "Optional FK → users.id (M6 Step 4). Per-lot override of the "
+            "definition's default responsible party. NULL = inherit from definition "
+            "(then fallback to all active users). "
+            "Must reference an existing user when provided."
+        ),
+    )
 
 
 class InstanceUpdate(BaseModel):
@@ -119,6 +128,17 @@ class InstanceUpdate(BaseModel):
             "Explicitly supplying null clears custom fields."
         ),
     )
+    responsible_user_id: int | None = Field(
+        default=None,
+        description=(
+            "Optional FK → users.id (M6 Step 4). Per-lot override. "
+            "When explicitly provided (even as null), updates the assignment: "
+            "non-null sets the responsible user (validated to exist); "
+            "null clears the per-lot override (lot reverts to the definition default). "
+            "When omitted, the existing assignment is unchanged. "
+            "Use model_fields_set to distinguish 'omitted' from 'explicitly null'."
+        ),
+    )
 
 
 class InstanceResponse(BaseModel):
@@ -140,6 +160,7 @@ class InstanceResponse(BaseModel):
     purchase_date: date | None
     purchase_source: str | None
     custom_fields: CustomFieldsDict | None  # M5: parsed dict (or None)
+    responsible_user_id: int | None  # M6: per-lot responsible-party override (or None)
     created_at: datetime
 
     model_config = {"from_attributes": True}

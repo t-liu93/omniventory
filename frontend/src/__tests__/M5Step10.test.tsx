@@ -88,6 +88,7 @@ const defBase = {
   default_best_before_days: null,
   reminder_lead_days: null,
   custom_fields: null,
+  responsible_user_id: null,
   created_at: "2026-06-27T00:00:00Z",
 };
 

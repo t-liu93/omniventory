@@ -747,6 +747,18 @@
             "description": "Per-item reminder lead-time override in days (M4). ``NULL`` = inherit (engine falls through to the per-user then global default \u2014 \u00a74.3). Must be \u2265 0 when provided (0 = fire on the target date itself). Applies to whichever date source this definition's lots carry (best_before for perishables, warranty for durables). Pydantic ge=0 is the sole validation; no DB CHECK constraint.",
             "title": "Reminder Lead Days"
           },
+          "responsible_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional FK \u2192 users.id. The default responsible party for all lots of this definition (M6 Step 4). NULL = unassigned; the reminder engine falls back to all active users (M4 parity). Must reference an existing user when provided.",
+            "title": "Responsible User Id"
+          },
           "stock_tracking_mode": {
             "default": "exact",
             "title": "Stock Tracking Mode",
@@ -884,6 +896,17 @@
             ],
             "title": "Reminder Lead Days"
           },
+          "responsible_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Responsible User Id"
+          },
           "stock_tracking_mode": {
             "title": "Stock Tracking Mode",
             "type": "string"
@@ -907,6 +930,7 @@
           "default_best_before_days",
           "reminder_lead_days",
           "custom_fields",
+          "responsible_user_id",
           "created_at"
         ],
         "title": "DefinitionResponse",
@@ -1079,6 +1103,18 @@
             ],
             "description": "Per-item reminder lead-time override in days (M4). ``NULL`` = remove the override (inherit from per-user or global). Must be \u2265 0 when provided.",
             "title": "Reminder Lead Days"
+          },
+          "responsible_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional FK \u2192 users.id (M6 Step 4). When explicitly provided (even as null), updates the responsible-party assignment: non-null sets the responsible user (validated to exist); null clears the assignment. When omitted from the PATCH body, the existing assignment is unchanged. Use model_fields_set to distinguish 'omitted' from 'explicitly null'.",
+            "title": "Responsible User Id"
           },
           "stock_tracking_mode": {
             "anyOf": [
@@ -1734,6 +1770,18 @@
             ],
             "title": "Quantity"
           },
+          "responsible_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional FK \u2192 users.id (M6 Step 4). Per-lot override of the definition's default responsible party. NULL = inherit from definition (then fallback to all active users). Must reference an existing user when provided.",
+            "title": "Responsible User Id"
+          },
           "serial": {
             "anyOf": [
               {
@@ -1936,6 +1984,17 @@
             ],
             "title": "Received At"
           },
+          "responsible_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Responsible User Id"
+          },
           "serial": {
             "anyOf": [
               {
@@ -1999,6 +2058,7 @@
           "purchase_date",
           "purchase_source",
           "custom_fields",
+          "responsible_user_id",
           "created_at"
         ],
         "title": "InstanceResponse",
@@ -2177,6 +2237,18 @@
               }
             ],
             "title": "Purchase Source"
+          },
+          "responsible_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional FK \u2192 users.id (M6 Step 4). Per-lot override. When explicitly provided (even as null), updates the assignment: non-null sets the responsible user (validated to exist); null clears the per-lot override (lot reverts to the definition default). When omitted, the existing assignment is unchanged. Use model_fields_set to distinguish 'omitted' from 'explicitly null'.",
+            "title": "Responsible User Id"
           },
           "serial": {
             "anyOf": [

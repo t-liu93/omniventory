@@ -62,6 +62,15 @@ class DefinitionCreate(BaseModel):
             "Maximum 50 fields. NULL = no custom fields."
         ),
     )
+    responsible_user_id: int | None = Field(
+        default=None,
+        description=(
+            "Optional FK → users.id. The default responsible party for all lots of "
+            "this definition (M6 Step 4). NULL = unassigned; the reminder engine "
+            "falls back to all active users (M4 parity). "
+            "Must reference an existing user when provided."
+        ),
+    )
 
 
 class DefinitionUpdate(BaseModel):
@@ -101,6 +110,17 @@ class DefinitionUpdate(BaseModel):
             "Use model_fields_set to distinguish 'omitted' from 'explicitly null'."
         ),
     )
+    responsible_user_id: int | None = Field(
+        default=None,
+        description=(
+            "Optional FK → users.id (M6 Step 4). "
+            "When explicitly provided (even as null), updates the responsible-party "
+            "assignment: non-null sets the responsible user (validated to exist); "
+            "null clears the assignment. "
+            "When omitted from the PATCH body, the existing assignment is unchanged. "
+            "Use model_fields_set to distinguish 'omitted' from 'explicitly null'."
+        ),
+    )
 
 
 class DefinitionResponse(BaseModel):
@@ -119,6 +139,7 @@ class DefinitionResponse(BaseModel):
     default_best_before_days: int | None  # M3: shelf-life default in days; NULL = no default
     reminder_lead_days: int | None  # M4: per-item lead override; NULL = inherit (§4.3)
     custom_fields: CustomFieldsDict | None  # M5: parsed dict (or None)
+    responsible_user_id: int | None  # M6: responsible-party FK (or None = unassigned)
     created_at: datetime
 
     model_config = {"from_attributes": True}

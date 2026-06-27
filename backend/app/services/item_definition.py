@@ -32,6 +32,7 @@ from app.repositories.item_definition import ItemDefinitionRepository
 from app.repositories.item_kind import ItemKindRepository
 from app.repositories.location import LocationRepository
 from app.repositories.stock_instance import StockInstanceRepository
+from app.repositories.user import UserRepository
 from app.schemas.custom_fields import serialize_custom_fields
 from app.schemas.item_definition import DefinitionCreate, DefinitionUpdate
 
@@ -48,6 +49,7 @@ class ItemDefinitionService:
         self._cat_repo = CategoryRepository(db)
         self._loc_repo = LocationRepository(db)
         self._inst_repo = StockInstanceRepository(db)
+        self._user_repo = UserRepository(db)
 
     # ---------------------------------------------------------------------- #
     # Private helpers                                                          #
@@ -118,6 +120,21 @@ class ItemDefinitionService:
                 message=f"Location {location_id} not found.",
             )
 
+    def _assert_user_exists(self, user_id: int) -> None:
+        """Raise 404 if the user does not exist (M6 Step 4).
+
+        Called when ``responsible_user_id`` is non-null on create or update.
+        A null value (clearing the assignment) is always allowed and bypasses
+        this check.
+        """
+        if self._user_repo.get_by_id(user_id) is None:
+            raise AppError(
+                ErrorCode.USER_NOT_FOUND,
+                status_code=404,
+                params={"id": user_id},
+                message=f"User {user_id} not found.",
+            )
+
     def _validate_tracking_mode(self, mode: str) -> None:
         """Raise 422 if ``mode`` is not a supported stock-tracking mode (M2 §3.1 / §4.7).
 
@@ -155,6 +172,9 @@ class ItemDefinitionService:
         if data.default_location_id is not None:
             self._assert_location_exists(data.default_location_id)
 
+        if data.responsible_user_id is not None:
+            self._assert_user_exists(data.responsible_user_id)
+
         self._validate_tracking_mode(data.stock_tracking_mode)
 
         return self._repo.create(
@@ -169,6 +189,7 @@ class ItemDefinitionService:
             default_best_before_days=data.default_best_before_days,
             reminder_lead_days=data.reminder_lead_days,
             custom_fields=serialize_custom_fields(data.custom_fields),
+            responsible_user_id=data.responsible_user_id,
         )
 
     def get(self, definition_id: int) -> ItemDefinition:
@@ -217,12 +238,16 @@ class ItemDefinitionService:
         best_before_days_changed = "default_best_before_days" in data.model_fields_set
         reminder_lead_days_changed = "reminder_lead_days" in data.model_fields_set
         custom_fields_changed = "custom_fields" in data.model_fields_set
+        responsible_user_id_changed = "responsible_user_id" in data.model_fields_set
 
         if category_id_changed and data.category_id is not None:
             self._assert_category_exists(data.category_id)
 
         if location_id_changed and data.default_location_id is not None:
             self._assert_location_exists(data.default_location_id)
+
+        if responsible_user_id_changed and data.responsible_user_id is not None:
+            self._assert_user_exists(data.responsible_user_id)
 
         if data.stock_tracking_mode is not None:
             self._validate_tracking_mode(data.stock_tracking_mode)
@@ -270,6 +295,8 @@ class ItemDefinitionService:
             custom_fields=serialize_custom_fields(data.custom_fields)
             if custom_fields_changed
             else None,
+            set_responsible_user_id=responsible_user_id_changed,
+            responsible_user_id=data.responsible_user_id,
         )
 
     def delete(self, definition_id: int) -> list[Path]:

@@ -86,6 +86,10 @@ class StockInstance(Base):
                      ``str → (str|int|float|bool|null)``. NULL = none.
                      (De)serialized + validated app-layer (M5 Step 4). No DB JSON
                      functions (roadmap §2.11).
+    responsible_user_id
+                     FK → users.id; nullable; ondelete=SET NULL. Per-lot override
+                     of the definition's default responsible party (M6 Step 4).
+                     NULL = inherit from definition → fallback to all active users.
     created_at       Row-creation timestamp (UTC, set by DB on insert).
     """
 
@@ -109,6 +113,8 @@ class StockInstance(Base):
             unique=True,
             sqlite_where=text("serial IS NOT NULL"),
         ),
+        # Non-unique index for responsible-party lookups (M6 Step 4).
+        Index("ix_stock_instances_responsible_user_id", "responsible_user_id"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -155,6 +161,16 @@ class StockInstance(Base):
     purchase_source: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
     custom_fields: Mapped[str | None] = mapped_column(
         Text,
+        nullable=True,
+        default=None,
+    )
+    responsible_user_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey(
+            "users.id",
+            name="fk_stock_instances_responsible_user_id",
+            ondelete="SET NULL",
+        ),
         nullable=True,
         default=None,
     )

@@ -27,7 +27,7 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -61,10 +61,18 @@ class ItemDefinition(Base):
                                ``str → (str|int|float|bool|null)``. NULL = none.
                                (De)serialized + validated app-layer (M5 Step 4). No DB JSON
                                functions (roadmap §2.11).
+    responsible_user_id        FK → users.id; nullable; ondelete=SET NULL. The default
+                               responsible party for all lots of this definition (M6 Step 4).
+                               NULL = unassigned; engine falls back to all active users.
     created_at                 Row-creation timestamp (UTC, set by DB on insert).
     """
 
     __tablename__ = "item_definitions"
+
+    __table_args__ = (
+        # Non-unique index for responsible-party lookups (M6 Step 4).
+        Index("ix_item_definitions_responsible_user_id", "responsible_user_id"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -113,6 +121,16 @@ class ItemDefinition(Base):
     )
     custom_fields: Mapped[str | None] = mapped_column(
         Text,
+        nullable=True,
+        default=None,
+    )
+    responsible_user_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey(
+            "users.id",
+            name="fk_item_definitions_responsible_user_id",
+            ondelete="SET NULL",
+        ),
         nullable=True,
         default=None,
     )

@@ -1877,6 +1877,11 @@ export interface components {
              */
             reminder_lead_days?: number | null;
             /**
+             * Responsible User Id
+             * @description Optional FK → users.id. The default responsible party for all lots of this definition (M6 Step 4). NULL = unassigned; the reminder engine falls back to all active users (M4 parity). Must reference an existing user when provided.
+             */
+            responsible_user_id?: number | null;
+            /**
              * Stock Tracking Mode
              * @default exact
              */
@@ -1920,6 +1925,8 @@ export interface components {
             name: string;
             /** Reminder Lead Days */
             reminder_lead_days: number | null;
+            /** Responsible User Id */
+            responsible_user_id: number | null;
             /** Stock Tracking Mode */
             stock_tracking_mode: string;
             /** Unit */
@@ -1982,6 +1989,11 @@ export interface components {
              * @description Per-item reminder lead-time override in days (M4). ``NULL`` = remove the override (inherit from per-user or global). Must be ≥ 0 when provided.
              */
             reminder_lead_days?: number | null;
+            /**
+             * Responsible User Id
+             * @description Optional FK → users.id (M6 Step 4). When explicitly provided (even as null), updates the responsible-party assignment: non-null sets the responsible user (validated to exist); null clears the assignment. When omitted from the PATCH body, the existing assignment is unchanged. Use model_fields_set to distinguish 'omitted' from 'explicitly null'.
+             */
+            responsible_user_id?: number | null;
             /** Stock Tracking Mode */
             stock_tracking_mode?: string | null;
             /** Unit */
@@ -2199,6 +2211,11 @@ export interface components {
             purchase_source?: string | null;
             /** Quantity */
             quantity?: number | string | null;
+            /**
+             * Responsible User Id
+             * @description Optional FK → users.id (M6 Step 4). Per-lot override of the definition's default responsible party. NULL = inherit from definition (then fallback to all active users). Must reference an existing user when provided.
+             */
+            responsible_user_id?: number | null;
             /** Serial */
             serial?: string | null;
             /** Stock Level */
@@ -2244,6 +2261,8 @@ export interface components {
             quantity: string | null;
             /** Received At */
             received_at: string | null;
+            /** Responsible User Id */
+            responsible_user_id: number | null;
             /** Serial */
             serial: string | null;
             /** Stock Level */
@@ -2312,6 +2331,11 @@ export interface components {
             purchase_price?: number | string | null;
             /** Purchase Source */
             purchase_source?: string | null;
+            /**
+             * Responsible User Id
+             * @description Optional FK → users.id (M6 Step 4). Per-lot override. When explicitly provided (even as null), updates the assignment: non-null sets the responsible user (validated to exist); null clears the per-lot override (lot reverts to the definition default). When omitted, the existing assignment is unchanged. Use model_fields_set to distinguish 'omitted' from 'explicitly null'.
+             */
+            responsible_user_id?: number | null;
             /** Serial */
             serial?: string | null;
             /** Stock Level */

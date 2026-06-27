@@ -83,6 +83,7 @@ class ItemDefinitionRepository:
         default_best_before_days: int | None = None,
         reminder_lead_days: int | None = None,
         custom_fields: str | None = None,
+        responsible_user_id: int | None = None,
     ) -> ItemDefinition:
         """Insert a new ItemDefinition and flush to get its PK."""
         defn = ItemDefinition(
@@ -97,6 +98,7 @@ class ItemDefinitionRepository:
             default_best_before_days=default_best_before_days,
             reminder_lead_days=reminder_lead_days,
             custom_fields=custom_fields,
+            responsible_user_id=responsible_user_id,
         )
         self._db.add(defn)
         self._db.flush()
@@ -123,12 +125,15 @@ class ItemDefinitionRepository:
         reminder_lead_days: int | None = None,
         set_custom_fields: bool = False,
         custom_fields: str | None = None,
+        set_responsible_user_id: bool = False,
+        responsible_user_id: int | None = None,
     ) -> ItemDefinition:
         """Apply partial field updates to an ItemDefinition.
 
-        Nullable FK fields (``category_id``, ``default_location_id``) use an
-        explicit ``set_*`` flag to distinguish "don't change" from "set to
-        NULL" — the same pattern as the Location/Category repositories.
+        Nullable FK fields (``category_id``, ``default_location_id``,
+        ``responsible_user_id``) use an explicit ``set_*`` flag to distinguish
+        "don't change" from "set to NULL" — the same pattern as the
+        Location/Category repositories.
 
         ``min_stock``, ``default_best_before_days``, ``reminder_lead_days``,
         and ``custom_fields`` also use explicit ``set_*`` flags for the same
@@ -157,6 +162,8 @@ class ItemDefinitionRepository:
             defn.reminder_lead_days = reminder_lead_days
         if set_custom_fields:
             defn.custom_fields = custom_fields
+        if set_responsible_user_id:
+            defn.responsible_user_id = responsible_user_id
         self._db.flush()
         return defn
 

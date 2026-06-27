@@ -267,6 +267,7 @@ class StockInstanceRepository:
         purchase_date: date | None = None,
         purchase_source: str | None = None,
         custom_fields: str | None = None,
+        responsible_user_id: int | None = None,
     ) -> StockInstance:
         """Insert a new StockInstance and flush to get its PK.
 
@@ -277,6 +278,8 @@ class StockInstanceRepository:
         ``best_before_date`` is nullable: pass the resolved date (explicit or
         auto-computed from the definition's default_best_before_days) or None.
         ``custom_fields`` is nullable: pass the JSON-serialized string or None.
+        ``responsible_user_id`` is nullable: pass a validated user PK for
+        per-lot responsible-party override (M6 Step 4), or None to inherit.
         """
         instance = StockInstance(
             definition_id=definition_id,
@@ -293,6 +296,7 @@ class StockInstanceRepository:
             purchase_date=purchase_date,
             purchase_source=purchase_source,
             custom_fields=custom_fields,
+            responsible_user_id=responsible_user_id,
         )
         self._db.add(instance)
         self._db.flush()
@@ -326,6 +330,8 @@ class StockInstanceRepository:
         purchase_source: str | None = None,
         set_custom_fields: bool = False,
         custom_fields: str | None = None,
+        set_responsible_user_id: bool = False,
+        responsible_user_id: int | None = None,
     ) -> StockInstance:
         """Apply partial field updates to a StockInstance.
 
@@ -340,6 +346,8 @@ class StockInstanceRepository:
         explicit ``None`` in the payload clears it to NULL (M3 Step 2).
         ``custom_fields`` uses the ``set_custom_fields`` flag for the same
         reason (M5 Step 4): omit = unchanged; explicit None = clear.
+        ``responsible_user_id`` uses the ``set_responsible_user_id`` flag for
+        the same reason (M6 Step 4): omit = unchanged; explicit None = clear.
         """
         if set_location_id:
             instance.location_id = location_id
@@ -365,6 +373,8 @@ class StockInstanceRepository:
             instance.purchase_source = purchase_source
         if set_custom_fields:
             instance.custom_fields = custom_fields
+        if set_responsible_user_id:
+            instance.responsible_user_id = responsible_user_id
         self._db.flush()
         return instance
 
