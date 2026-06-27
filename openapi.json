@@ -2301,6 +2301,103 @@
         "title": "IntegrationStateResponse",
         "type": "object"
       },
+      "InvitationAccept": {
+        "description": "Request body for ``POST /invitations/accept`` (public, no auth).",
+        "properties": {
+          "password": {
+            "title": "Password",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "password"
+        ],
+        "title": "InvitationAccept",
+        "type": "object"
+      },
+      "InvitationCreate": {
+        "description": "Request body for ``POST /invitations``.",
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "role"
+        ],
+        "title": "InvitationCreate",
+        "type": "object"
+      },
+      "InvitationPublic": {
+        "description": "Response for ``GET /invitations/accept?token=`` (public, no auth).\n\nLets the frontend pre-fill the form (which email is being invited, and\nwhat role they'll get) before the user sets their password.",
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "role"
+        ],
+        "title": "InvitationPublic",
+        "type": "object"
+      },
+      "InvitationResponse": {
+        "description": "Response body for ``POST /invitations``.\n\nIncludes the ``accept_url`` (the one-time link) because the admin is\ntrusted and must be able to copy/paste the link for the invitee.\n``emailed`` indicates whether the link was also sent by email.",
+        "properties": {
+          "accept_url": {
+            "title": "Accept Url",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "emailed": {
+            "title": "Emailed",
+            "type": "boolean"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "role",
+          "expires_at",
+          "accept_url",
+          "emailed"
+        ],
+        "title": "InvitationResponse",
+        "type": "object"
+      },
       "KindResponse": {
         "description": "Public representation of an ItemKind.",
         "properties": {
@@ -3279,6 +3376,113 @@
           "read_at"
         ],
         "title": "NotificationResponse",
+        "type": "object"
+      },
+      "PasswordChange": {
+        "description": "Request body for ``POST /auth/change-password`` (any authed user).\n\n``current_password`` is verified against the stored hash.\n``new_password`` replaces it on success.\n\nOn mismatch \u2192 400 ``auth.password_incorrect``.\nOn success, the user's other sessions are revoked (the current session\nremains active).",
+        "properties": {
+          "current_password": {
+            "title": "Current Password",
+            "type": "string"
+          },
+          "new_password": {
+            "title": "New Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "title": "PasswordChange",
+        "type": "object"
+      },
+      "PasswordResetAccept": {
+        "description": "Request body for ``POST /password-reset/accept`` (public, no auth).",
+        "properties": {
+          "password": {
+            "title": "Password",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "password"
+        ],
+        "title": "PasswordResetAccept",
+        "type": "object"
+      },
+      "PasswordResetIssueResponse": {
+        "description": "Response for ``POST /users/{id}/reset-password``.",
+        "properties": {
+          "emailed": {
+            "title": "Emailed",
+            "type": "boolean"
+          },
+          "reset_url": {
+            "title": "Reset Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reset_url",
+          "emailed"
+        ],
+        "title": "PasswordResetIssueResponse",
+        "type": "object"
+      },
+      "PasswordResetPublic": {
+        "description": "Response for ``GET /password-reset/accept?token=`` (public, no auth).\n\nReturns a masked email so the user can confirm which account the reset\nlink is for, without exposing the full address to an anonymous caller.",
+        "properties": {
+          "email_masked": {
+            "title": "Email Masked",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email_masked"
+        ],
+        "title": "PasswordResetPublic",
+        "type": "object"
+      },
+      "PendingInvitationResponse": {
+        "description": "One row in the ``GET /invitations`` list of pending invites.\n\nDoes not include ``accept_url`` \u2014 the link was surfaced at creation time;\nthe admin can re-issue if needed (which replaces the prior link).",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "role",
+          "expires_at",
+          "created_at"
+        ],
+        "title": "PendingInvitationResponse",
         "type": "object"
       },
       "ReadAllResponse": {
@@ -4370,6 +4574,78 @@
         "summary": "Update Attachment",
         "tags": [
           "attachments"
+        ]
+      }
+    },
+    "/api/auth/change-password": {
+      "post": {
+        "description": "Change the current user's password (any authenticated user).\n\nVerifies ``current_password`` against the stored hash.  On mismatch\nreturns 400 ``auth.password_incorrect``.  On success, sets the new\npassword hash and revokes all OTHER sessions for this user (the current\nsession remains active, so the caller stays logged in).\n\nError codes:\n- 400 ``auth.password_incorrect`` \u2014 wrong current password.",
+        "operationId": "change_password_api_auth_change_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Change Password",
+        "tags": [
+          "auth"
         ]
       }
     },
@@ -7055,6 +7331,451 @@
         ]
       }
     },
+    "/api/invitations": {
+      "get": {
+        "description": "List all currently pending invitations (MANAGE_USERS only).",
+        "operationId": "list_invitations_api_invitations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PendingInvitationResponse"
+                  },
+                  "title": "Response List Invitations Api Invitations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "List Invitations",
+        "tags": [
+          "invitations"
+        ]
+      },
+      "post": {
+        "description": "Create an invitation for *email* with *role* (MANAGE_USERS only).\n\nReturns the one-time accept URL (the admin copies this and sends it to the\ninvitee, or it is emailed automatically when SMTP is configured).\n\nThe ``accept_url`` is derived from the incoming request's base URL \u2014\nzero-config for the single-container deployment.\n\nError codes:\n- 409 ``user.email_exists`` \u2014 *email* is already a registered user.\n- 422 ``validation.invalid_input`` \u2014 unknown role string.",
+        "operationId": "create_invitation_api_invitations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Create Invitation",
+        "tags": [
+          "invitations"
+        ]
+      }
+    },
+    "/api/invitations/accept": {
+      "get": {
+        "description": "Validate an invite token and return the invitee's email and role (public).\n\nCalled by the frontend to pre-fill the set-password form before the user\nclicks \"Create account\".  No session required.\n\nError codes:\n- 400 ``auth.invalid_token`` \u2014 token invalid, expired, or already consumed.",
+        "operationId": "get_invitation_accept_api_invitations_accept_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationPublic"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get Invitation Accept",
+        "tags": [
+          "invitations"
+        ]
+      },
+      "post": {
+        "description": "Accept an invite and create the new user account (public, no auth).\n\nDoes NOT auto-login \u2014 the frontend redirects to the login page after success.\n\nError codes:\n- 400 ``auth.invalid_token`` \u2014 token invalid, expired, consumed, or email\n  race (email was registered between invite creation and accept).",
+        "operationId": "post_invitation_accept_api_invitations_accept_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationAccept"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Post Invitation Accept",
+        "tags": [
+          "invitations"
+        ]
+      }
+    },
+    "/api/invitations/{invite_id}": {
+      "delete": {
+        "description": "Revoke a pending invitation by id (MANAGE_USERS only).\n\nError codes:\n- 404 ``invitation.not_found`` \u2014 no invite with that id.",
+        "operationId": "revoke_invitation_api_invitations__invite_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invite_id",
+            "required": true,
+            "schema": {
+              "title": "Invite Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Revoke Invitation",
+        "tags": [
+          "invitations"
+        ]
+      }
+    },
     "/api/kinds": {
       "get": {
         "description": "Return all item kinds (seeded: durable / consumable / perishable).\n\nThis endpoint is read-only \u2014 there are no write endpoints for kinds in M1.",
@@ -8196,6 +8917,189 @@
         ]
       }
     },
+    "/api/password-reset/accept": {
+      "get": {
+        "description": "Validate a password-reset token and return a masked email (public).\n\nCalled by the frontend to confirm which account the reset is for before\nshowing the set-new-password form.  No session required.\n\nError codes:\n- 400 ``auth.invalid_token`` \u2014 token invalid, expired, or consumed.",
+        "operationId": "get_password_reset_accept_api_password_reset_accept_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordResetPublic"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get Password Reset Accept",
+        "tags": [
+          "invitations"
+        ]
+      },
+      "post": {
+        "description": "Accept a password-reset token and set the new password (public, no auth).\n\nOn success: the user's password is updated; all their existing sessions\nare revoked (they must re-authenticate with the new password).\n\nError codes:\n- 400 ``auth.invalid_token`` \u2014 token invalid, expired, consumed, or user missing.",
+        "operationId": "post_password_reset_accept_api_password_reset_accept_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetAccept"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Post Password Reset Accept",
+        "tags": [
+          "invitations"
+        ]
+      }
+    },
     "/api/reminders/run": {
       "post": {
         "description": "Trigger the reminder engine scan on demand.\n\nEvaluates all sources (best_before, warranty, low_stock) across all active\nusers and creates idempotent in-app notification rows.  Returns the count\nof *newly created* rows per source; zero means \"nothing new this scan\"\n(either no lots qualify or they were already notified).\n\nRe-running is safe: the engine uses a unique ``(user_id, dedup_key)`` to\nprevent duplicate notifications.\n\nAfter the handler returns, ``get_db`` auto-commits so notification rows are\ndurable.  External channel dispatch (email digest etc.) runs next via\n``build_dispatcher``; delivery rows are committed by the subsequent\n``get_db`` commit.\n\nNote: dispatch happens AFTER ``get_db`` commits (F1 fix).  To achieve this\nwithin a single ``get_db`` dependency scope the handler explicitly commits,\ndispatches, then returns \u2014 ``get_db`` will commit again on exit (idempotent\nfor an empty transaction).",
@@ -9249,6 +10153,99 @@
         "summary": "Update User",
         "tags": [
           "users"
+        ]
+      }
+    },
+    "/api/users/{user_id}/reset-password": {
+      "post": {
+        "description": "Issue a password-reset link for *user_id* (MANAGE_USERS only).\n\nReturns the one-time reset URL and whether it was emailed.\n\nError codes:\n- 404 ``user.not_found`` \u2014 no user with that id.",
+        "operationId": "issue_password_reset_api_users__user_id__reset_password_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordResetIssueResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Issue Password Reset",
+        "tags": [
+          "invitations"
         ]
       }
     }

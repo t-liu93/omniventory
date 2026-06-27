@@ -139,6 +139,41 @@ def _purge_expired_sessions() -> None:
         db.close()
 
 
+def _purge_expired_user_tokens() -> None:
+    """Delete expired user-token rows on application startup (M6 Step 3).
+
+    Mirrors ``_purge_expired_sessions`` — runs best-effort at startup to keep
+    the ``user_tokens`` table tidy.  Skips silently if the table does not yet
+    exist (pre-migration or test environment without the 0028 migration).
+    """
+    from datetime import UTC, datetime
+
+    from sqlalchemy import inspect as sa_inspect
+
+    from app.db.base import get_engine, get_session_factory
+    from app.repositories.user_token import UserTokenRepository
+
+    engine = get_engine()
+    if not sa_inspect(engine).has_table("user_tokens"):
+        return  # Schema not yet migrated — skip silently.
+
+    factory = get_session_factory()
+    db = factory()
+    try:
+        repo = UserTokenRepository(db)
+        count = repo.purge_expired(datetime.now(UTC))
+        db.commit()
+        if count:
+            import logging
+
+            logging.getLogger(__name__).info("Purged %d expired user-token(s) on startup.", count)
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
 def _start_mqtt_bridge(app: FastAPI) -> None:
     """Start the MQTT bridge if configured and not in test mode.
 
@@ -208,6 +243,7 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
     _resolve_secret_key(app)
     _purge_expired_sessions()
+    _purge_expired_user_tokens()
     start_scheduler(app)
     _start_mqtt_bridge(app)
     yield
@@ -319,6 +355,7 @@ def create_app() -> FastAPI:
     from app.api.routes.export import router as export_router
     from app.api.routes.instances import router as instances_router
     from app.api.routes.integrations import router as integrations_router
+    from app.api.routes.invitations import router as invitations_router
     from app.api.routes.kinds import router as kinds_router
     from app.api.routes.locations import router as locations_router
     from app.api.routes.low_stock import router as low_stock_router
@@ -353,6 +390,7 @@ def create_app() -> FastAPI:
     root_router.include_router(search_router)
     root_router.include_router(export_router)
     root_router.include_router(users_router)
+    root_router.include_router(invitations_router)
 
     app.include_router(root_router, prefix=settings.api_prefix)
 

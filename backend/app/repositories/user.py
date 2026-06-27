@@ -174,3 +174,17 @@ class UserRepository:
         user.reminder_warranty_lead_days = days
         self._db.flush()
         return user
+
+    def set_password_hash(self, user: User, password_hash: str) -> User:
+        """Set the user's password_hash and flush.
+
+        Called by the invitation/password service (M6 Step 3) after validating
+        a one-time reset token or after verifying the current password for a
+        self change-password.  The caller must commit (or rely on ``get_db``).
+
+        DB access only — the caller is responsible for all business-logic
+        validation (token validity, current-password check, etc.).
+        """
+        user.password_hash = password_hash
+        self._db.flush()
+        return user

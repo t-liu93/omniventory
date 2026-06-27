@@ -50,6 +50,7 @@ from app.schemas.auth import (
     UserPreferencesUpdate,
     UserResponse,
 )
+from app.schemas.invitation import PasswordChange
 
 _ERROR_RESPONSES: dict[int | str, dict[str, object]] = {
     401: {"model": ErrorResponse},
@@ -224,6 +225,36 @@ def update_me(
         db.refresh(user)
 
     return MeResponse(user=UserResponse.model_validate(user))
+
+
+@router.post("/change-password", response_model=MessageResponse)
+def change_password(
+    body: PasswordChange,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> MessageResponse:
+    """Change the current user's password (any authenticated user).
+
+    Verifies ``current_password`` against the stored hash.  On mismatch
+    returns 400 ``auth.password_incorrect``.  On success, sets the new
+    password hash and revokes all OTHER sessions for this user (the current
+    session remains active, so the caller stays logged in).
+
+    Error codes:
+    - 400 ``auth.password_incorrect`` — wrong current password.
+    """
+    from app.services.invitation import InvitationService
+
+    settings = get_settings()
+    session_id: str | None = request.cookies.get(settings.session_cookie_name)
+    if not session_id:
+        # Should not happen — get_current_user already verified the cookie.
+        raise AppError(ErrorCode.NOT_AUTHENTICATED, status_code=401)
+
+    svc = InvitationService(db)
+    svc.change_password(user, body.current_password, body.new_password, session_id)
+    return MessageResponse(message="Password changed successfully.")
 
 
 # ---------------------------------------------------------------------------

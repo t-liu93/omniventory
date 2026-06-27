@@ -22,6 +22,7 @@ from app.models.stock_instance import StockInstance
 from app.models.stock_movement import StockMovement
 from app.models.tag import Tag, TagLink
 from app.models.user import User
+from app.models.user_token import UserToken
 
 __all__ = [
     "AppConfig",
@@ -43,4 +44,5 @@ __all__ = [
     "Tag",
     "TagLink",
     "User",
+    "UserToken",
 ]

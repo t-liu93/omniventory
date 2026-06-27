@@ -230,6 +230,27 @@ class EmailChannel:
                         n.id,
                     )
 
+    def send_transactional(self, to_address: str, subject: str, body: str) -> None:
+        """Send a one-off transactional email (not a digest).
+
+        Used by ``InvitationService`` (M6 Step 3) to deliver invite links and
+        password-reset links when SMTP is configured.  Raises on any SMTP error
+        — the caller must catch if best-effort delivery is required.
+
+        Does NOT log to ``notification_deliveries`` — there is no
+        ``Notification`` row for a transactional send.
+
+        Parameters
+        ----------
+        to_address:
+            Recipient email address.
+        subject:
+            Email subject line.
+        body:
+            Plain-text email body.
+        """
+        self._send_smtp(to_address, subject, body)
+
     def send_test(self, to_address: str, lang: str) -> None:
         """Send a test email to ``to_address`` using the currently-saved settings.
 

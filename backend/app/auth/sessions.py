@@ -5,10 +5,11 @@ the opaque session id — no user data.
 
 Public API
 ----------
-``create(db, user_id)``         Create a new session row; return its id.
-``verify(db, session_id)``      Look up and validate; return the Session or None.
-``revoke(db, session_id)``      Delete the session row (logout / revocation).
-``purge_expired(db)``           Delete all rows whose ``expires_at`` has passed.
+``create(db, user_id)``                          Create a new session row; return its id.
+``verify(db, session_id)``                       Look up and validate; return the Session or None.
+``revoke(db, session_id)``                       Delete the session row (logout / revocation).
+``revoke_all_for_user(db, user_id, *, ...)``     Bulk-delete all sessions for a user (M6 Step 3).
+``purge_expired(db)``                            Delete all rows whose ``expires_at`` has passed.
 
 Session lifetime
 ----------------
@@ -121,6 +122,51 @@ def revoke(db: DBSession, session_id: str) -> None:
     if session is not None:
         db.delete(session)
         db.flush()
+
+
+def revoke_all_for_user(
+    db: DBSession,
+    user_id: int,
+    *,
+    except_session_id: str | None = None,
+) -> int:
+    """Bulk-delete all sessions for ``user_id``, optionally keeping one.
+
+    Parameters
+    ----------
+    db:
+        Active SQLAlchemy session.
+    user_id:
+        The user whose sessions are revoked.
+    except_session_id:
+        When provided, this session is kept alive (used by change-password to
+        keep the current session while revoking all other sessions).
+
+    Returns the number of rows deleted.
+
+    Implementation notes
+    --------------------
+    Uses ``synchronize_session=False`` + ``expire_all()`` for the same reason
+    as ``purge_expired`` — avoids the tz-naive comparison trap and keeps the
+    identity map consistent after a bulk DELETE (M6 §4.3).
+
+    Called by:
+    - ``InvitationService.accept_reset`` — revoke ALL sessions for the user.
+    - ``InvitationService.change_password`` — revoke OTHER sessions, keep the
+      current one (pass ``except_session_id``).
+    """
+    from sqlalchemy import CursorResult, delete
+
+    stmt = delete(Session).where(Session.user_id == user_id)
+    if except_session_id is not None:
+        stmt = stmt.where(Session.id != except_session_id)
+
+    raw = db.execute(stmt, execution_options={"synchronize_session": False})
+    db.expire_all()
+    db.flush()
+    cursor: CursorResult[tuple[()]] = raw  # type: ignore[assignment]
+    count: int = cursor.rowcount if cursor.rowcount is not None else 0
+    return count
 
 
 def purge_expired(db: DBSession) -> int:

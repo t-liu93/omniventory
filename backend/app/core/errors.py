@@ -125,6 +125,12 @@ class ErrorCode:
     USER_NOT_FOUND = "user.not_found"
     USER_LAST_ADMIN = "user.last_admin"
 
+    # --- Auth tokens + passwords (M6 Step 3) ---
+    AUTH_INVALID_TOKEN = "auth.invalid_token"  # invite/reset token bad/expired/used
+    AUTH_PASSWORD_INCORRECT = "auth.password_incorrect"  # wrong current password
+    USER_EMAIL_EXISTS = "user.email_exists"  # email already registered as a user
+    INVITATION_NOT_FOUND = "invitation.not_found"  # revoke a missing invite
+
     # --- Internal / catch-all ---
     INTERNAL_ERROR = "internal.error"
 
@@ -177,6 +183,10 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     ErrorCode.BARCODE_DUPLICATE: "A barcode with that code is already bound to a definition.",
     ErrorCode.USER_NOT_FOUND: "User not found.",
     ErrorCode.USER_LAST_ADMIN: "Cannot remove or demote the last active admin.",
+    ErrorCode.AUTH_INVALID_TOKEN: "Token is invalid, expired, or already used.",
+    ErrorCode.AUTH_PASSWORD_INCORRECT: "Current password is incorrect.",
+    ErrorCode.USER_EMAIL_EXISTS: "A user with that email address already exists.",
+    ErrorCode.INVITATION_NOT_FOUND: "Invitation not found.",
     ErrorCode.INTERNAL_ERROR: "An internal error occurred.",
 }
 
