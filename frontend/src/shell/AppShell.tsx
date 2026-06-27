@@ -38,9 +38,15 @@ import {
   useMantineColorScheme,
   useComputedColorScheme,
   Box,
+  TextInput,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
+import { useState } from "react";
+import {
+  NavLink as RouterNavLink,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import {
   Sun,
   Moon,
@@ -52,6 +58,7 @@ import {
   Clock,
   Bell,
   Settings,
+  Search as SearchIcon,
 } from "react-feather";
 import { useTranslation } from "react-i18next";
 import { client } from "../api/client";
@@ -106,6 +113,51 @@ function NavItem({
         style={{ borderRadius: "var(--mantine-radius-md)", cursor: "pointer" }}
       />
     </RouterNavLink>
+  );
+}
+
+/**
+ * Header search bar — exported so it can be tested in isolation.
+ *
+ * On Enter or icon click navigates to /search?q=<trimmed_query>.
+ * Hidden on mobile (sm and below) via Mantine's visibleFrom prop;
+ * mobile users access search through the Search nav item in the drawer.
+ */
+export function HeaderSearchBar() {
+  const { t } = useTranslation("search");
+  const navigate = useNavigate();
+  const [query, setQuery] = useState("");
+
+  function submit() {
+    const q = query.trim();
+    if (q) {
+      navigate(`/search?q=${encodeURIComponent(q)}`);
+    }
+  }
+
+  return (
+    <TextInput
+      placeholder={t("placeholder")}
+      value={query}
+      onChange={(e) => setQuery(e.currentTarget.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") submit();
+      }}
+      rightSection={
+        <ActionIcon
+          variant="subtle"
+          size="sm"
+          onClick={submit}
+          aria-label={t("placeholder")}
+        >
+          <SearchIcon size={14} />
+        </ActionIcon>
+      }
+      size="sm"
+      visibleFrom="sm"
+      style={{ width: 220 }}
+      data-testid="header-search-input"
+    />
   );
 }
 
@@ -169,6 +221,12 @@ function NavContent({ onClose }: { onClose?: () => void }) {
         onClick={onClose}
       />
       <NavItem
+        to="/search"
+        label={t("search")}
+        icon={<SearchIcon size={16} />}
+        onClick={onClose}
+      />
+      <NavItem
         to="/configuration"
         label={t("configuration")}
         icon={<Settings size={16} />}
@@ -211,6 +269,9 @@ function HeaderContent({
           {t("appName")}
         </Text>
       </Group>
+
+      {/* Center: search bar (desktop/tablet only — hidden on mobile via visibleFrom="sm") */}
+      <HeaderSearchBar />
 
       {/* Right: notification bell + language switcher + color-scheme toggle + logout */}
       <Group gap="xs">

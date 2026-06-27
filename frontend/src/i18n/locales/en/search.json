@@ -1,0 +1,15 @@
+{
+  "placeholder": "Search…",
+  "title": "Search Results",
+  "groups": {
+    "item_definitions": "Items ({{count}})",
+    "stock_instances": "Stock Instances ({{count}})",
+    "locations": "Locations ({{count}})",
+    "categories": "Categories ({{count}})",
+    "tags": "Tags ({{count}})"
+  },
+  "groupMore": "Showing {{shown}} of {{total}}",
+  "prompt": "Enter a search term to find items, locations, and more.",
+  "noResults": "No results found for \"{{q}}\".",
+  "loadError": "Failed to load search results."
+}

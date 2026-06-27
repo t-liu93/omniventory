@@ -32,6 +32,7 @@ import enTags from "../i18n/locales/en/tags.json";
 import enNotes from "../i18n/locales/en/notes.json";
 import enCustomFields from "../i18n/locales/en/customFields.json";
 import enBarcode from "../i18n/locales/en/barcode.json";
+import enSearch from "../i18n/locales/en/search.json";
 
 import zhCommon from "../i18n/locales/zh/common.json";
 import zhAuth from "../i18n/locales/zh/auth.json";
@@ -51,6 +52,7 @@ import zhTags from "../i18n/locales/zh/tags.json";
 import zhNotes from "../i18n/locales/zh/notes.json";
 import zhCustomFields from "../i18n/locales/zh/customFields.json";
 import zhBarcode from "../i18n/locales/zh/barcode.json";
+import zhSearch from "../i18n/locales/zh/search.json";
 
 // ── Deep key extraction ───────────────────────────────────────────────────────
 
@@ -93,6 +95,7 @@ const namespacePairs: [string, unknown, unknown][] = [
   ["notes", enNotes, zhNotes],
   ["customFields", enCustomFields, zhCustomFields],
   ["barcode", enBarcode, zhBarcode],
+  ["search", enSearch, zhSearch],
 ];
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

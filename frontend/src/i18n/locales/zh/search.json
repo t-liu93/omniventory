@@ -1,0 +1,15 @@
+{
+  "placeholder": "搜索…",
+  "title": "搜索结果",
+  "groups": {
+    "item_definitions": "物品（{{count}} 条）",
+    "stock_instances": "库存实例（{{count}} 条）",
+    "locations": "位置（{{count}} 条）",
+    "categories": "分类（{{count}} 条）",
+    "tags": "标签（{{count}} 条）"
+  },
+  "groupMore": "显示 {{shown}} 条，共 {{total}} 条",
+  "prompt": "输入搜索词以查找物品、位置等。",
+  "noResults": "未找到与 \"{{q}}\" 相关的结果。",
+  "loadError": "加载搜索结果失败。"
+}
