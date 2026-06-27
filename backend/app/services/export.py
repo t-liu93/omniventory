@@ -388,8 +388,14 @@ class ExportService:
 
     @staticmethod
     def _iter_csv(columns: list[str], records: list[dict[str, object]]) -> Iterator[str]:
-        """Yield CSV-encoded text: header row, then one data row per record."""
-        yield _csv_encode_row(list(columns))
+        """Yield CSV-encoded text: UTF-8 BOM, header row, then one data row per record.
+
+        The BOM (U+FEFF, encoded as EF BB BF in UTF-8) is prepended so that
+        spreadsheet apps (Excel, WPS, Numbers) auto-detect UTF-8 rather than
+        falling back to the legacy system codepage, which would mangle non-ASCII
+        characters (e.g. Chinese) into '?'.
+        """
+        yield "﻿" + _csv_encode_row(list(columns))
         for record in records:
             yield _csv_encode_row([record.get(col) for col in columns])
 

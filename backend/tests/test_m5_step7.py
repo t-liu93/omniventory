@@ -261,7 +261,13 @@ def _set_tags(
 
 
 def _parse_csv(text: str) -> tuple[list[str], list[list[str]]]:
-    """Parse a CSV string into (header, data_rows)."""
+    """Parse a CSV string into (header, data_rows).
+
+    Strips a leading UTF-8 BOM character (U+FEFF) before parsing so callers
+    get clean header/row values without the BOM prefix on the first cell.
+    """
+    if text.startswith("﻿"):
+        text = text[1:]
     reader = csv.reader(io.StringIO(text))
     rows = list(reader)
     # csv.writer appends a trailing newline; the last row may be empty
@@ -949,3 +955,89 @@ class TestAllEntitiesAndFormats:
     ) -> None:
         status, _ = _export(test_client, entity, fmt)
         assert status == 200
+
+
+# ---------------------------------------------------------------------------
+# 14. UTF-8 BOM — Excel / WPS / Numbers spreadsheet compatibility
+# ---------------------------------------------------------------------------
+
+
+class TestCSVBOM:
+    """CSV export starts with a UTF-8 BOM so spreadsheet apps auto-detect UTF-8."""
+
+    def test_csv_body_starts_with_bom_char(self, test_client: TestClient) -> None:
+        """The CSV body text starts with the UTF-8 BOM character U+FEFF."""
+        status, body = _export(test_client, "locations", "csv")
+        assert status == 200
+        assert body.startswith("﻿"), "CSV text must begin with the UTF-8 BOM character (U+FEFF)"
+
+    def test_csv_bytes_start_with_bom_bytes(self, test_client: TestClient) -> None:
+        """The raw CSV bytes start with EF BB BF (the UTF-8 encoding of U+FEFF)."""
+        resp = test_client.get("/api/export/locations", params={"format": "csv"})
+        assert resp.status_code == 200
+        assert resp.content[:3] == b"\xef\xbb\xbf", (
+            "CSV bytes must start with the UTF-8 BOM (EF BB BF)"
+        )
+
+    def test_csv_bom_appears_exactly_once(self, test_client: TestClient) -> None:
+        """The BOM appears only once at position 0, not repeated for each row."""
+        _create_location(test_client, "Row A")
+        _create_location(test_client, "Row B")
+        status, body = _export(test_client, "locations", "csv")
+        assert status == 200
+        assert body.count("﻿") == 1, "BOM must appear exactly once (at the start), not per row"
+
+    def test_chinese_content_round_trips_via_utf8_sig(self, test_client: TestClient) -> None:
+        """Chinese names / category / tags / custom_fields survive CSV export unchanged.
+
+        This is the regression test that proves the BOM fix works: decoding the
+        CSV bytes with 'utf-8-sig' (which strips the BOM) and parsing through
+        csv.reader must produce the original Chinese strings, not '?' or mojibake.
+        """
+        cat = _create_category(test_client, "工具箱")
+        loc = _create_location(test_client, "客厅")
+        tag = _create_tag(test_client, "常用")
+        defn = _create_definition(
+            test_client,
+            "干电池",
+            category_id=cat["id"],
+            default_location_id=loc["id"],
+            custom_fields={"品牌": "南孚", "规格": "5号"},
+        )
+        _set_tags(test_client, "item_definition", defn["id"], [tag["id"]])
+
+        resp = test_client.get("/api/export/item_definitions", params={"format": "csv"})
+        assert resp.status_code == 200
+
+        # Decode with utf-8-sig: this is what Excel/WPS does once it sees the BOM.
+        # It strips the BOM and decodes the rest as UTF-8.
+        csv_text = resp.content.decode("utf-8-sig")
+        reader = csv.reader(io.StringIO(csv_text))
+        all_rows = [r for r in reader if r]
+        assert len(all_rows) >= 2, "Expected header + at least one data row"
+        header = all_rows[0]
+        data = all_rows[1]
+        d = dict(zip(header, data, strict=False))
+
+        assert d["name"] == "干电池", f"name mangled: {d['name']!r}"
+        assert d["category_name"] == "工具箱", f"category_name mangled: {d['category_name']!r}"
+        assert d["default_location_name"] == "客厅", (
+            f"default_location_name mangled: {d['default_location_name']!r}"
+        )
+        assert d["tags"] == "常用", f"tags mangled: {d['tags']!r}"
+        cf = json.loads(d["custom_fields"])
+        assert cf["品牌"] == "南孚", f"custom_fields 品牌 mangled: {cf['品牌']!r}"
+        assert cf["规格"] == "5号", f"custom_fields 规格 mangled: {cf['规格']!r}"
+
+    def test_json_export_has_no_bom(self, test_client: TestClient) -> None:
+        """JSON export does NOT start with a BOM — BOM in JSON is non-standard.
+
+        A BOM in a JSON file violates RFC 8259 §8.1 and breaks most JSON parsers.
+        """
+        resp = test_client.get("/api/export/locations", params={"format": "json"})
+        assert resp.status_code == 200
+        assert not resp.content.startswith(b"\xef\xbb\xbf"), (
+            "JSON export must NOT include a UTF-8 BOM"
+        )
+        # Must still be valid JSON parseable directly from the bytes.
+        assert json.loads(resp.content) == []
