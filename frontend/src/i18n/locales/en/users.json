@@ -1,0 +1,49 @@
+{
+  "page": {
+    "title": "Users",
+    "subtitle": "Manage user accounts, roles, and invitations."
+  },
+  "table": {
+    "email": "Email",
+    "role": "Role",
+    "active": "Status",
+    "actions": "Actions"
+  },
+  "actions": {
+    "invite": "Invite user",
+    "delete": "Delete",
+    "resetPassword": "Reset password",
+    "generateLink": "Generate link",
+    "activate": "Activate",
+    "deactivate": "Deactivate"
+  },
+  "invite": {
+    "title": "Invite user",
+    "emailLabel": "Email address",
+    "roleLabel": "Role",
+    "submit": "Send invitation",
+    "successTitle": "Invitation created",
+    "acceptLink": "Accept link",
+    "copyLink": "Copy link",
+    "emailSent": "Email sent",
+    "emailNotSent": "Copy and share this link manually",
+    "done": "Done"
+  },
+  "delete": {
+    "title": "Delete user",
+    "confirm": "Are you sure you want to delete {{email}}? This cannot be undone.",
+    "confirm_btn": "Delete",
+    "cancel": "Cancel",
+    "success": "User deleted"
+  },
+  "resetPassword": {
+    "title": "Reset password",
+    "prompt": "Generate a one-time password reset link for {{email}}.",
+    "resetLink": "Reset link",
+    "copyLink": "Copy link",
+    "emailSent": "Email sent to user",
+    "emailNotSent": "Copy and share this link manually",
+    "done": "Done"
+  },
+  "empty": "No users found."
+}

@@ -34,6 +34,7 @@ import { LowStock } from "./pages/LowStock";
 import { Expiring } from "./pages/Expiring";
 import { Notifications } from "./pages/Notifications";
 import { Configuration } from "./pages/Configuration";
+import { Users } from "./pages/Users";
 import { Search } from "./pages/Search";
 import { NotFound } from "./pages/NotFound";
 import { client } from "./api/client";
@@ -128,6 +129,11 @@ function App() {
             <Route path="/low-stock" element={<LowStock />} />
             <Route path="/expiring" element={<Expiring />} />
             <Route path="/notifications" element={<Notifications />} />
+            <Route path="/users" element={
+              <RequirePermission permission="MANAGE_USERS">
+                <Users />
+              </RequirePermission>
+            } />
             <Route path="/configuration" element={
               <RequirePermission permission="MANAGE_SETTINGS">
                 <Configuration />

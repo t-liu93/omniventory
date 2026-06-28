@@ -35,6 +35,8 @@ import enBarcode from "../i18n/locales/en/barcode.json";
 import enSearch from "../i18n/locales/en/search.json";
 import enExport from "../i18n/locales/en/export.json";
 import enRoles from "../i18n/locales/en/roles.json";
+import enUsers from "../i18n/locales/en/users.json";
+import enInvitations from "../i18n/locales/en/invitations.json";
 
 import zhCommon from "../i18n/locales/zh/common.json";
 import zhAuth from "../i18n/locales/zh/auth.json";
@@ -57,6 +59,8 @@ import zhBarcode from "../i18n/locales/zh/barcode.json";
 import zhSearch from "../i18n/locales/zh/search.json";
 import zhExport from "../i18n/locales/zh/export.json";
 import zhRoles from "../i18n/locales/zh/roles.json";
+import zhUsers from "../i18n/locales/zh/users.json";
+import zhInvitations from "../i18n/locales/zh/invitations.json";
 
 // ── Deep key extraction ───────────────────────────────────────────────────────
 
@@ -102,6 +106,8 @@ const namespacePairs: [string, unknown, unknown][] = [
   ["search", enSearch, zhSearch],
   ["export", enExport, zhExport],
   ["roles", enRoles, zhRoles],
+  ["users", enUsers, zhUsers],
+  ["invitations", enInvitations, zhInvitations],
 ];
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

@@ -1,0 +1,16 @@
+{
+  "section": {
+    "title": "Pending invitations",
+    "subtitle": "Invitations waiting to be accepted.",
+    "empty": "No pending invitations."
+  },
+  "table": {
+    "email": "Email",
+    "role": "Role",
+    "expires": "Expires",
+    "actions": "Actions"
+  },
+  "actions": {
+    "revoke": "Revoke"
+  }
+}

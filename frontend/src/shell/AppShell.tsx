@@ -59,6 +59,7 @@ import {
   Bell,
   Settings,
   Search as SearchIcon,
+  Users,
 } from "react-feather";
 import { useTranslation } from "react-i18next";
 import { client } from "../api/client";
@@ -230,6 +231,15 @@ function NavContent({ onClose }: { onClose?: () => void }) {
         icon={<SearchIcon size={16} />}
         onClick={onClose}
       />
+      {/* Admin-only: Users (MANAGE_USERS required) */}
+      {can("MANAGE_USERS") && (
+        <NavItem
+          to="/users"
+          label={t("users")}
+          icon={<Users size={16} />}
+          onClick={onClose}
+        />
+      )}
       {/* Admin-only: Configuration (MANAGE_SETTINGS required) */}
       {can("MANAGE_SETTINGS") && (
         <NavItem

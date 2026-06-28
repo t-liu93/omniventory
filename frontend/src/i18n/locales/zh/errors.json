@@ -6,7 +6,16 @@
     "account_inactive": "该账户已停用。",
     "invalid_credentials": "邮箱或密码不正确。",
     "account_disabled": "该账户已被禁用。",
-    "setup_already_complete": "初始化已完成，管理员账户已存在。"
+    "setup_already_complete": "初始化已完成，管理员账户已存在。",
+    "forbidden": "您没有执行此操作的权限。"
+  },
+  "user": {
+    "not_found": "用户不存在。",
+    "email_exists": "该邮箱地址已被注册。",
+    "last_admin": "无法移除最后一位活跃管理员，请先将其他用户提升为管理员。"
+  },
+  "invitation": {
+    "not_found": "邀请不存在。"
   },
   "validation": {
     "invalid_input": "提交的数据无效，请检查表单后重试。",

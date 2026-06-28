@@ -6,7 +6,16 @@
     "account_inactive": "This account is inactive.",
     "invalid_credentials": "Invalid email or password.",
     "account_disabled": "This account has been disabled.",
-    "setup_already_complete": "Setup is already complete. An admin account already exists."
+    "setup_already_complete": "Setup is already complete. An admin account already exists.",
+    "forbidden": "You do not have permission to perform this action."
+  },
+  "user": {
+    "not_found": "User not found.",
+    "email_exists": "A user with this email address already exists.",
+    "last_admin": "Cannot remove the last active admin. Promote another user to admin first."
+  },
+  "invitation": {
+    "not_found": "Invitation not found."
   },
   "validation": {
     "invalid_input": "The submitted data is invalid. Please check the form and try again.",
