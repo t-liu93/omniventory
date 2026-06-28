@@ -1111,6 +1111,12 @@ export interface paths {
          *
          *     ``unread_only=true`` restricts the result to rows where ``read_at IS NULL``.
          *     ``limit`` caps the number of rows (default 50, max 200).
+         *
+         *     M6 Step 5 — in-app inbox gating: when the user has opted out of the in-app
+         *     inbox (``notify_in_app=False``), this endpoint returns an empty list.
+         *     Notification rows may still exist in the DB to feed the email digest — a
+         *     deliberate simplification documented in M6 §12.  The bell/badge UI should
+         *     hide itself when the user's ``notify_in_app`` pref is off.
          */
         get: operations["list_notifications_api_notifications_get"];
         put?: never;
@@ -1157,6 +1163,9 @@ export interface paths {
          *
          *     Used to drive the bell badge in the frontend.  Returns ``{ count: 0 }``
          *     when there are no unread notifications.
+         *
+         *     M6 Step 5 — in-app inbox gating: returns ``{ count: 0 }`` when the user
+         *     has opted out of the in-app inbox (``notify_in_app=False``).
          */
         get: operations["get_unread_count_api_notifications_unread_count_get"];
         put?: never;
@@ -3202,7 +3211,9 @@ export interface components {
          *     All fields are optional and PATCH-style.  An omitted field is a no-op and
          *     does NOT overwrite an existing value.  Setting a field to ``null``
          *     explicitly unsets it (clears the override, re-inheriting the next level in
-         *     the resolution chain).
+         *     the resolution chain) — **except** for the two boolean notify-pref fields,
+         *     which are non-nullable columns: an explicit ``null`` for those is treated
+         *     as a no-op (the route handler only writes non-None values).
          *
          *     Null-vs-omitted semantics
          *     -------------------------
@@ -3214,20 +3225,35 @@ export interface components {
          *
          *     The route checks ``"<field>" in body.model_fields_set`` for each field:
          *     - **Omitted** → no-op (do not touch the stored value).
-         *     - **Null** explicitly → write NULL to DB (remove the override, inherit up).
+         *     - **Null** explicitly → write NULL to DB for nullable fields; no-op for
+         *       non-nullable boolean fields (``notify_in_app``, ``notify_email_digest``).
          *     - **Value** → validate + write.
          *
-         *     This applies uniformly to:
+         *     This applies to:
          *     - ``preferred_language``: NULL → client resolves (localStorage → navigator → 'en').
          *     - ``reminder_best_before_lead_days``: NULL → inherit per-user fallback chain (§4.3).
          *     - ``reminder_warranty_lead_days``: NULL → inherit per-user fallback chain (§4.3).
+         *     - ``notify_in_app``: bool (M6); null treated as no-op (non-nullable column).
+         *     - ``notify_email_digest``: bool (M6); null treated as no-op (non-nullable column).
          * @example {
+         *       "notify_email_digest": false,
+         *       "notify_in_app": true,
          *       "preferred_language": "zh",
          *       "reminder_best_before_lead_days": 5,
          *       "reminder_warranty_lead_days": 14
          *     }
          */
         UserPreferencesUpdate: {
+            /**
+             * Notify Email Digest
+             * @description M6: opt out of the daily email digest (false) or back in (true). Non-nullable column — an explicit ``null`` is treated as a no-op. Omitting the field is always a no-op.
+             */
+            notify_email_digest?: boolean | null;
+            /**
+             * Notify In App
+             * @description M6: opt out of the in-app notification inbox (false) or back in (true). Non-nullable column — an explicit ``null`` is treated as a no-op. Omitting the field is always a no-op.
+             */
+            notify_in_app?: boolean | null;
             /** Preferred Language */
             preferred_language?: string | null;
             /**
@@ -3248,6 +3274,10 @@ export interface components {
          *     ``preferred_language`` is nullable.  NULL means the user has never
          *     explicitly chosen a language; the client resolves via its own chain.
          *     Added in M1.5 Step 2.
+         *
+         *     ``notify_in_app`` / ``notify_email_digest`` — per-user channel opt-outs
+         *     added in M6 Step 5.  Both default to True on the model; always present in
+         *     the response.
          */
         UserResponse: {
             /**
@@ -3261,6 +3291,16 @@ export interface components {
             id: number;
             /** Is Active */
             is_active: boolean;
+            /**
+             * Notify Email Digest
+             * @default true
+             */
+            notify_email_digest: boolean;
+            /**
+             * Notify In App
+             * @default true
+             */
+            notify_in_app: boolean;
             /** Preferred Language */
             preferred_language?: string | null;
             /** Reminder Best Before Lead Days */

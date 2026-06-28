@@ -220,6 +220,16 @@ def update_me(
         repo.set_reminder_warranty_lead_days(user, body.reminder_warranty_lead_days)
         needs_commit = True
 
+    # M6 Step 5: per-user channel opt-outs.  The columns are NOT NULL, so an
+    # explicit null is treated as a no-op (only write when the value is a bool).
+    if "notify_in_app" in body.model_fields_set and body.notify_in_app is not None:
+        repo.set_notify_prefs(user, notify_in_app=body.notify_in_app)
+        needs_commit = True
+
+    if "notify_email_digest" in body.model_fields_set and body.notify_email_digest is not None:
+        repo.set_notify_prefs(user, notify_email_digest=body.notify_email_digest)
+        needs_commit = True
+
     if needs_commit:
         db.commit()
         db.refresh(user)

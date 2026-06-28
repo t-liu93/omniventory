@@ -90,8 +90,17 @@ def list_notifications(
 
     ``unread_only=true`` restricts the result to rows where ``read_at IS NULL``.
     ``limit`` caps the number of rows (default 50, max 200).
+
+    M6 Step 5 — in-app inbox gating: when the user has opted out of the in-app
+    inbox (``notify_in_app=False``), this endpoint returns an empty list.
+    Notification rows may still exist in the DB to feed the email digest — a
+    deliberate simplification documented in M6 §12.  The bell/badge UI should
+    hide itself when the user's ``notify_in_app`` pref is off.
     """
     assert ctx.user is not None  # get_authenticated_context guarantees this
+    # M6 §4.5 inbox gate: return [] when user opted out of the in-app inbox.
+    if not ctx.user.notify_in_app:
+        return []
     pairs = service.list_for_user(ctx.user.id, unread_only=unread_only, limit=limit)
     return [_build_response(n, p) for n, p in pairs]
 
@@ -107,8 +116,14 @@ def get_unread_count(
 
     Used to drive the bell badge in the frontend.  Returns ``{ count: 0 }``
     when there are no unread notifications.
+
+    M6 Step 5 — in-app inbox gating: returns ``{ count: 0 }`` when the user
+    has opted out of the in-app inbox (``notify_in_app=False``).
     """
     assert ctx.user is not None
+    # M6 §4.5 inbox gate: return 0 when user opted out of the in-app inbox.
+    if not ctx.user.notify_in_app:
+        return UnreadCountResponse(count=0)
     return UnreadCountResponse(count=service.unread_count(ctx.user.id))
 
 

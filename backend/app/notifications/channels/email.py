@@ -174,6 +174,17 @@ class EmailChannel:
                 logger.warning("EmailChannel: user_id=%d not found; skipping digest.", user_id)
                 return
 
+            # M6 Step 5 — email digest opt-out: skip building/sending without
+            # recording any delivery rows.  Notification rows (created by the
+            # engine) may still exist to power the in-app inbox; we simply do
+            # not send the email for this recipient.
+            if not user.notify_email_digest:
+                logger.debug(
+                    "EmailChannel: user_id=%d has notify_email_digest=False; skipping digest.",
+                    user_id,
+                )
+                return
+
             lang = user.preferred_language or "en"
             recipient_email = user.email
 

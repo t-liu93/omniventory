@@ -8,11 +8,18 @@ scoped path: same low-stock logic as run_scan, but limited to one definition
 across all recipients.  Called by StockMovementService after consume/discard/
 adjust, within the same DB transaction (best-effort, savepoint-isolated).
 
-Locked decisions implemented here (M4 §2)
+Locked decisions implemented here (M4 §2 / M6 §2)
 ------------------------------------------
 - **One engine, source-pluggable**: each date source is a small ``_DateSource``
-  descriptor; the engine loops sources x recipients x lots in a single pass.
-- **Recipients = all active users (M4)**: ``UserRepository.list_active()``.
+  descriptor; the engine loops sources x lots x recipients in a single pass.
+- **Recipient routing (M6 Step 5)**: each notification is routed to the
+  *effective responsible party* (``lot.responsible_user_id`` → definition's
+  ``responsible_user_id`` → fallback to all active users for date sources;
+  ``definition.responsible_user_id`` → fallback for low-stock).  Fallback
+  preserves the M4 broadcast behaviour exactly.
+- **Pref gating (M6 Step 5)**: before creating a notification row for a
+  recipient, the engine skips them entirely when both ``notify_in_app`` and
+  ``notify_email_digest`` are False (they want nothing from any channel).
 - **"Today" honours ``household.timezone``**: ``today_local`` is computed from
   the current UTC time localised into ``household.timezone`` via
   ``zoneinfo.ZoneInfo``; never via ``date.today()`` (which returns the system
@@ -22,6 +29,23 @@ Locked decisions implemented here (M4 §2)
   dedup key ``"{source}:u{uid}:i{lot_id}:{target_date}"`` makes re-runs no-ops.
 - **Low-stock episodes** (§4.5 / §3.3): opener fires on going low; repeats
   fire when elapsed >= offset (catch-up); episode closes on recovery.
+
+Low-stock Phase 1 vs Phase 2 split (M6 Step 5)
+-----------------------------------------------
+``_evaluate_low_stock_for_user`` now receives two separate low sets:
+
+``low_now_for_open``
+    The *routed* low set for this user (Phase 1 — open new episodes or fire
+    repeats).  Only definitions whose effective responsible party routes to
+    this user are included.  A definition routed to another user is excluded
+    from this set so the engine does not create opener rows for unrouted users.
+
+``low_now_global``
+    The *global* low set — every definition currently below its threshold,
+    regardless of routing.  Used by Phase 2 (close recovered episodes): a
+    previously-broadcast opener must close on recovery for everyone who holds
+    an opener, even if the definition's assignment has since changed.  Phase 2
+    never creates rows; it only marks existing openers resolved.
 
 Testability
 -----------
@@ -55,6 +79,7 @@ from app.models.notification import Notification
 from app.models.stock_instance import StockInstance
 from app.models.user import User
 from app.repositories.household import HouseholdRepository
+from app.repositories.item_definition import ItemDefinitionRepository
 from app.repositories.notification import NotificationRepository
 from app.repositories.stock_instance import StockInstanceRepository
 from app.repositories.user import UserRepository
@@ -275,6 +300,7 @@ class ReminderEngine:
         self._notification_repo = NotificationRepository(db)
         self._household_repo = HouseholdRepository(db)
         self._settings_service = SettingsService(db)
+        self._definition_repo = ItemDefinitionRepository(db)
 
     # ------------------------------------------------------------------
     # Public API
@@ -303,10 +329,13 @@ class ReminderEngine:
             today_local = self._today_in_tz(household.timezone)
 
         # ---- Collect recipients -------------------------------------------
-        recipients = self._user_repo.list_active()
-        if not recipients:
+        active_users = self._user_repo.list_active()
+        if not active_users:
             logger.debug("run_scan: no active users -- skipping.")
             return ScanSummary()
+
+        # Build a quick lookup: user_id -> User (for O(1) routing resolution).
+        active_by_id: dict[int, User] = {u.id: u for u in active_users}
 
         # ---- Evaluate each date source ------------------------------------
         summary = ScanSummary()
@@ -317,7 +346,8 @@ class ReminderEngine:
             count, new_notifications = self._evaluate_date_source(
                 source=source,
                 lots=lots,
-                recipients=recipients,
+                active_users=active_users,
+                active_by_id=active_by_id,
                 today_local=today_local,
             )
             # Map source name to summary field
@@ -342,10 +372,33 @@ class ReminderEngine:
             {o for o in self._settings_service.low_stock_repeat_days() if o >= 1}
         )
 
-        for user in recipients:
+        # M6 Step 5: precompute routing per low definition so we can derive
+        # each user's routed low set efficiently in O(|low_now|) rather than
+        # O(|active_users| × |low_now|).
+        #
+        # For each low definition, resolve its responsible party and map it to
+        # the recipient list (_recipients_for handles the fallback-to-all case).
+        recipients_by_def: dict[int, list[User]] = {
+            def_id: self._recipients_for(
+                self._effective_responsible_for_definition_id(def_id),
+                active_users,
+                active_by_id,
+            )
+            for def_id in low_now
+        }
+
+        # Build a reverse mapping: user_id -> set of low def_ids routed to
+        # that user.  This powers Phase 1 (open/repeat) per user.
+        user_routed_low: dict[int, set[int]] = {u.id: set() for u in active_users}
+        for def_id, def_recipients in recipients_by_def.items():
+            for u in def_recipients:
+                user_routed_low[u.id].add(def_id)
+
+        for user in active_users:
             low_count, new_notifs = self._evaluate_low_stock_for_user(
                 user=user,
-                low_now=low_now,
+                low_now_for_open=user_routed_low[user.id],  # routed: Phase 1
+                low_now_global=low_now,  # all low: Phase 2 close
                 low_item_map=low_item_map,
                 repeat_offsets=repeat_offsets,
                 today_local=today_local,
@@ -382,6 +435,12 @@ class ReminderEngine:
         run_scan but scoped to one definition.  Used for immediate in-app
         feedback without waiting for the daily scan.
 
+        M6 Step 5: the definition's effective responsible party is resolved and
+        used to route the Phase 1 opener/repeat to the correct user(s).  Phase 2
+        (close on recovery) still runs for ALL users who hold an opener for this
+        definition, regardless of routing — a previously-broadcast opener must
+        close for everyone.
+
         Returns the list of newly created ``Notification`` rows so that the
         caller (route handler) can dispatch instant channels post-commit
         (Step 8 §4.6: "scan + event paths"; dispatch after commit is the F1 fix).
@@ -403,9 +462,11 @@ class ReminderEngine:
             household = self._household_repo.ensure()
             today_local = self._today_in_tz(household.timezone)
 
-        recipients = self._user_repo.list_active()
-        if not recipients:
+        active_users = self._user_repo.list_active()
+        if not active_users:
             return []
+
+        active_by_id: dict[int, User] = {u.id: u for u in active_users}
 
         from app.services.low_stock import LowStockService
 
@@ -417,16 +478,24 @@ class ReminderEngine:
             {o for o in self._settings_service.low_stock_repeat_days() if o >= 1}
         )
 
-        # Restrict low_now to just the requested definition so that the
-        # per-user loop only touches this definition.
+        # Restrict to just the requested definition (global low set, for Phase 2).
         scoped_low_now: set[int] = {definition_id} if definition_id in low_now else set()
+
+        # M6 Step 5: route the scoped definition to the correct recipient set.
+        responsible_id = self._effective_responsible_for_definition_id(definition_id)
+        def_recipients = self._recipients_for(responsible_id, active_users, active_by_id)
+        def_recipient_ids: set[int] = {u.id for u in def_recipients}
 
         all_new: list[Notification] = []
 
-        for user in recipients:
+        for user in active_users:
+            # Phase 1: only route the definition to users who are recipients.
+            # Phase 2 (close): all users with openers still get closed on recovery.
+            low_now_for_open = scoped_low_now if user.id in def_recipient_ids else set()
             _count, new_notifs = self._evaluate_low_stock_for_user(
                 user=user,
-                low_now=scoped_low_now,
+                low_now_for_open=low_now_for_open,
+                low_now_global=scoped_low_now,
                 low_item_map=low_item_map,
                 repeat_offsets=repeat_offsets,
                 today_local=today_local,
@@ -440,6 +509,68 @@ class ReminderEngine:
         return all_new
 
     # ------------------------------------------------------------------
+    # Internal: recipient routing helpers (M6 Step 5)
+    # ------------------------------------------------------------------
+
+    def _effective_responsible_for_lot(self, lot: StockInstance) -> int | None:
+        """Return the effective responsible user ID for a date-source lot.
+
+        Resolution (M6 §4.4 / §2 "Responsible party"):
+        1. ``lot.responsible_user_id``               (per-lot override).
+        2. ``lot.definition.responsible_user_id``    (definition default).
+        3. ``None``                                  (unassigned → fallback to all).
+
+        User IDs are always ≥ 1 so ``or`` short-circuits correctly on None/0.
+        The definition relationship is already eager-loaded by the repository
+        (``list_live_with_best_before`` / ``list_live_with_warranty`` both use
+        ``joinedload(StockInstance.definition)``), so no extra query is issued.
+        """
+        return lot.responsible_user_id or lot.definition.responsible_user_id or None
+
+    def _effective_responsible_for_definition_id(self, def_id: int) -> int | None:
+        """Return the responsible_user_id for an ItemDefinition, or None.
+
+        Used for low-stock routing where we have a definition_id from
+        ``LowStockService.compute()`` but not a loaded definition object.
+        Issues one ``SELECT`` per definition; callers that iterate many
+        definitions call this once and cache the result (see ``run_scan``).
+        """
+        defn = self._definition_repo.get(def_id)
+        if defn is None:
+            return None
+        return defn.responsible_user_id or None
+
+    def _recipients_for(
+        self,
+        responsible_user_id: int | None,
+        active_users: list[User],
+        active_by_id: dict[int, User],
+    ) -> list[User]:
+        """Resolve the recipient list for a given effective responsible party.
+
+        If ``responsible_user_id`` is non-None and the user is currently active,
+        returns a single-element list containing that user.  Otherwise — when
+        unassigned (None), or when the responsible user has been deactivated /
+        deleted (SET NULL → None, or ID absent from ``active_by_id``) — returns
+        the full ``active_users`` list, which is exactly the M4 broadcast
+        behaviour.  This ensures no reminder is ever dropped on a SET NULL or
+        deactivation event.
+
+        Parameters
+        ----------
+        responsible_user_id:
+            The resolved effective responsible party, or ``None``.
+        active_users:
+            All currently active users (the M4 fallback set).
+        active_by_id:
+            Mapping from user_id to User for O(1) lookup.
+        """
+        if responsible_user_id is not None and responsible_user_id in active_by_id:
+            return [active_by_id[responsible_user_id]]
+        # Unassigned, inactive, or deleted responsible → M4 broadcast fallback.
+        return active_users
+
+    # ------------------------------------------------------------------
     # Internal: date-source evaluation
     # ------------------------------------------------------------------
 
@@ -448,23 +579,42 @@ class ReminderEngine:
         *,
         source: _DateSource,
         lots: list[StockInstance],
-        recipients: list[User],
+        active_users: list[User],
+        active_by_id: dict[int, User],
         today_local: date,
     ) -> tuple[int, list[Notification]]:
-        """Evaluate one date source across all recipients x lots.
+        """Evaluate one date source, routing each lot to its effective recipients.
+
+        M6 Step 5 change: the outer loop is now over *lots* (not recipients).
+        For each lot, we resolve the effective responsible party and derive the
+        recipient list via ``_recipients_for``.  Then we apply the existing
+        per-(user, lot, date) dedup/window/create logic to exactly those
+        recipients.  Dedup keys are unchanged so existing notification rows
+        deduplicate correctly.
 
         Returns (created_count, list_of_new_notifications).
         """
         created_count = 0
         new_notifications: list[Notification] = []
 
-        for user in recipients:
-            for lot in lots:
-                target_date = source.get_target_date(lot)
-                if target_date is None:
-                    continue  # Defensive: the query should already filter these out.
+        for lot in lots:
+            target_date = source.get_target_date(lot)
+            if target_date is None:
+                continue  # Defensive: the query should already filter these out.
 
-                definition_lead: int | None = lot.definition.reminder_lead_days
+            # M6 Step 5: resolve recipients per lot.
+            effective_rid = self._effective_responsible_for_lot(lot)
+            recipients = self._recipients_for(effective_rid, active_users, active_by_id)
+
+            definition_lead: int | None = lot.definition.reminder_lead_days
+
+            for user in recipients:
+                # M6 Step 5 pref gate: skip users who want no notifications at all.
+                # Do NOT re-route to others — this is an independent per-recipient
+                # skip applied after routing (M6 §4.5).
+                if not user.notify_in_app and not user.notify_email_digest:
+                    continue
+
                 lead = _resolve_lead(source, definition_lead, user, self._settings_service)
 
                 window: date = target_date - timedelta(days=lead)
@@ -503,7 +653,8 @@ class ReminderEngine:
         self,
         *,
         user: User,
-        low_now: set[int],
+        low_now_for_open: set[int],
+        low_now_global: set[int],
         low_item_map: Mapping[int, object],  # definition_id -> LowStockItem
         repeat_offsets: list[int],
         today_local: date,
@@ -515,8 +666,16 @@ class ReminderEngine:
         ----------
         user:
             The recipient.
-        low_now:
-            Set of definition IDs currently below their threshold.
+        low_now_for_open:
+            **Routed** set of definition IDs to consider for Phase 1
+            (open new episodes or fire repeats).  Contains only the defs for
+            which this user is the effective recipient (M6 §4.4).
+        low_now_global:
+            **Global** set of all definition IDs currently below their
+            threshold.  Used by Phase 2 (close recovered episodes): a
+            previously-broadcast opener must close for everyone who holds one,
+            regardless of current routing (M6 §4.4 / the Phase-1-vs-Phase-2
+            split described in the module docstring).
         low_item_map:
             Maps definition_id -> LowStockItem (for params building).
         repeat_offsets:
@@ -535,94 +694,100 @@ class ReminderEngine:
         created_count = 0
         new_notifications: list[Notification] = []
 
-        # --- Phase 1: open new episodes or fire repeats for low definitions --
-        for def_id in low_now:
-            item = low_item_map[def_id]  # LowStockItem
-            opener = self._notification_repo.open_low_stock_opener(user.id, def_id)
+        # M6 Step 5 pref gate: only create rows if the user wants at least one
+        # channel.  Phase 2 (close) runs regardless — resolving episodes is
+        # purely marking existing rows as resolved, not creating new ones.
+        create_for_user = user.notify_in_app or user.notify_email_digest
 
-            if opener is None:
-                # No open episode -- open a new one (opener row, offset_days=0).
-                #
-                # Same-day re-open disambiguation (walkthrough fix #3):
-                # When a definition goes low, recovers, and goes low again on the
-                # SAME calendar day, the naive dedup key
-                # "low_stock:u{uid}:d{def}:{today}:o0" collides with the
-                # already-resolved opener for the earlier episode.
-                # create_if_absent matches purely by (user_id, dedup_key) and
-                # ignores resolved_at, so it returns created=False on the clash
-                # and the user gets no new notification.
-                #
-                # Fix: count ALL opener rows (regardless of resolved_at) anchored
-                # on today.  If this is the first episode of the day (seq==0), use
-                # the legacy bare key so already-stored rows are unaffected.
-                # If seq>=1 (a re-open), append "#<seq>" to produce a fresh key
-                # that has never been written before.
-                seq = self._notification_repo.count_low_stock_openers_on(
-                    user.id, def_id, today_local
-                )
-                params = _build_low_stock_params(item)
-                base_dedup = f"low_stock:u{user.id}:d{def_id}:{today_local.isoformat()}:o0"
-                # The "#<seq>" suffix is ONLY for opener (offset_days=0) disambiguation
-                # on the same anchor date.  Repeat keys (offset_days>=1) carry NO such
-                # suffix: among episodes sharing one anchor date, only the last open one
-                # can reach the repeat stage -- the earlier ones resolved the same day
-                # (elapsed=0 < every repeat offset>=1), so they never wrote a repeat row.
-                dedup = base_dedup if seq == 0 else f"{base_dedup}#{seq}"
-                notification, created = self._notification_repo.create_if_absent(
-                    user_id=user.id,
-                    source="low_stock",
-                    subject_type="definition",
-                    subject_id=def_id,
-                    dedup_key=dedup,
-                    message_code="reminder.low_stock",
-                    params=params,
-                    episode_started_on=today_local,
-                    offset_days=0,
-                )
-                if created:
-                    created_count += 1
-                    new_notifications.append(notification)
-            else:
-                # Episode already open -- fire any repeat offsets whose
-                # threshold has been reached.
-                # elapsed >= 0 always; repeat_offsets each >= 1 so opener is
-                # never also a repeat.
-                elapsed = (today_local - opener.episode_started_on).days  # type: ignore[operator]
-                item = low_item_map[def_id]
-                for o in repeat_offsets:
-                    if o > elapsed:
-                        # Not reached yet; remaining offsets are even larger
-                        # (list is sorted), so break early.
-                        break
-                    # o <= elapsed: this repeat should have fired.
-                    params = _build_low_stock_params(item, offset=o)
-                    dedup = (
-                        f"low_stock:u{user.id}:d{def_id}"
-                        f":{opener.episode_started_on.isoformat()}:o{o}"  # type: ignore[union-attr]
+        # --- Phase 1: open new episodes or fire repeats for low definitions --
+        if create_for_user:
+            for def_id in low_now_for_open:
+                item = low_item_map[def_id]  # LowStockItem
+                opener = self._notification_repo.open_low_stock_opener(user.id, def_id)
+
+                if opener is None:
+                    # No open episode -- open a new one (opener row, offset_days=0).
+                    #
+                    # Same-day re-open disambiguation (walkthrough fix #3):
+                    # When a definition goes low, recovers, and goes low again on the
+                    # SAME calendar day, the naive dedup key
+                    # "low_stock:u{uid}:d{def}:{today}:o0" collides with the
+                    # already-resolved opener for the earlier episode.
+                    # create_if_absent matches purely by (user_id, dedup_key) and
+                    # ignores resolved_at, so it returns created=False on the clash
+                    # and the user gets no new notification.
+                    #
+                    # Fix: count ALL opener rows (regardless of resolved_at) anchored
+                    # on today.  If this is the first episode of the day (seq==0), use
+                    # the legacy bare key so already-stored rows are unaffected.
+                    # If seq>=1 (a re-open), append "#<seq>" to produce a fresh key
+                    # that has never been written before.
+                    seq = self._notification_repo.count_low_stock_openers_on(
+                        user.id, def_id, today_local
                     )
+                    params = _build_low_stock_params(item)
+                    base_dedup = f"low_stock:u{user.id}:d{def_id}:{today_local.isoformat()}:o0"
+                    # The "#<seq>" suffix is ONLY for opener (offset_days=0) disambiguation
+                    # on the same anchor date.  Repeat keys (offset_days>=1) carry NO such
+                    # suffix: among episodes sharing one anchor date, only the last open one
+                    # can reach the repeat stage -- the earlier ones resolved the same day
+                    # (elapsed=0 < every repeat offset>=1), so they never wrote a repeat row.
+                    dedup = base_dedup if seq == 0 else f"{base_dedup}#{seq}"
                     notification, created = self._notification_repo.create_if_absent(
                         user_id=user.id,
                         source="low_stock",
                         subject_type="definition",
                         subject_id=def_id,
                         dedup_key=dedup,
-                        message_code="reminder.low_stock_repeat",
+                        message_code="reminder.low_stock",
                         params=params,
-                        episode_started_on=opener.episode_started_on,
-                        offset_days=o,
+                        episode_started_on=today_local,
+                        offset_days=0,
                     )
                     if created:
                         created_count += 1
                         new_notifications.append(notification)
+                else:
+                    # Episode already open -- fire any repeat offsets whose
+                    # threshold has been reached.
+                    # elapsed >= 0 always; repeat_offsets each >= 1 so opener is
+                    # never also a repeat.
+                    elapsed = (today_local - opener.episode_started_on).days  # type: ignore[operator]
+                    item = low_item_map[def_id]
+                    for o in repeat_offsets:
+                        if o > elapsed:
+                            # Not reached yet; remaining offsets are even larger
+                            # (list is sorted), so break early.
+                            break
+                        # o <= elapsed: this repeat should have fired.
+                        params = _build_low_stock_params(item, offset=o)
+                        dedup = (
+                            f"low_stock:u{user.id}:d{def_id}"
+                            f":{opener.episode_started_on.isoformat()}:o{o}"  # type: ignore[union-attr]
+                        )
+                        notification, created = self._notification_repo.create_if_absent(
+                            user_id=user.id,
+                            source="low_stock",
+                            subject_type="definition",
+                            subject_id=def_id,
+                            dedup_key=dedup,
+                            message_code="reminder.low_stock_repeat",
+                            params=params,
+                            episode_started_on=opener.episode_started_on,
+                            offset_days=o,
+                        )
+                        if created:
+                            created_count += 1
+                            new_notifications.append(notification)
 
         # --- Phase 2: close episodes for recovered definitions ----------------
         # Fetch all open openers for this user.
         open_openers = self._notification_repo.open_low_stock_openers(user.id)
         for opener in open_openers:
-            if opener.subject_id in low_now:
-                # Still low -- leave episode open.
+            if opener.subject_id in low_now_global:
+                # Still low globally -- leave episode open.
                 continue
-            # Not in low_now: the definition has recovered (or is now
+            # Not in low_now_global: the definition has recovered (or is now
             # scoped to a different definition in the event-trigger path).
             # In the event-trigger path we only close episodes for the
             # single scoped definition; other definitions' openers are

@@ -24,6 +24,10 @@ class UserResponse(BaseModel):
     ``preferred_language`` is nullable.  NULL means the user has never
     explicitly chosen a language; the client resolves via its own chain.
     Added in M1.5 Step 2.
+
+    ``notify_in_app`` / ``notify_email_digest`` — per-user channel opt-outs
+    added in M6 Step 5.  Both default to True on the model; always present in
+    the response.
     """
 
     id: int
@@ -34,6 +38,8 @@ class UserResponse(BaseModel):
     preferred_language: str | None = None
     reminder_best_before_lead_days: int | None = None  # M4: per-user lead override; NULL = inherit
     reminder_warranty_lead_days: int | None = None  # M4: per-user lead override; NULL = inherit
+    notify_in_app: bool = True  # M6: in-app inbox opt-out; default True = M4 behaviour
+    notify_email_digest: bool = True  # M6: email digest opt-out; default True = M4 behaviour
 
     model_config = {"from_attributes": True}
 
@@ -69,7 +75,9 @@ class UserPreferencesUpdate(BaseModel):
     All fields are optional and PATCH-style.  An omitted field is a no-op and
     does NOT overwrite an existing value.  Setting a field to ``null``
     explicitly unsets it (clears the override, re-inheriting the next level in
-    the resolution chain).
+    the resolution chain) — **except** for the two boolean notify-pref fields,
+    which are non-nullable columns: an explicit ``null`` for those is treated
+    as a no-op (the route handler only writes non-None values).
 
     Null-vs-omitted semantics
     -------------------------
@@ -81,13 +89,16 @@ class UserPreferencesUpdate(BaseModel):
 
     The route checks ``"<field>" in body.model_fields_set`` for each field:
     - **Omitted** → no-op (do not touch the stored value).
-    - **Null** explicitly → write NULL to DB (remove the override, inherit up).
+    - **Null** explicitly → write NULL to DB for nullable fields; no-op for
+      non-nullable boolean fields (``notify_in_app``, ``notify_email_digest``).
     - **Value** → validate + write.
 
-    This applies uniformly to:
+    This applies to:
     - ``preferred_language``: NULL → client resolves (localStorage → navigator → 'en').
     - ``reminder_best_before_lead_days``: NULL → inherit per-user fallback chain (§4.3).
     - ``reminder_warranty_lead_days``: NULL → inherit per-user fallback chain (§4.3).
+    - ``notify_in_app``: bool (M6); null treated as no-op (non-nullable column).
+    - ``notify_email_digest``: bool (M6); null treated as no-op (non-nullable column).
     """
 
     preferred_language: str | None = None
@@ -111,6 +122,22 @@ class UserPreferencesUpdate(BaseModel):
             "Omitting the field is a no-op; ``null`` explicitly clears the override."
         ),
     )
+    notify_in_app: bool | None = Field(
+        default=None,
+        description=(
+            "M6: opt out of the in-app notification inbox (false) or back in (true). "
+            "Non-nullable column — an explicit ``null`` is treated as a no-op. "
+            "Omitting the field is always a no-op."
+        ),
+    )
+    notify_email_digest: bool | None = Field(
+        default=None,
+        description=(
+            "M6: opt out of the daily email digest (false) or back in (true). "
+            "Non-nullable column — an explicit ``null`` is treated as a no-op. "
+            "Omitting the field is always a no-op."
+        ),
+    )
 
     model_config = {
         "json_schema_extra": {
@@ -119,6 +146,8 @@ class UserPreferencesUpdate(BaseModel):
                     "preferred_language": "zh",
                     "reminder_best_before_lead_days": 5,
                     "reminder_warranty_lead_days": 14,
+                    "notify_in_app": True,
+                    "notify_email_digest": False,
                 }
             ]
         }

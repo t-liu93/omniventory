@@ -4106,15 +4106,41 @@
         "type": "object"
       },
       "UserPreferencesUpdate": {
-        "description": "Body for PATCH /api/auth/me \u2014 update per-user preferences.\n\nAll fields are optional and PATCH-style.  An omitted field is a no-op and\ndoes NOT overwrite an existing value.  Setting a field to ``null``\nexplicitly unsets it (clears the override, re-inheriting the next level in\nthe resolution chain).\n\nNull-vs-omitted semantics\n-------------------------\nPydantic v2's ``model_fields_set`` correctly tracks which fields were\nexplicitly present in the raw input, including when the value is ``null``.\nBecause all fields default to ``None``, an omitted key does *not* appear in\n``model_fields_set``, while ``{\"field\": null}`` *does* \u2014 allowing the route\nto distinguish omission from explicit null.\n\nThe route checks ``\"<field>\" in body.model_fields_set`` for each field:\n- **Omitted** \u2192 no-op (do not touch the stored value).\n- **Null** explicitly \u2192 write NULL to DB (remove the override, inherit up).\n- **Value** \u2192 validate + write.\n\nThis applies uniformly to:\n- ``preferred_language``: NULL \u2192 client resolves (localStorage \u2192 navigator \u2192 'en').\n- ``reminder_best_before_lead_days``: NULL \u2192 inherit per-user fallback chain (\u00a74.3).\n- ``reminder_warranty_lead_days``: NULL \u2192 inherit per-user fallback chain (\u00a74.3).",
+        "description": "Body for PATCH /api/auth/me \u2014 update per-user preferences.\n\nAll fields are optional and PATCH-style.  An omitted field is a no-op and\ndoes NOT overwrite an existing value.  Setting a field to ``null``\nexplicitly unsets it (clears the override, re-inheriting the next level in\nthe resolution chain) \u2014 **except** for the two boolean notify-pref fields,\nwhich are non-nullable columns: an explicit ``null`` for those is treated\nas a no-op (the route handler only writes non-None values).\n\nNull-vs-omitted semantics\n-------------------------\nPydantic v2's ``model_fields_set`` correctly tracks which fields were\nexplicitly present in the raw input, including when the value is ``null``.\nBecause all fields default to ``None``, an omitted key does *not* appear in\n``model_fields_set``, while ``{\"field\": null}`` *does* \u2014 allowing the route\nto distinguish omission from explicit null.\n\nThe route checks ``\"<field>\" in body.model_fields_set`` for each field:\n- **Omitted** \u2192 no-op (do not touch the stored value).\n- **Null** explicitly \u2192 write NULL to DB for nullable fields; no-op for\n  non-nullable boolean fields (``notify_in_app``, ``notify_email_digest``).\n- **Value** \u2192 validate + write.\n\nThis applies to:\n- ``preferred_language``: NULL \u2192 client resolves (localStorage \u2192 navigator \u2192 'en').\n- ``reminder_best_before_lead_days``: NULL \u2192 inherit per-user fallback chain (\u00a74.3).\n- ``reminder_warranty_lead_days``: NULL \u2192 inherit per-user fallback chain (\u00a74.3).\n- ``notify_in_app``: bool (M6); null treated as no-op (non-nullable column).\n- ``notify_email_digest``: bool (M6); null treated as no-op (non-nullable column).",
         "examples": [
           {
+            "notify_email_digest": false,
+            "notify_in_app": true,
             "preferred_language": "zh",
             "reminder_best_before_lead_days": 5,
             "reminder_warranty_lead_days": 14
           }
         ],
         "properties": {
+          "notify_email_digest": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "M6: opt out of the daily email digest (false) or back in (true). Non-nullable column \u2014 an explicit ``null`` is treated as a no-op. Omitting the field is always a no-op.",
+            "title": "Notify Email Digest"
+          },
+          "notify_in_app": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "M6: opt out of the in-app notification inbox (false) or back in (true). Non-nullable column \u2014 an explicit ``null`` is treated as a no-op. Omitting the field is always a no-op.",
+            "title": "Notify In App"
+          },
           "preferred_language": {
             "anyOf": [
               {
@@ -4157,7 +4183,7 @@
         "type": "object"
       },
       "UserResponse": {
-        "description": "Public representation of a User (no password_hash).\n\n``preferred_language`` is nullable.  NULL means the user has never\nexplicitly chosen a language; the client resolves via its own chain.\nAdded in M1.5 Step 2.",
+        "description": "Public representation of a User (no password_hash).\n\n``preferred_language`` is nullable.  NULL means the user has never\nexplicitly chosen a language; the client resolves via its own chain.\nAdded in M1.5 Step 2.\n\n``notify_in_app`` / ``notify_email_digest`` \u2014 per-user channel opt-outs\nadded in M6 Step 5.  Both default to True on the model; always present in\nthe response.",
         "properties": {
           "created_at": {
             "format": "date-time",
@@ -4174,6 +4200,16 @@
           },
           "is_active": {
             "title": "Is Active",
+            "type": "boolean"
+          },
+          "notify_email_digest": {
+            "default": true,
+            "title": "Notify Email Digest",
+            "type": "boolean"
+          },
+          "notify_in_app": {
+            "default": true,
+            "title": "Notify In App",
             "type": "boolean"
           },
           "preferred_language": {
@@ -8760,7 +8796,7 @@
     },
     "/api/notifications": {
       "get": {
-        "description": "Return the current user's notification inbox, newest-first.\n\n``unread_only=true`` restricts the result to rows where ``read_at IS NULL``.\n``limit`` caps the number of rows (default 50, max 200).",
+        "description": "Return the current user's notification inbox, newest-first.\n\n``unread_only=true`` restricts the result to rows where ``read_at IS NULL``.\n``limit`` caps the number of rows (default 50, max 200).\n\nM6 Step 5 \u2014 in-app inbox gating: when the user has opted out of the in-app\ninbox (``notify_in_app=False``), this endpoint returns an empty list.\nNotification rows may still exist in the DB to feed the email digest \u2014 a\ndeliberate simplification documented in M6 \u00a712.  The bell/badge UI should\nhide itself when the user's ``notify_in_app`` pref is off.",
         "operationId": "list_notifications_api_notifications_get",
         "parameters": [
           {
@@ -8886,7 +8922,7 @@
     },
     "/api/notifications/unread-count": {
       "get": {
-        "description": "Return the number of unread notifications for the current user.\n\nUsed to drive the bell badge in the frontend.  Returns ``{ count: 0 }``\nwhen there are no unread notifications.",
+        "description": "Return the number of unread notifications for the current user.\n\nUsed to drive the bell badge in the frontend.  Returns ``{ count: 0 }``\nwhen there are no unread notifications.\n\nM6 Step 5 \u2014 in-app inbox gating: returns ``{ count: 0 }`` when the user\nhas opted out of the in-app inbox (``notify_in_app=False``).",
         "operationId": "get_unread_count_api_notifications_unread_count_get",
         "responses": {
           "200": {

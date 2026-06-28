@@ -14,6 +14,8 @@ Design notes
 - ``preferred_language`` is nullable; NULL means "never explicitly chosen" and
   the client falls back to its own resolution chain (localStorage → navigator → en).
   Added in M1.5 Step 2.
+- ``notify_in_app`` / ``notify_email_digest`` — per-user channel opt-outs
+  (M6 Step 5).  Both default to True (= M4 behaviour preserved).
 """
 
 from datetime import datetime
@@ -43,6 +45,13 @@ class User(Base):
                                         (§4.3 resolution chain: per-item > per-user > global).
     reminder_warranty_lead_days         Per-user warranty-expiry lead-time override (M4). ``≥ 0``
                                         (Pydantic-validated). NULL = inherit global default.
+    notify_in_app                       True → include this user in the in-app notification
+                                        inbox (default).  False → the inbox returns [] for this
+                                        user; rows may still be created to feed the email digest.
+                                        M6 Step 5.
+    notify_email_digest                 True → include this user in the daily email digest
+                                        (default).  False → the email channel skips building /
+                                        sending the digest for this user.  M6 Step 5.
     """
 
     __tablename__ = "users"
@@ -60,6 +69,18 @@ class User(Base):
     preferred_language: Mapped[str | None] = mapped_column(String(16), nullable=True)
     reminder_best_before_lead_days: Mapped[int | None] = mapped_column(nullable=True, default=None)
     reminder_warranty_lead_days: Mapped[int | None] = mapped_column(nullable=True, default=None)
+    notify_in_app: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="1",
+    )
+    notify_email_digest: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="1",
+    )
 
     # Back-reference to sessions (lazy-loaded on demand).
     sessions: Mapped[list["Session"]] = relationship(  # type: ignore[name-defined]  # noqa: F821

@@ -175,6 +175,32 @@ class UserRepository:
         self._db.flush()
         return user
 
+    def set_notify_prefs(
+        self,
+        user: User,
+        *,
+        notify_in_app: bool | None = None,
+        notify_email_digest: bool | None = None,
+    ) -> User:
+        """Update the user's in-app and/or email-digest opt-out flags and flush.
+
+        Only the fields that are explicitly passed as a non-None value are
+        written.  Pass ``notify_in_app=False`` to opt out of the in-app inbox;
+        pass ``notify_email_digest=False`` to opt out of the email digest.
+        The columns are NOT NULL, so callers must never pass None with the
+        intent to clear — use the default (omit the argument) to leave the
+        value unchanged.
+
+        The caller must commit (or rely on ``get_db``'s auto-commit on response).
+        Added in M6 Step 5.
+        """
+        if notify_in_app is not None:
+            user.notify_in_app = notify_in_app
+        if notify_email_digest is not None:
+            user.notify_email_digest = notify_email_digest
+        self._db.flush()
+        return user
+
     def set_password_hash(self, user: User, password_hash: str) -> User:
         """Set the user's password_hash and flush.
 
