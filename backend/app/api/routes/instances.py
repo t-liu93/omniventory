@@ -33,12 +33,15 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import require_edit
+from app.api.deps import require_edit, require_view
 from app.core.context import RequestContext, get_authenticated_context
 from app.core.errors import ErrorResponse
 from app.db.session import get_db
 from app.models.user import User
 from app.notifications.dispatcher import build_dispatcher, publish_mqtt_state
+from app.schemas.maintenance_schedule import (
+    MaintenanceScheduleResponse as _MaintenanceScheduleResponse,
+)
 from app.schemas.stock_instance import InstanceCreate, InstanceResponse, InstanceUpdate
 from app.schemas.stock_movement import MovementResponse
 from app.schemas.stock_movement_ops import AdjustRequest, DiscardRequest, IntakeRequest, MoveRequest
@@ -305,3 +308,37 @@ def move(
     db.commit()
     db.refresh(inst)
     return InstanceResponse.model_validate(inst)
+
+
+# ---------------------------------------------------------------------------
+# Instance-scoped maintenance schedules (M7 Step 4)
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/{instance_id}/maintenance-schedules",
+    response_model=list[_MaintenanceScheduleResponse],
+    tags=["maintenance-schedules"],
+)
+def list_instance_maintenance_schedules(
+    instance_id: int,
+    _ctx: Annotated[RequestContext, Depends(get_authenticated_context)],
+    _: Annotated[User, Depends(require_view)],
+    db: Session = Depends(get_db),
+) -> list[_MaintenanceScheduleResponse]:
+    """Return all maintenance schedules for a specific stock instance.
+
+    Convenience route for the instance-detail view.  Equivalent to
+    ``GET /maintenance-schedules?instance_id={id}`` but scoped to one instance.
+
+    Returns an empty list when the instance has no schedules (does not 404 —
+    consistent with how listing returns an empty collection for unknown filter
+    values).  The instance's existence is not validated here (callers have
+    already fetched the instance for the detail page via the instance endpoint).
+    """
+    from app.services.maintenance_schedule import MaintenanceScheduleService
+
+    svc = MaintenanceScheduleService(db)
+    schedules = svc.list_for_instance(instance_id)
+    global_lead = svc.global_lead_days()
+    return [_MaintenanceScheduleResponse.from_schedule(s, global_lead) for s in schedules]

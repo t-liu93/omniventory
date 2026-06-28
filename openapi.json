@@ -2964,6 +2964,315 @@
         "title": "LowStockItem",
         "type": "object"
       },
+      "MaintenanceComplete": {
+        "description": "Body for POST /maintenance-schedules/{id}/complete.\n\nParameters\n----------\ncompleted_on:\n    The completion date.  Defaults to today when omitted.  Back-datable:\n    providing a past date advances ``next_due_date`` from that date.\nnote:\n    An optional completion annotation.  **Not persisted in M7** \u2014 there\n    is no per-completion history table (M7 \u00a713 deferred).  The field is\n    accepted in the schema for parity with future history-table work;\n    the service intentionally ignores it and documents this choice.\n    When the completion history table ships, the service can start\n    persisting it without a schema change.",
+        "properties": {
+          "completed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed On"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "title": "MaintenanceComplete",
+        "type": "object"
+      },
+      "MaintenanceScheduleCreate": {
+        "description": "Body for POST /maintenance-schedules.\n\nRequired fields: ``instance_id``, ``name``, ``interval_unit``,\n``interval_count``, ``next_due_date``.  Optional: ``lead_days``,\n``notes``.\n\nValidation\n----------\n- ``interval_count \u2265 1`` (Pydantic ``ge=1``).\n- ``lead_days \u2265 0`` (Pydantic ``ge=0``) when provided.\n- ``interval_unit`` is validated app-layer against\n  ``MAINTENANCE_INTERVAL_UNITS`` by the service; a Pydantic failure there\n  would produce ``validation.invalid_input``, but the *stable* error code\n  for this field is ``validation.unsupported_interval_unit`` (422) which is\n  raised as an ``AppError`` by the service layer after receiving any value.",
+        "properties": {
+          "instance_id": {
+            "title": "Instance Id",
+            "type": "integer"
+          },
+          "interval_count": {
+            "minimum": 1.0,
+            "title": "Interval Count",
+            "type": "integer"
+          },
+          "interval_unit": {
+            "maxLength": 8,
+            "title": "Interval Unit",
+            "type": "string"
+          },
+          "lead_days": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Days"
+          },
+          "name": {
+            "maxLength": 255,
+            "title": "Name",
+            "type": "string"
+          },
+          "next_due_date": {
+            "format": "date",
+            "title": "Next Due Date",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "required": [
+          "instance_id",
+          "name",
+          "interval_unit",
+          "interval_count",
+          "next_due_date"
+        ],
+        "title": "MaintenanceScheduleCreate",
+        "type": "object"
+      },
+      "MaintenanceScheduleResponse": {
+        "description": "Public representation of one maintenance schedule.\n\nDerived fields (not stored in the DB column):\n- ``instance_name``       Resolved from ``schedule.instance.definition.name``.\n- ``effective_lead_days`` ``schedule.lead_days`` if not None, else the global\n                          ``reminders.maintenance.lead_days`` default.\n- ``status``              Server-computed from today, next_due_date, and\n                          effective_lead_days:\n                          - ``overdue``  : today > next_due_date\n                          - ``due_soon`` : (next_due_date - lead) <= today <= next_due_date\n                          - ``ok``       : today < (next_due_date - lead)\n\nUse ``MaintenanceScheduleResponse.from_schedule(schedule, global_lead)`` to\nbuild this from an ORM object with instance and definition already loaded.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "effective_lead_days": {
+            "title": "Effective Lead Days",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "instance_id": {
+            "title": "Instance Id",
+            "type": "integer"
+          },
+          "instance_name": {
+            "title": "Instance Name",
+            "type": "string"
+          },
+          "interval_count": {
+            "title": "Interval Count",
+            "type": "integer"
+          },
+          "interval_unit": {
+            "title": "Interval Unit",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "last_completed_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Completed Date"
+          },
+          "lead_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Days"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "next_due_date": {
+            "format": "date",
+            "title": "Next Due Date",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "status": {
+            "enum": [
+              "overdue",
+              "due_soon",
+              "ok"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "instance_id",
+          "instance_name",
+          "name",
+          "interval_unit",
+          "interval_count",
+          "next_due_date",
+          "lead_days",
+          "effective_lead_days",
+          "last_completed_date",
+          "notes",
+          "is_active",
+          "created_by",
+          "created_at",
+          "updated_at",
+          "status"
+        ],
+        "title": "MaintenanceScheduleResponse",
+        "type": "object"
+      },
+      "MaintenanceScheduleUpdate": {
+        "description": "Body for PATCH /maintenance-schedules/{id}.\n\nPATCH semantics: only fields present in the request body are applied\n(checked via ``model_fields_set`` in the service layer).  Fields absent\nfrom the body leave the row unchanged.\n\nAll fields are optional (None = not provided / leave unchanged).\n\nValidation\n----------\n- ``interval_count \u2265 1`` when provided.\n- ``lead_days \u2265 0`` when provided.\n- ``interval_unit`` validated app-layer by the service.",
+        "properties": {
+          "interval_count": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval Count"
+          },
+          "interval_unit": {
+            "anyOf": [
+              {
+                "maxLength": 8,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval Unit"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          },
+          "lead_days": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Days"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "next_due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Due Date"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "title": "MaintenanceScheduleUpdate",
+        "type": "object"
+      },
       "MeResponse": {
         "description": "Response body for GET /auth/me.",
         "properties": {
@@ -7825,6 +8134,84 @@
         ]
       }
     },
+    "/api/instances/{instance_id}/maintenance-schedules": {
+      "get": {
+        "description": "Return all maintenance schedules for a specific stock instance.\n\nConvenience route for the instance-detail view.  Equivalent to\n``GET /maintenance-schedules?instance_id={id}`` but scoped to one instance.\n\nReturns an empty list when the instance has no schedules (does not 404 \u2014\nconsistent with how listing returns an empty collection for unknown filter\nvalues).  The instance's existence is not validated here (callers have\nalready fetched the instance for the detail page via the instance endpoint).",
+        "operationId": "list_instance_maintenance_schedules_api_instances__instance_id__maintenance_schedules_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "instance_id",
+            "required": true,
+            "schema": {
+              "title": "Instance Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MaintenanceScheduleResponse"
+                  },
+                  "title": "Response List Instance Maintenance Schedules Api Instances  Instance Id  Maintenance Schedules Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "List Instance Maintenance Schedules",
+        "tags": [
+          "instances",
+          "maintenance-schedules"
+        ]
+      }
+    },
     "/api/instances/{instance_id}/move": {
       "post": {
         "description": "Relocate a lot to a new location (whole-lot move).\n\nRecords a move movement with delta = 0; updates location_id.\n\nReturns 404 if the instance or to_location_id does not exist.\nReturns 409 if the definition is not in 'exact' mode.",
@@ -9063,6 +9450,488 @@
         "summary": "Get Low Stock",
         "tags": [
           "low-stock"
+        ]
+      }
+    },
+    "/api/maintenance-schedules": {
+      "get": {
+        "description": "Return maintenance schedules, optionally filtered by instance and/or active state.\n\n- Omit ``instance_id`` to list across all instances.\n- ``active=true`` returns only is_active=True rows; ``active=false`` only\n  is_active=False rows; omitting returns all.",
+        "operationId": "list_maintenance_schedules_api_maintenance_schedules_get",
+        "parameters": [
+          {
+            "description": "Filter to schedules for this stock instance.",
+            "in": "query",
+            "name": "instance_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to schedules for this stock instance.",
+              "title": "Instance Id"
+            }
+          },
+          {
+            "description": "When true, return only active schedules; false = only paused.",
+            "in": "query",
+            "name": "active",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "When true, return only active schedules; false = only paused.",
+              "title": "Active"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MaintenanceScheduleResponse"
+                  },
+                  "title": "Response List Maintenance Schedules Api Maintenance Schedules Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "List Maintenance Schedules",
+        "tags": [
+          "maintenance-schedules"
+        ]
+      },
+      "post": {
+        "description": "Create a new maintenance schedule on a stock instance.\n\nReturns 404 if the referenced stock instance does not exist.\nReturns 422 if ``interval_unit`` is not one of ``day``/``week``/``month``/``year``.\nReturns 422 if ``interval_count < 1`` or ``lead_days < 0``.",
+        "operationId": "create_maintenance_schedule_api_maintenance_schedules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MaintenanceScheduleCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceScheduleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Create Maintenance Schedule",
+        "tags": [
+          "maintenance-schedules"
+        ]
+      }
+    },
+    "/api/maintenance-schedules/{schedule_id}": {
+      "delete": {
+        "description": "Delete a maintenance schedule.\n\nReturns 404 (maintenance.not_found) when the id does not exist.",
+        "operationId": "delete_maintenance_schedule_api_maintenance_schedules__schedule_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "schedule_id",
+            "required": true,
+            "schema": {
+              "title": "Schedule Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Delete Maintenance Schedule",
+        "tags": [
+          "maintenance-schedules"
+        ]
+      },
+      "get": {
+        "description": "Return one maintenance schedule by id.\n\nReturns 404 (maintenance.not_found) when the id does not exist.",
+        "operationId": "get_maintenance_schedule_api_maintenance_schedules__schedule_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "schedule_id",
+            "required": true,
+            "schema": {
+              "title": "Schedule Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceScheduleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get Maintenance Schedule",
+        "tags": [
+          "maintenance-schedules"
+        ]
+      },
+      "patch": {
+        "description": "Edit an existing maintenance schedule (PATCH \u2014 only supplied fields updated).\n\nReturns 404 when the schedule does not exist.\nReturns 422 when an invalid ``interval_unit`` is supplied.",
+        "operationId": "edit_maintenance_schedule_api_maintenance_schedules__schedule_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "schedule_id",
+            "required": true,
+            "schema": {
+              "title": "Schedule Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MaintenanceScheduleUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceScheduleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Edit Maintenance Schedule",
+        "tags": [
+          "maintenance-schedules"
+        ]
+      }
+    },
+    "/api/maintenance-schedules/{schedule_id}/complete": {
+      "post": {
+        "description": "Record a maintenance completion and advance next_due_date.\n\nSets ``last_completed_date = completed_on`` (today if omitted) and\nadvances ``next_due_date`` by the schedule's interval (calendar-correct).\nBack-dated completions: supply ``completed_on`` to advance from a past date.\n\nThe optional ``note`` is accepted for parity with future completion-history\nwork but is **not persisted in M7** (no history table \u2014 M7 \u00a713 deferred).\n\nReturns 404 (maintenance.not_found) when the id does not exist.",
+        "operationId": "complete_maintenance_schedule_api_maintenance_schedules__schedule_id__complete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "schedule_id",
+            "required": true,
+            "schema": {
+              "title": "Schedule Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/MaintenanceComplete"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceScheduleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Complete Maintenance Schedule",
+        "tags": [
+          "maintenance-schedules"
         ]
       }
     },

@@ -81,6 +81,13 @@ _DEFAULTS: dict[str, Any] = {
     "reminders.warranty_lead_days": 30,
     "reminders.low_stock_repeat_days": [1, 3, 7],
     "reminders.scan_time": "08:00",
+    # Maintenance lead default (M7 Step 4 — code-defined default only; the API
+    # surface (SettingsResponse/SettingsUpdate) is added in Step 5 to keep Step 4
+    # atomic.  Adding the _DEFAULTS entry and accessor here is required because
+    # Step 4's MaintenanceScheduleResponse already consumes it to resolve
+    # effective_lead_days.  Harmless: the table stores overrides only, and a
+    # code-default is invisible until Step 5 surfaces it in the API contract.)
+    "reminders.maintenance.lead_days": 7,
     # Shopping list
     "shopping_list.auto_add_low_stock": True,
     # Email channel
@@ -475,6 +482,19 @@ class SettingsService:
         ``{shopping_list: {auto_add_low_stock: false}}``.
         """
         return bool(self._get_value("shopping_list.auto_add_low_stock"))
+
+    def maintenance_lead_days(self) -> int:
+        """Return the global maintenance-schedule advance-notice lead in days.
+
+        Default is ``7`` (M7 §4.6).  Per-schedule ``lead_days`` overrides this;
+        this accessor is used when a schedule's ``lead_days`` is None (inherit).
+
+        The API surface for this setting (SettingsResponse/SettingsUpdate) is
+        added in Step 5; this accessor exists in Step 4 because
+        ``MaintenanceScheduleResponse.from_schedule`` already consumes it to
+        resolve ``effective_lead_days``.
+        """
+        return int(self._get_value("reminders.maintenance.lead_days"))
 
     # ------------------------------------------------------------------
     # Public channel config getters (Step 8)

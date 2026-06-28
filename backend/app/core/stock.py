@@ -32,6 +32,14 @@ LOW_STOCK_TRIGGER_LEVEL: str = "low"
 #   manual — user-entered (free-text or definition-linked).
 SHOPPING_LIST_SOURCES: tuple[str, ...] = ("auto", "manual")
 
+# Maintenance schedule interval units (M7 §3.2 / §4.1).
+# Validated app-layer against this constant; no DB CHECK (roadmap §2.11).
+#   day   — every N calendar days.
+#   week  — every N weeks (7-day multiples).
+#   month — every N calendar months (calendar-correct, end-of-month clamping).
+#   year  — every N years (implemented as N*12 months — same clamping rules).
+MAINTENANCE_INTERVAL_UNITS: tuple[str, ...] = ("day", "week", "month", "year")
+
 # The six movement types for the append-only stock ledger (M2 §3.3 / §4.3).
 # Validated app-layer (no DB CHECK — the set may grow; roadmap §2.11).
 #   intake     — stock received / added.

@@ -13,6 +13,7 @@ from app.models.household import Household
 from app.models.item_definition import ItemDefinition
 from app.models.item_kind import ItemKind
 from app.models.location import Location
+from app.models.maintenance_schedule import MaintenanceSchedule
 from app.models.media_file import MediaFile
 from app.models.note import Note
 from app.models.notification import Notification
@@ -36,6 +37,7 @@ __all__ = [
     "ItemDefinition",
     "ItemKind",
     "Location",
+    "MaintenanceSchedule",
     "MediaFile",
     "Note",
     "Notification",

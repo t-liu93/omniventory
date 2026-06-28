@@ -750,6 +750,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/instances/{instance_id}/maintenance-schedules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Instance Maintenance Schedules
+         * @description Return all maintenance schedules for a specific stock instance.
+         *
+         *     Convenience route for the instance-detail view.  Equivalent to
+         *     ``GET /maintenance-schedules?instance_id={id}`` but scoped to one instance.
+         *
+         *     Returns an empty list when the instance has no schedules (does not 404 —
+         *     consistent with how listing returns an empty collection for unknown filter
+         *     values).  The instance's existence is not validated here (callers have
+         *     already fetched the instance for the detail page via the instance endpoint).
+         */
+        get: operations["list_instance_maintenance_schedules_api_instances__instance_id__maintenance_schedules_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/instances/{instance_id}/move": {
         parameters: {
             query?: never;
@@ -1063,6 +1091,102 @@ export interface paths {
         get: operations["get_low_stock_api_low_stock_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/maintenance-schedules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Maintenance Schedules
+         * @description Return maintenance schedules, optionally filtered by instance and/or active state.
+         *
+         *     - Omit ``instance_id`` to list across all instances.
+         *     - ``active=true`` returns only is_active=True rows; ``active=false`` only
+         *       is_active=False rows; omitting returns all.
+         */
+        get: operations["list_maintenance_schedules_api_maintenance_schedules_get"];
+        put?: never;
+        /**
+         * Create Maintenance Schedule
+         * @description Create a new maintenance schedule on a stock instance.
+         *
+         *     Returns 404 if the referenced stock instance does not exist.
+         *     Returns 422 if ``interval_unit`` is not one of ``day``/``week``/``month``/``year``.
+         *     Returns 422 if ``interval_count < 1`` or ``lead_days < 0``.
+         */
+        post: operations["create_maintenance_schedule_api_maintenance_schedules_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/maintenance-schedules/{schedule_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Maintenance Schedule
+         * @description Return one maintenance schedule by id.
+         *
+         *     Returns 404 (maintenance.not_found) when the id does not exist.
+         */
+        get: operations["get_maintenance_schedule_api_maintenance_schedules__schedule_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Maintenance Schedule
+         * @description Delete a maintenance schedule.
+         *
+         *     Returns 404 (maintenance.not_found) when the id does not exist.
+         */
+        delete: operations["delete_maintenance_schedule_api_maintenance_schedules__schedule_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Edit Maintenance Schedule
+         * @description Edit an existing maintenance schedule (PATCH — only supplied fields updated).
+         *
+         *     Returns 404 when the schedule does not exist.
+         *     Returns 422 when an invalid ``interval_unit`` is supplied.
+         */
+        patch: operations["edit_maintenance_schedule_api_maintenance_schedules__schedule_id__patch"];
+        trace?: never;
+    };
+    "/api/maintenance-schedules/{schedule_id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete Maintenance Schedule
+         * @description Record a maintenance completion and advance next_due_date.
+         *
+         *     Sets ``last_completed_date = completed_on`` (today if omitted) and
+         *     advances ``next_due_date`` by the schedule's interval (calendar-correct).
+         *     Back-dated completions: supply ``completed_on`` to advance from a past date.
+         *
+         *     The optional ``note`` is accepted for parity with future completion-history
+         *     work but is **not persisted in M7** (no history table — M7 §13 deferred).
+         *
+         *     Returns 404 (maintenance.not_found) when the id does not exist.
+         */
+        post: operations["complete_maintenance_schedule_api_maintenance_schedules__schedule_id__complete_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2882,6 +3006,161 @@ export interface components {
             reason: string;
             /** Threshold */
             threshold: string | null;
+        };
+        /**
+         * MaintenanceComplete
+         * @description Body for POST /maintenance-schedules/{id}/complete.
+         *
+         *     Parameters
+         *     ----------
+         *     completed_on:
+         *         The completion date.  Defaults to today when omitted.  Back-datable:
+         *         providing a past date advances ``next_due_date`` from that date.
+         *     note:
+         *         An optional completion annotation.  **Not persisted in M7** — there
+         *         is no per-completion history table (M7 §13 deferred).  The field is
+         *         accepted in the schema for parity with future history-table work;
+         *         the service intentionally ignores it and documents this choice.
+         *         When the completion history table ships, the service can start
+         *         persisting it without a schema change.
+         */
+        MaintenanceComplete: {
+            /** Completed On */
+            completed_on?: string | null;
+            /** Note */
+            note?: string | null;
+        };
+        /**
+         * MaintenanceScheduleCreate
+         * @description Body for POST /maintenance-schedules.
+         *
+         *     Required fields: ``instance_id``, ``name``, ``interval_unit``,
+         *     ``interval_count``, ``next_due_date``.  Optional: ``lead_days``,
+         *     ``notes``.
+         *
+         *     Validation
+         *     ----------
+         *     - ``interval_count ≥ 1`` (Pydantic ``ge=1``).
+         *     - ``lead_days ≥ 0`` (Pydantic ``ge=0``) when provided.
+         *     - ``interval_unit`` is validated app-layer against
+         *       ``MAINTENANCE_INTERVAL_UNITS`` by the service; a Pydantic failure there
+         *       would produce ``validation.invalid_input``, but the *stable* error code
+         *       for this field is ``validation.unsupported_interval_unit`` (422) which is
+         *       raised as an ``AppError`` by the service layer after receiving any value.
+         */
+        MaintenanceScheduleCreate: {
+            /** Instance Id */
+            instance_id: number;
+            /** Interval Count */
+            interval_count: number;
+            /** Interval Unit */
+            interval_unit: string;
+            /** Lead Days */
+            lead_days?: number | null;
+            /** Name */
+            name: string;
+            /**
+             * Next Due Date
+             * Format: date
+             */
+            next_due_date: string;
+            /** Notes */
+            notes?: string | null;
+        };
+        /**
+         * MaintenanceScheduleResponse
+         * @description Public representation of one maintenance schedule.
+         *
+         *     Derived fields (not stored in the DB column):
+         *     - ``instance_name``       Resolved from ``schedule.instance.definition.name``.
+         *     - ``effective_lead_days`` ``schedule.lead_days`` if not None, else the global
+         *                               ``reminders.maintenance.lead_days`` default.
+         *     - ``status``              Server-computed from today, next_due_date, and
+         *                               effective_lead_days:
+         *                               - ``overdue``  : today > next_due_date
+         *                               - ``due_soon`` : (next_due_date - lead) <= today <= next_due_date
+         *                               - ``ok``       : today < (next_due_date - lead)
+         *
+         *     Use ``MaintenanceScheduleResponse.from_schedule(schedule, global_lead)`` to
+         *     build this from an ORM object with instance and definition already loaded.
+         */
+        MaintenanceScheduleResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By */
+            created_by: number | null;
+            /** Effective Lead Days */
+            effective_lead_days: number;
+            /** Id */
+            id: number;
+            /** Instance Id */
+            instance_id: number;
+            /** Instance Name */
+            instance_name: string;
+            /** Interval Count */
+            interval_count: number;
+            /** Interval Unit */
+            interval_unit: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Last Completed Date */
+            last_completed_date: string | null;
+            /** Lead Days */
+            lead_days: number | null;
+            /** Name */
+            name: string;
+            /**
+             * Next Due Date
+             * Format: date
+             */
+            next_due_date: string;
+            /** Notes */
+            notes: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "overdue" | "due_soon" | "ok";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * MaintenanceScheduleUpdate
+         * @description Body for PATCH /maintenance-schedules/{id}.
+         *
+         *     PATCH semantics: only fields present in the request body are applied
+         *     (checked via ``model_fields_set`` in the service layer).  Fields absent
+         *     from the body leave the row unchanged.
+         *
+         *     All fields are optional (None = not provided / leave unchanged).
+         *
+         *     Validation
+         *     ----------
+         *     - ``interval_count ≥ 1`` when provided.
+         *     - ``lead_days ≥ 0`` when provided.
+         *     - ``interval_unit`` validated app-layer by the service.
+         */
+        MaintenanceScheduleUpdate: {
+            /** Interval Count */
+            interval_count?: number | null;
+            /** Interval Unit */
+            interval_unit?: string | null;
+            /** Is Active */
+            is_active?: boolean | null;
+            /** Lead Days */
+            lead_days?: number | null;
+            /** Name */
+            name?: string | null;
+            /** Next Due Date */
+            next_due_date?: string | null;
+            /** Notes */
+            notes?: string | null;
         };
         /**
          * MeResponse
@@ -6064,6 +6343,64 @@ export interface operations {
             };
         };
     };
+    list_instance_maintenance_schedules_api_instances__instance_id__maintenance_schedules_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenanceScheduleResponse"][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     move_api_instances__instance_id__move_post: {
         parameters: {
             query?: never;
@@ -7035,6 +7372,365 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_maintenance_schedules_api_maintenance_schedules_get: {
+        parameters: {
+            query?: {
+                /** @description Filter to schedules for this stock instance. */
+                instance_id?: number | null;
+                /** @description When true, return only active schedules; false = only paused. */
+                active?: boolean | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenanceScheduleResponse"][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_maintenance_schedule_api_maintenance_schedules_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaintenanceScheduleCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenanceScheduleResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_maintenance_schedule_api_maintenance_schedules__schedule_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                schedule_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenanceScheduleResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_maintenance_schedule_api_maintenance_schedules__schedule_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                schedule_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    edit_maintenance_schedule_api_maintenance_schedules__schedule_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                schedule_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaintenanceScheduleUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenanceScheduleResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    complete_maintenance_schedule_api_maintenance_schedules__schedule_id__complete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                schedule_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["MaintenanceComplete"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenanceScheduleResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

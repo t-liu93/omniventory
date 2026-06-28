@@ -137,6 +137,10 @@ class ErrorCode:
     # --- Shopping list (M7 Step 1) ---
     SHOPPING_LIST_NOT_FOUND = "shopping_list.not_found"  # 404 — operate on a missing list item
 
+    # --- Maintenance schedules (M7 Step 4) ---
+    MAINTENANCE_NOT_FOUND = "maintenance.not_found"  # 404 — operate on a missing schedule
+    VALIDATION_UNSUPPORTED_INTERVAL_UNIT = "validation.unsupported_interval_unit"  # 422
+
     # --- Internal / catch-all ---
     INTERNAL_ERROR = "internal.error"
 
@@ -195,6 +199,8 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     ErrorCode.INVITATION_NOT_FOUND: "Invitation not found.",
     ErrorCode.AUTH_RATE_LIMITED: "Too many failed attempts. Please try again later.",
     ErrorCode.SHOPPING_LIST_NOT_FOUND: "Shopping list item not found.",
+    ErrorCode.MAINTENANCE_NOT_FOUND: "Maintenance schedule not found.",
+    ErrorCode.VALIDATION_UNSUPPORTED_INTERVAL_UNIT: "Unsupported maintenance interval unit.",
     ErrorCode.INTERNAL_ERROR: "An internal error occurred.",
 }
 
