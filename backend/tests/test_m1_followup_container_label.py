@@ -65,6 +65,7 @@ def client(temp_db: Path) -> Generator[TestClient]:  # noqa: ARG001
 
     import app.db.base as db_base_mod
     import app.models.app_config as app_config_mod
+    import app.models.audit_log as audit_log_mod
     import app.models.category as cat_mod
     import app.models.household as hh_mod
     import app.models.item_definition as idef_mod
@@ -86,6 +87,7 @@ def client(temp_db: Path) -> Generator[TestClient]:  # noqa: ARG001
     importlib.reload(stock_instance_mod)
     importlib.reload(stock_movement_mod)
     importlib.reload(loc_mod)
+    importlib.reload(audit_log_mod)
 
     from app.db.base import Base, get_engine
     from app.main import create_app

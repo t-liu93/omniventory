@@ -67,6 +67,7 @@ def db_session() -> Generator[Session]:
     """In-memory SQLite session with all models, FK enforcement ON, kinds seeded."""
     import app.db.base as db_base_mod
     import app.models.app_config as app_config_mod
+    import app.models.audit_log as audit_log_mod
     import app.models.category as cat_mod
     import app.models.household as hh_mod
     import app.models.item_definition as idef_mod
@@ -89,6 +90,7 @@ def db_session() -> Generator[Session]:
         loc_mod,
         si_mod,
         sm_mod,
+        audit_log_mod,
     ):
         importlib.reload(mod)
 
@@ -644,6 +646,7 @@ def http_client(temp_db_step5: Path) -> Generator[object]:  # noqa: ARG001
 
     import app.db.base as db_base_mod
     import app.models.app_config as app_config_mod
+    import app.models.audit_log as audit_log_mod
     import app.models.category as cat_mod
     import app.models.household as hh_mod
     import app.models.item_definition as idef_mod
@@ -666,6 +669,7 @@ def http_client(temp_db_step5: Path) -> Generator[object]:  # noqa: ARG001
         loc_mod,
         si_mod,
         sm_mod,
+        audit_log_mod,
     ):
         importlib.reload(mod)
 
@@ -715,6 +719,7 @@ def http_client_no_auth(temp_db_step5: Path) -> Generator[object]:  # noqa: ARG0
 
     import app.db.base as db_base_mod
     import app.models.app_config as app_config_mod
+    import app.models.audit_log as audit_log_mod
     import app.models.category as cat_mod
     import app.models.household as hh_mod
     import app.models.item_definition as idef_mod
@@ -737,6 +742,7 @@ def http_client_no_auth(temp_db_step5: Path) -> Generator[object]:  # noqa: ARG0
         loc_mod,
         si_mod,
         sm_mod,
+        audit_log_mod,
     ):
         importlib.reload(mod)
 

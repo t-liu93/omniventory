@@ -59,6 +59,32 @@ export interface paths {
         patch: operations["update_attachment_api_attachments__attachment_id__patch"];
         trace?: never;
     };
+    "/api/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Audit
+         * @description Return a paginated list of security/admin audit events (VIEW_AUDIT only).
+         *
+         *     Filters are ANDed; omitted filters are no-ops.  Results are ordered
+         *     newest-first.
+         *
+         *     Error codes:
+         *     - 403 ``auth.forbidden`` — caller lacks ``VIEW_AUDIT`` (not admin).
+         */
+        get: operations["list_audit_api_audit_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/change-password": {
         parameters: {
             query?: never;
@@ -76,6 +102,8 @@ export interface paths {
          *     returns 400 ``auth.password_incorrect``.  On success, sets the new
          *     password hash and revokes all OTHER sessions for this user (the current
          *     session remains active, so the caller stays logged in).
+         *
+         *     Emits ``password.changed`` on success (committed by ``get_db``).
          *
          *     Error codes:
          *     - 400 ``auth.password_incorrect`` — wrong current password.
@@ -101,10 +129,14 @@ export interface paths {
          * @description Authenticate with email + password and return a session cookie.
          *
          *     On success: creates a server-side session row and sets the ``HttpOnly``
-         *     session cookie.  Returns the public user object.
+         *     session cookie.  Returns the public user object.  Emits
+         *     ``auth.login_succeeded`` to the audit log.
          *
          *     On failure: returns 401 (email not found or wrong password).  The same
          *     error is returned for both cases to prevent user-enumeration attacks.
+         *     Emits ``auth.login_failed`` (actor_user_id=NULL, actor_email=attempted
+         *     email) and COMMITS that row BEFORE raising the 401 so it survives the
+         *     ``get_db`` rollback triggered by the AppError exception.
          */
         post: operations["login_api_auth_login_post"];
         delete?: never;
@@ -128,6 +160,10 @@ export interface paths {
          *
          *     Idempotent: if the cookie is absent or the session is already gone, the
          *     endpoint still returns 200 and clears the cookie.
+         *
+         *     Emits ``auth.logout`` (best-effort: if the cookie's session resolves to a
+         *     user we log with that actor; otherwise we skip — don't break idempotent
+         *     logout).
          */
         post: operations["logout_api_auth_logout_post"];
         delete?: never;
@@ -809,6 +845,8 @@ export interface paths {
          *     The ``accept_url`` is derived from the incoming request's base URL —
          *     zero-config for the single-container deployment.
          *
+         *     Emits ``invitation.issued`` on success.
+         *
          *     Error codes:
          *     - 409 ``user.email_exists`` — *email* is already a registered user.
          *     - 422 ``validation.invalid_input`` — unknown role string.
@@ -845,6 +883,10 @@ export interface paths {
          *
          *     Does NOT auto-login — the frontend redirects to the login page after success.
          *
+         *     Emits ``invitation.accepted`` (actor_user_id may be NULL — the accept is
+         *     public/anonymous; we use the created user's id as the actor since they are
+         *     the agent performing the accept).
+         *
          *     Error codes:
          *     - 400 ``auth.invalid_token`` — token invalid, expired, consumed, or email
          *       race (email was registered between invite creation and accept).
@@ -869,6 +911,8 @@ export interface paths {
         /**
          * Revoke Invitation
          * @description Revoke a pending invitation by id (MANAGE_USERS only).
+         *
+         *     Emits ``invitation.revoked`` on success.
          *
          *     Error codes:
          *     - 404 ``invitation.not_found`` — no invite with that id.
@@ -1228,6 +1272,9 @@ export interface paths {
          *     On success: the user's password is updated; all their existing sessions
          *     are revoked (they must re-authenticate with the new password).
          *
+         *     Emits ``password.reset`` with ``{"phase": "completed"}``; actor is the
+         *     user whose password was reset (they accepted the link).
+         *
          *     Error codes:
          *     - 400 ``auth.invalid_token`` — token invalid, expired, consumed, or user missing.
          */
@@ -1344,6 +1391,8 @@ export interface paths {
          *     field, the MQTT bridge is reloaded after the settings are committed so
          *     the new config takes effect without an app restart.  This is best-effort
          *     — a reload failure does not fail the save.
+         *
+         *     Emits ``settings.changed`` on success.
          */
         patch: operations["patch_settings_api_settings_patch"];
         trace?: never;
@@ -1539,6 +1588,9 @@ export interface paths {
          * Delete User
          * @description Delete a user (MANAGE_USERS only).
          *
+         *     Emits ``user.deleted`` on success.  The target user's email is captured
+         *     BEFORE deletion as a snapshot (the row is gone after the flush).
+         *
          *     Error codes:
          *     - 404 ``user.not_found``  — no user with that id.
          *     - 409 ``user.last_admin`` — cannot delete the last active admin.
@@ -1552,6 +1604,11 @@ export interface paths {
          *
          *     PATCH semantics: only fields present in the request body are applied;
          *     omitted fields are untouched.
+         *
+         *     Emits up to two audit events on success (one per changed field):
+         *     - ``user.role_changed``    — params ``{"old_role":…, "new_role":…}``.
+         *     - ``user.deactivated``     — when ``is_active`` toggled False.
+         *     - ``user.reactivated``     — when ``is_active`` toggled True.
          *
          *     Error codes:
          *     - 404 ``user.not_found``    — no user with that id.
@@ -1575,6 +1632,8 @@ export interface paths {
          * @description Issue a password-reset link for *user_id* (MANAGE_USERS only).
          *
          *     Returns the one-time reset URL and whether it was emailed.
+         *
+         *     Emits ``password.reset`` with ``{"phase": "issued"}`` on success.
          *
          *     Error codes:
          *     - 404 ``user.not_found`` — no user with that id.
@@ -1640,6 +1699,52 @@ export interface components {
             sort_order?: number | null;
             /** Title */
             title?: string | null;
+        };
+        /**
+         * AuditLogListResponse
+         * @description Paginated envelope for ``GET /audit``.
+         */
+        AuditLogListResponse: {
+            /** Items */
+            items: components["schemas"]["AuditLogResponse"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
+        /**
+         * AuditLogResponse
+         * @description Wire representation of one audit-log row.
+         *
+         *     ``params`` is stored as a compact JSON string in the DB; the
+         *     ``_parse_params`` validator deserialises it to a dict (or ``None``) before
+         *     the value is serialised back to JSON by the response encoder.  This mirrors
+         *     how ``notifications.params`` is handled in the M4 notification schemas.
+         */
+        AuditLogResponse: {
+            /** Actor Email */
+            actor_email?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Event Type */
+            event_type: string;
+            /** Id */
+            id: number;
+            /** Ip Address */
+            ip_address?: string | null;
+            /** Params */
+            params?: {
+                [key: string]: unknown;
+            } | null;
+            /** Target Id */
+            target_id?: number | null;
+            /** Target Type */
+            target_type?: string | null;
         };
         /**
          * BarcodeCreate
@@ -3621,6 +3726,60 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_audit_api_audit_get: {
+        parameters: {
+            query?: {
+                event_type?: string | null;
+                actor_id?: number | null;
+                from?: string | null;
+                to?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditLogListResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

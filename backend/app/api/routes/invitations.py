@@ -53,6 +53,7 @@ from app.schemas.invitation import (
     PasswordResetPublic,
     PendingInvitationResponse,
 )
+from app.services.audit import AuditService
 from app.services.invitation import InvitationService
 
 _ERROR_RESPONSES: dict[int | str, dict[str, object]] = {
@@ -87,6 +88,7 @@ def create_invitation(
     request: Request,
     admin: Annotated[User, Depends(require_manage_users)],
     service: Annotated[InvitationService, Depends(_get_service)],
+    db: Session = Depends(get_db),
 ) -> InvitationResponse:
     """Create an invitation for *email* with *role* (MANAGE_USERS only).
 
@@ -95,6 +97,8 @@ def create_invitation(
 
     The ``accept_url`` is derived from the incoming request's base URL —
     zero-config for the single-container deployment.
+
+    Emits ``invitation.issued`` on success.
 
     Error codes:
     - 409 ``user.email_exists`` — *email* is already a registered user.
@@ -111,6 +115,17 @@ def create_invitation(
     # base URL the service used when sending the email.
     app_origin = str(request.base_url).rstrip("/")
     accept_url = f"{app_origin}/invite/accept?token={raw_token}"
+
+    ip = request.client.host if request.client else None
+    AuditService(db).record(
+        "invitation.issued",
+        actor_user_id=admin.id,
+        actor_email=admin.email,
+        target_type="invitation",
+        target_id=token.id,
+        params={"email": token.email, "role": token.role},
+        ip_address=ip,
+    )
 
     return InvitationResponse(
         id=token.id,
@@ -135,15 +150,30 @@ def list_invitations(
 @router.delete("/invitations/{invite_id}", status_code=status.HTTP_204_NO_CONTENT)
 def revoke_invitation(
     invite_id: int,
-    _admin: Annotated[User, Depends(require_manage_users)],
+    request: Request,
+    admin: Annotated[User, Depends(require_manage_users)],
     service: Annotated[InvitationService, Depends(_get_service)],
+    db: Session = Depends(get_db),
 ) -> None:
     """Revoke a pending invitation by id (MANAGE_USERS only).
+
+    Emits ``invitation.revoked`` on success.
 
     Error codes:
     - 404 ``invitation.not_found`` — no invite with that id.
     """
-    service.revoke(invite_id)
+    revoked = service.revoke(invite_id)
+
+    ip = request.client.host if request.client else None
+    AuditService(db).record(
+        "invitation.revoked",
+        actor_user_id=admin.id,
+        actor_email=admin.email,
+        target_type="invitation",
+        target_id=invite_id,
+        params={"email": revoked.email},
+        ip_address=ip,
+    )
 
 
 @router.get("/invitations/accept", response_model=InvitationPublic)
@@ -171,17 +201,35 @@ def get_invitation_accept(
 )
 def post_invitation_accept(
     body: InvitationAccept,
+    request: Request,
     service: Annotated[InvitationService, Depends(_get_service)],
+    db: Session = Depends(get_db),
 ) -> UserResponse:
     """Accept an invite and create the new user account (public, no auth).
 
     Does NOT auto-login — the frontend redirects to the login page after success.
+
+    Emits ``invitation.accepted`` (actor_user_id may be NULL — the accept is
+    public/anonymous; we use the created user's id as the actor since they are
+    the agent performing the accept).
 
     Error codes:
     - 400 ``auth.invalid_token`` — token invalid, expired, consumed, or email
       race (email was registered between invite creation and accept).
     """
     user = service.accept_invite(body.token, body.password)
+
+    ip = request.client.host if request.client else None
+    AuditService(db).record(
+        "invitation.accepted",
+        actor_user_id=user.id,
+        actor_email=user.email,
+        target_type="user",
+        target_id=user.id,
+        params={"email": user.email, "role": user.role},
+        ip_address=ip,
+    )
+
     return UserResponse.model_validate(user)
 
 
@@ -199,10 +247,13 @@ def issue_password_reset(
     request: Request,
     admin: Annotated[User, Depends(require_manage_users)],
     service: Annotated[InvitationService, Depends(_get_service)],
+    db: Session = Depends(get_db),
 ) -> PasswordResetIssueResponse:
     """Issue a password-reset link for *user_id* (MANAGE_USERS only).
 
     Returns the one-time reset URL and whether it was emailed.
+
+    Emits ``password.reset`` with ``{"phase": "issued"}`` on success.
 
     Error codes:
     - 404 ``user.not_found`` — no user with that id.
@@ -212,6 +263,18 @@ def issue_password_reset(
         created_by=admin.id,
         request=request,
     )
+
+    ip = request.client.host if request.client else None
+    AuditService(db).record(
+        "password.reset",
+        actor_user_id=admin.id,
+        actor_email=admin.email,
+        target_type="user",
+        target_id=user_id,
+        params={"phase": "issued"},
+        ip_address=ip,
+    )
+
     return PasswordResetIssueResponse(reset_url=reset_url, emailed=emailed)
 
 
@@ -235,15 +298,32 @@ def get_password_reset_accept(
 @router.post("/password-reset/accept", response_model=MessageResponse)
 def post_password_reset_accept(
     body: PasswordResetAccept,
+    request: Request,
     service: Annotated[InvitationService, Depends(_get_service)],
+    db: Session = Depends(get_db),
 ) -> MessageResponse:
     """Accept a password-reset token and set the new password (public, no auth).
 
     On success: the user's password is updated; all their existing sessions
     are revoked (they must re-authenticate with the new password).
 
+    Emits ``password.reset`` with ``{"phase": "completed"}``; actor is the
+    user whose password was reset (they accepted the link).
+
     Error codes:
     - 400 ``auth.invalid_token`` — token invalid, expired, consumed, or user missing.
     """
-    service.accept_reset(body.token, body.password)
+    user = service.accept_reset(body.token, body.password)
+
+    ip = request.client.host if request.client else None
+    AuditService(db).record(
+        "password.reset",
+        actor_user_id=user.id,
+        actor_email=user.email,
+        target_type="user",
+        target_id=user.id,
+        params={"phase": "completed"},
+        ip_address=ip,
+    )
+
     return MessageResponse(message="Password reset successfully.")

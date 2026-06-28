@@ -150,6 +150,119 @@
         "title": "AttachmentUpdate",
         "type": "object"
       },
+      "AuditLogListResponse": {
+        "description": "Paginated envelope for ``GET /audit``.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AuditLogResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "AuditLogListResponse",
+        "type": "object"
+      },
+      "AuditLogResponse": {
+        "description": "Wire representation of one audit-log row.\n\n``params`` is stored as a compact JSON string in the DB; the\n``_parse_params`` validator deserialises it to a dict (or ``None``) before\nthe value is serialised back to JSON by the response encoder.  This mirrors\nhow ``notifications.params`` is handled in the M4 notification schemas.",
+        "properties": {
+          "actor_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Email"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "ip_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip Address"
+          },
+          "params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Params"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          },
+          "target_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Type"
+          }
+        },
+        "required": [
+          "id",
+          "event_type",
+          "created_at"
+        ],
+        "title": "AuditLogResponse",
+        "type": "object"
+      },
       "BarcodeCreate": {
         "description": "Body for POST /definitions/{id}/barcodes.",
         "properties": {
@@ -4685,9 +4798,152 @@
         ]
       }
     },
+    "/api/audit": {
+      "get": {
+        "description": "Return a paginated list of security/admin audit events (VIEW_AUDIT only).\n\nFilters are ANDed; omitted filters are no-ops.  Results are ordered\nnewest-first.\n\nError codes:\n- 403 ``auth.forbidden`` \u2014 caller lacks ``VIEW_AUDIT`` (not admin).",
+        "operationId": "list_audit_api_audit_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "event_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "actor_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Actor Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditLogListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Audit",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
     "/api/auth/change-password": {
       "post": {
-        "description": "Change the current user's password (any authenticated user).\n\nVerifies ``current_password`` against the stored hash.  On mismatch\nreturns 400 ``auth.password_incorrect``.  On success, sets the new\npassword hash and revokes all OTHER sessions for this user (the current\nsession remains active, so the caller stays logged in).\n\nError codes:\n- 400 ``auth.password_incorrect`` \u2014 wrong current password.",
+        "description": "Change the current user's password (any authenticated user).\n\nVerifies ``current_password`` against the stored hash.  On mismatch\nreturns 400 ``auth.password_incorrect``.  On success, sets the new\npassword hash and revokes all OTHER sessions for this user (the current\nsession remains active, so the caller stays logged in).\n\nEmits ``password.changed`` on success (committed by ``get_db``).\n\nError codes:\n- 400 ``auth.password_incorrect`` \u2014 wrong current password.",
         "operationId": "change_password_api_auth_change_password_post",
         "requestBody": {
           "content": {
@@ -4759,7 +5015,7 @@
     },
     "/api/auth/login": {
       "post": {
-        "description": "Authenticate with email + password and return a session cookie.\n\nOn success: creates a server-side session row and sets the ``HttpOnly``\nsession cookie.  Returns the public user object.\n\nOn failure: returns 401 (email not found or wrong password).  The same\nerror is returned for both cases to prevent user-enumeration attacks.",
+        "description": "Authenticate with email + password and return a session cookie.\n\nOn success: creates a server-side session row and sets the ``HttpOnly``\nsession cookie.  Returns the public user object.  Emits\n``auth.login_succeeded`` to the audit log.\n\nOn failure: returns 401 (email not found or wrong password).  The same\nerror is returned for both cases to prevent user-enumeration attacks.\nEmits ``auth.login_failed`` (actor_user_id=NULL, actor_email=attempted\nemail) and COMMITS that row BEFORE raising the 401 so it survives the\n``get_db`` rollback triggered by the AppError exception.",
         "operationId": "login_api_auth_login_post",
         "requestBody": {
           "content": {
@@ -4831,7 +5087,7 @@
     },
     "/api/auth/logout": {
       "post": {
-        "description": "Revoke the current session and clear the cookie.\n\nIdempotent: if the cookie is absent or the session is already gone, the\nendpoint still returns 200 and clears the cookie.",
+        "description": "Revoke the current session and clear the cookie.\n\nIdempotent: if the cookie is absent or the session is already gone, the\nendpoint still returns 200 and clears the cookie.\n\nEmits ``auth.logout`` (best-effort: if the cookie's session resolves to a\nuser we log with that actor; otherwise we skip \u2014 don't break idempotent\nlogout).",
         "operationId": "logout_api_auth_logout_post",
         "responses": {
           "200": {
@@ -7525,7 +7781,7 @@
         ]
       },
       "post": {
-        "description": "Create an invitation for *email* with *role* (MANAGE_USERS only).\n\nReturns the one-time accept URL (the admin copies this and sends it to the\ninvitee, or it is emailed automatically when SMTP is configured).\n\nThe ``accept_url`` is derived from the incoming request's base URL \u2014\nzero-config for the single-container deployment.\n\nError codes:\n- 409 ``user.email_exists`` \u2014 *email* is already a registered user.\n- 422 ``validation.invalid_input`` \u2014 unknown role string.",
+        "description": "Create an invitation for *email* with *role* (MANAGE_USERS only).\n\nReturns the one-time accept URL (the admin copies this and sends it to the\ninvitee, or it is emailed automatically when SMTP is configured).\n\nThe ``accept_url`` is derived from the incoming request's base URL \u2014\nzero-config for the single-container deployment.\n\nEmits ``invitation.issued`` on success.\n\nError codes:\n- 409 ``user.email_exists`` \u2014 *email* is already a registered user.\n- 422 ``validation.invalid_input`` \u2014 unknown role string.",
         "operationId": "create_invitation_api_invitations_post",
         "requestBody": {
           "content": {
@@ -7708,7 +7964,7 @@
         ]
       },
       "post": {
-        "description": "Accept an invite and create the new user account (public, no auth).\n\nDoes NOT auto-login \u2014 the frontend redirects to the login page after success.\n\nError codes:\n- 400 ``auth.invalid_token`` \u2014 token invalid, expired, consumed, or email\n  race (email was registered between invite creation and accept).",
+        "description": "Accept an invite and create the new user account (public, no auth).\n\nDoes NOT auto-login \u2014 the frontend redirects to the login page after success.\n\nEmits ``invitation.accepted`` (actor_user_id may be NULL \u2014 the accept is\npublic/anonymous; we use the created user's id as the actor since they are\nthe agent performing the accept).\n\nError codes:\n- 400 ``auth.invalid_token`` \u2014 token invalid, expired, consumed, or email\n  race (email was registered between invite creation and accept).",
         "operationId": "post_invitation_accept_api_invitations_accept_post",
         "requestBody": {
           "content": {
@@ -7800,7 +8056,7 @@
     },
     "/api/invitations/{invite_id}": {
       "delete": {
-        "description": "Revoke a pending invitation by id (MANAGE_USERS only).\n\nError codes:\n- 404 ``invitation.not_found`` \u2014 no invite with that id.",
+        "description": "Revoke a pending invitation by id (MANAGE_USERS only).\n\nEmits ``invitation.revoked`` on success.\n\nError codes:\n- 404 ``invitation.not_found`` \u2014 no invite with that id.",
         "operationId": "revoke_invitation_api_invitations__invite_id__delete",
         "parameters": [
           {
@@ -9118,7 +9374,7 @@
         ]
       },
       "post": {
-        "description": "Accept a password-reset token and set the new password (public, no auth).\n\nOn success: the user's password is updated; all their existing sessions\nare revoked (they must re-authenticate with the new password).\n\nError codes:\n- 400 ``auth.invalid_token`` \u2014 token invalid, expired, consumed, or user missing.",
+        "description": "Accept a password-reset token and set the new password (public, no auth).\n\nOn success: the user's password is updated; all their existing sessions\nare revoked (they must re-authenticate with the new password).\n\nEmits ``password.reset`` with ``{\"phase\": \"completed\"}``; actor is the\nuser whose password was reset (they accepted the link).\n\nError codes:\n- 400 ``auth.invalid_token`` \u2014 token invalid, expired, consumed, or user missing.",
         "operationId": "post_password_reset_accept_api_password_reset_accept_post",
         "requestBody": {
           "content": {
@@ -9359,7 +9615,7 @@
         ]
       },
       "patch": {
-        "description": "Apply a partial update to the reminders and channels configuration.\n\nOnly fields explicitly supplied in the payload are changed; omitted\nfields are left at their current value.  Validation errors are handled\nby the existing ``RequestValidationError`` handler (\u2192 ``validation.invalid_input``).\n\nTo set a secret supply the new value; to clear it supply an explicit\nempty string (``\"\"``) or ``null``.\n\n**Live MQTT reconnect**: when the update touches any ``channels.mqtt.*``\nfield, the MQTT bridge is reloaded after the settings are committed so\nthe new config takes effect without an app restart.  This is best-effort\n\u2014 a reload failure does not fail the save.",
+        "description": "Apply a partial update to the reminders and channels configuration.\n\nOnly fields explicitly supplied in the payload are changed; omitted\nfields are left at their current value.  Validation errors are handled\nby the existing ``RequestValidationError`` handler (\u2192 ``validation.invalid_input``).\n\nTo set a secret supply the new value; to clear it supply an explicit\nempty string (``\"\"``) or ``null``.\n\n**Live MQTT reconnect**: when the update touches any ``channels.mqtt.*``\nfield, the MQTT bridge is reloaded after the settings are committed so\nthe new config takes effect without an app restart.  This is best-effort\n\u2014 a reload failure does not fail the save.\n\nEmits ``settings.changed`` on success.",
         "operationId": "patch_settings_api_settings_patch",
         "requestBody": {
           "content": {
@@ -10018,7 +10274,7 @@
     },
     "/api/users/{user_id}": {
       "delete": {
-        "description": "Delete a user (MANAGE_USERS only).\n\nError codes:\n- 404 ``user.not_found``  \u2014 no user with that id.\n- 409 ``user.last_admin`` \u2014 cannot delete the last active admin.",
+        "description": "Delete a user (MANAGE_USERS only).\n\nEmits ``user.deleted`` on success.  The target user's email is captured\nBEFORE deletion as a snapshot (the row is gone after the flush).\n\nError codes:\n- 404 ``user.not_found``  \u2014 no user with that id.\n- 409 ``user.last_admin`` \u2014 cannot delete the last active admin.",
         "operationId": "delete_user_api_users__user_id__delete",
         "parameters": [
           {
@@ -10173,7 +10429,7 @@
         ]
       },
       "patch": {
-        "description": "Change a user's role and/or active status (MANAGE_USERS only).\n\nPATCH semantics: only fields present in the request body are applied;\nomitted fields are untouched.\n\nError codes:\n- 404 ``user.not_found``    \u2014 no user with that id.\n- 409 ``user.last_admin``   \u2014 operation would orphan the household.\n- 422 ``validation.invalid_input`` \u2014 unknown role string.",
+        "description": "Change a user's role and/or active status (MANAGE_USERS only).\n\nPATCH semantics: only fields present in the request body are applied;\nomitted fields are untouched.\n\nEmits up to two audit events on success (one per changed field):\n- ``user.role_changed``    \u2014 params ``{\"old_role\":\u2026, \"new_role\":\u2026}``.\n- ``user.deactivated``     \u2014 when ``is_active`` toggled False.\n- ``user.reactivated``     \u2014 when ``is_active`` toggled True.\n\nError codes:\n- 404 ``user.not_found``    \u2014 no user with that id.\n- 409 ``user.last_admin``   \u2014 operation would orphan the household.\n- 422 ``validation.invalid_input`` \u2014 unknown role string.",
         "operationId": "update_user_api_users__user_id__patch",
         "parameters": [
           {
@@ -10266,7 +10522,7 @@
     },
     "/api/users/{user_id}/reset-password": {
       "post": {
-        "description": "Issue a password-reset link for *user_id* (MANAGE_USERS only).\n\nReturns the one-time reset URL and whether it was emailed.\n\nError codes:\n- 404 ``user.not_found`` \u2014 no user with that id.",
+        "description": "Issue a password-reset link for *user_id* (MANAGE_USERS only).\n\nReturns the one-time reset URL and whether it was emailed.\n\nEmits ``password.reset`` with ``{\"phase\": \"issued\"}`` on success.\n\nError codes:\n- 404 ``user.not_found`` \u2014 no user with that id.",
         "operationId": "issue_password_reset_api_users__user_id__reset_password_post",
         "parameters": [
           {

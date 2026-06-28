@@ -222,8 +222,12 @@ class InvitationService:
         """Return all currently pending invites (not consumed, not expired)."""
         return self._token_repo.list_pending_invites()
 
-    def revoke(self, invite_id: int) -> None:
-        """Delete a pending invite by id.
+    def revoke(self, invite_id: int) -> UserToken:
+        """Delete a pending invite by id and return the revoked token.
+
+        The returned token is used by the route to emit an audit row (the token
+        row is deleted, but the in-memory object retains its fields for the
+        duration of the request).
 
         Raises
         ------
@@ -234,6 +238,7 @@ class InvitationService:
         if token is None or token.purpose != "invite":
             raise AppError(ErrorCode.INVITATION_NOT_FOUND, status_code=404)
         self._token_repo.delete(token)
+        return token
 
     def validate_invite(self, raw_token: str) -> UserToken:
         """Validate an invite token and return the row.

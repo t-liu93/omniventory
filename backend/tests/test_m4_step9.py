@@ -83,6 +83,7 @@ def _make_in_memory_session() -> tuple[Session, object]:
     """Create a fresh in-memory SQLite session with all models registered."""
     import app.db.base as db_base_mod
     import app.models.app_config as app_config_mod
+    import app.models.audit_log as audit_log_mod
     import app.models.category as cat_mod
     import app.models.household as hh_mod
     import app.models.item_definition as idef_mod
@@ -111,6 +112,7 @@ def _make_in_memory_session() -> tuple[Session, object]:
         setting_mod,
         notif_mod,
         nd_mod,
+        audit_log_mod,
     ):
         importlib.reload(mod)
 

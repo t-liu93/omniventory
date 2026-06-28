@@ -100,24 +100,44 @@ def _clear_session_cookie(response: Response) -> None:
 @router.post("/login", response_model=UserResponse)
 def login(
     body: LoginRequest,
+    request: Request,
     response: Response,
     db: Session = Depends(get_db),
 ) -> UserResponse:
     """Authenticate with email + password and return a session cookie.
 
     On success: creates a server-side session row and sets the ``HttpOnly``
-    session cookie.  Returns the public user object.
+    session cookie.  Returns the public user object.  Emits
+    ``auth.login_succeeded`` to the audit log.
 
     On failure: returns 401 (email not found or wrong password).  The same
     error is returned for both cases to prevent user-enumeration attacks.
+    Emits ``auth.login_failed`` (actor_user_id=NULL, actor_email=attempted
+    email) and COMMITS that row BEFORE raising the 401 so it survives the
+    ``get_db`` rollback triggered by the AppError exception.
     """
+    from app.services.audit import AuditService
+
     repo = UserRepository(db)
+    audit = AuditService(db)
+    ip = request.client.host if request.client else None
+    attempted_email = body.email.lower()
+
     user = repo.get_by_email(body.email)
 
     if user is None:
         # Consume time comparable to a real hash verification to prevent
         # user-enumeration via response timing.
         dummy_verify(body.password)
+        # Record the failed attempt, then commit BEFORE raising so the row
+        # survives the get_db rollback that fires when an exception propagates.
+        audit.record(
+            "auth.login_failed",
+            actor_user_id=None,
+            actor_email=attempted_email,
+            ip_address=ip,
+        )
+        db.commit()
         raise AppError(
             ErrorCode.INVALID_CREDENTIALS,
             status_code=401,
@@ -125,6 +145,13 @@ def login(
         )
 
     if not verify_password(body.password, user.password_hash):
+        audit.record(
+            "auth.login_failed",
+            actor_user_id=None,
+            actor_email=attempted_email,
+            ip_address=ip,
+        )
+        db.commit()
         raise AppError(
             ErrorCode.INVALID_CREDENTIALS,
             status_code=401,
@@ -141,6 +168,16 @@ def login(
     session = session_auth.create(db, user.id)
     _set_session_cookie(response, session.id)
 
+    # Audit the successful login (committed by get_db on success).
+    audit.record(
+        "auth.login_succeeded",
+        actor_user_id=user.id,
+        actor_email=user.email,
+        target_type="user",
+        target_id=user.id,
+        ip_address=ip,
+    )
+
     return UserResponse.model_validate(user)
 
 
@@ -154,12 +191,37 @@ def logout(
 
     Idempotent: if the cookie is absent or the session is already gone, the
     endpoint still returns 200 and clears the cookie.
+
+    Emits ``auth.logout`` (best-effort: if the cookie's session resolves to a
+    user we log with that actor; otherwise we skip — don't break idempotent
+    logout).
     """
+    from app.models.session import Session as SessionModel
+    from app.services.audit import AuditService
+
     settings = get_settings()
     session_id: str | None = request.cookies.get(settings.session_cookie_name)
+
+    # Resolve the actor BEFORE revoking (the session row is deleted by revoke).
+    actor = None
     if session_id:
+        sess = db.get(SessionModel, session_id)
+        if sess is not None:
+            actor = UserRepository(db).get_by_id(sess.user_id)
         session_auth.revoke(db, session_id)
+
     _clear_session_cookie(response)
+
+    # Best-effort: audit only when we could resolve the user from the session.
+    if actor is not None:
+        ip = request.client.host if request.client else None
+        AuditService(db).record(
+            "auth.logout",
+            actor_user_id=actor.id,
+            actor_email=actor.email,
+            ip_address=ip,
+        )
+
     return MessageResponse(message="Logged out successfully")
 
 
@@ -251,9 +313,12 @@ def change_password(
     password hash and revokes all OTHER sessions for this user (the current
     session remains active, so the caller stays logged in).
 
+    Emits ``password.changed`` on success (committed by ``get_db``).
+
     Error codes:
     - 400 ``auth.password_incorrect`` — wrong current password.
     """
+    from app.services.audit import AuditService
     from app.services.invitation import InvitationService
 
     settings = get_settings()
@@ -264,6 +329,17 @@ def change_password(
 
     svc = InvitationService(db)
     svc.change_password(user, body.current_password, body.new_password, session_id)
+
+    ip = request.client.host if request.client else None
+    AuditService(db).record(
+        "password.changed",
+        actor_user_id=user.id,
+        actor_email=user.email,
+        target_type="user",
+        target_id=user.id,
+        ip_address=ip,
+    )
+
     return MessageResponse(message="Password changed successfully.")
 
 

@@ -178,6 +178,7 @@ def _reload_all_models() -> None:
     import app.db.base as db_base_mod
     import app.models.app_config as app_config_mod
     import app.models.attachment as attachment_mod
+    import app.models.audit_log as audit_log_mod
     import app.models.barcode as barcode_mod
     import app.models.category as cat_mod
     import app.models.household as hh_mod
@@ -193,6 +194,7 @@ def _reload_all_models() -> None:
     import app.models.stock_movement as stock_movement_mod
     import app.models.tag as tag_mod
     import app.models.user as user_mod
+    import app.models.user_token as user_token_mod
 
     importlib.reload(db_base_mod)
     importlib.reload(hh_mod)
@@ -212,6 +214,8 @@ def _reload_all_models() -> None:
     importlib.reload(tag_mod)
     importlib.reload(note_mod)
     importlib.reload(barcode_mod)
+    importlib.reload(user_token_mod)
+    importlib.reload(audit_log_mod)
 
 
 def _seed_db(engine: object) -> None:

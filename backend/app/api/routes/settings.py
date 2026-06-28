@@ -82,7 +82,7 @@ def patch_settings(
     payload: SettingsUpdate,
     request: Request,
     _ctx: Annotated[RequestContext, Depends(get_authenticated_context)],
-    _: Annotated[User, Depends(require_manage_settings)],
+    admin: Annotated[User, Depends(require_manage_settings)],
     service: Annotated[SettingsService, Depends(_get_service)],
     db: Session = Depends(get_db),
 ) -> SettingsResponse:
@@ -99,7 +99,11 @@ def patch_settings(
     field, the MQTT bridge is reloaded after the settings are committed so
     the new config takes effect without an app restart.  This is best-effort
     — a reload failure does not fail the save.
+
+    Emits ``settings.changed`` on success.
     """
+    from app.services.audit import AuditService
+
     mqtt_touched = payload.channels is not None and payload.channels.mqtt is not None
     result = service.apply_update(payload)
 
@@ -123,6 +127,17 @@ def patch_settings(
             logger.exception(
                 "patch_settings: MQTT reload failed after settings save — ignored (best-effort)."
             )
+
+    ip = request.client.host if request.client else None
+    # Only emit an audit row when the PATCH actually supplies at least one field;
+    # an empty-body PATCH is a no-op and must not produce noise rows.
+    if payload.model_fields_set:
+        AuditService(db).record(
+            "settings.changed",
+            actor_user_id=admin.id,
+            actor_email=admin.email,
+            ip_address=ip,
+        )
 
     return result
 

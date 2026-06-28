@@ -88,6 +88,7 @@ def test_client(
     import app.db.base as db_base_mod
     import app.models.app_config as app_config_mod
     import app.models.attachment as attachment_mod
+    import app.models.audit_log as audit_log_mod
     import app.models.barcode as barcode_mod
     import app.models.category as cat_mod
     import app.models.household as hh_mod
@@ -122,6 +123,7 @@ def test_client(
     importlib.reload(tag_mod)
     importlib.reload(note_mod)
     importlib.reload(barcode_mod)
+    importlib.reload(audit_log_mod)
 
     from app.config import get_settings
     from app.db.base import Base, get_engine

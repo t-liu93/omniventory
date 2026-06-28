@@ -20,7 +20,7 @@ Error contract:
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_manage_users
@@ -29,6 +29,7 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import UserResponse
 from app.schemas.user_admin import UserAdminUpdate, UserSummary
+from app.services.audit import AuditService
 from app.services.user_admin import UserAdminService
 
 _ERROR_RESPONSES: dict[int | str, dict[str, object]] = {
@@ -80,38 +81,101 @@ def get_user(
 def update_user(
     user_id: int,
     body: UserAdminUpdate,
-    _admin: Annotated[User, Depends(require_manage_users)],
+    request: Request,
+    admin: Annotated[User, Depends(require_manage_users)],
     service: Annotated[UserAdminService, Depends(_get_service)],
+    db: Session = Depends(get_db),
 ) -> UserResponse:
     """Change a user's role and/or active status (MANAGE_USERS only).
 
     PATCH semantics: only fields present in the request body are applied;
     omitted fields are untouched.
 
+    Emits up to two audit events on success (one per changed field):
+    - ``user.role_changed``    — params ``{"old_role":…, "new_role":…}``.
+    - ``user.deactivated``     — when ``is_active`` toggled False.
+    - ``user.reactivated``     — when ``is_active`` toggled True.
+
     Error codes:
     - 404 ``user.not_found``    — no user with that id.
     - 409 ``user.last_admin``   — operation would orphan the household.
     - 422 ``validation.invalid_input`` — unknown role string.
     """
+    # Capture the old state before the update so we can compute what changed.
+    target = service.get_user(user_id)
+    old_role = target.role
+    old_is_active = target.is_active
+
     user = service.update_user(
         user_id,
         role=body.role,
         is_active=body.is_active,
         fields_set=body.model_fields_set,
     )
+
+    # Emit audit rows for each field that actually changed.
+    audit = AuditService(db)
+    ip = request.client.host if request.client else None
+    if user.role != old_role:
+        audit.record(
+            "user.role_changed",
+            actor_user_id=admin.id,
+            actor_email=admin.email,
+            target_type="user",
+            target_id=user.id,
+            params={"old_role": old_role, "new_role": user.role},
+            ip_address=ip,
+        )
+    if user.is_active != old_is_active:
+        event = "user.reactivated" if user.is_active else "user.deactivated"
+        audit.record(
+            event,
+            actor_user_id=admin.id,
+            actor_email=admin.email,
+            target_type="user",
+            target_id=user.id,
+            ip_address=ip,
+        )
+
     return UserResponse.model_validate(user)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(
     user_id: int,
-    _admin: Annotated[User, Depends(require_manage_users)],
+    request: Request,
+    admin: Annotated[User, Depends(require_manage_users)],
     service: Annotated[UserAdminService, Depends(_get_service)],
+    db: Session = Depends(get_db),
 ) -> None:
     """Delete a user (MANAGE_USERS only).
+
+    Emits ``user.deleted`` on success.  The target user's email is captured
+    BEFORE deletion as a snapshot (the row is gone after the flush).
 
     Error codes:
     - 404 ``user.not_found``  — no user with that id.
     - 409 ``user.last_admin`` — cannot delete the last active admin.
     """
+    # Capture identity before deletion so the audit row has the target email.
+    target = service.get_user(user_id)
+    target_id_snapshot = target.id
+    target_email_snapshot = target.email
+
     service.delete_user(user_id)
+
+    ip = request.client.host if request.client else None
+    # When the admin deletes their own account actor_user_id must be NULL:
+    # the actor row has just been deleted, so inserting a FK reference to it
+    # would raise FOREIGN KEY constraint failed.  actor_email is still captured
+    # as a snapshot so the row remains auditable.
+    actor_id = None if target_id_snapshot == admin.id else admin.id
+    AuditService(db).record(
+        "user.deleted",
+        actor_user_id=actor_id,
+        actor_email=admin.email,
+        target_type="user",
+        target_id=target_id_snapshot,
+        params={"email": target_email_snapshot},
+        ip_address=ip,
+    )
