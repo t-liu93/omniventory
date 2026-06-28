@@ -310,6 +310,25 @@ class StockMovementService:
                 exc_info=True,
             )
 
+        # Event hook: reconcile auto shopping-list rows after discard.
+        # A separate best-effort + savepoint-isolated call so a reconcile failure
+        # NEVER rolls back the movement.  Local import avoids any import cycle
+        # (mirrors the ReminderEngine local import pattern above).
+        try:
+            from app.services.shopping_list import ShoppingListService
+
+            with self._db.begin_nested():
+                ShoppingListService(self._db).reconcile_auto_items()
+        except Exception:
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "reconcile_auto_items after discard failed for definition %d "
+                "(best-effort -- movement committed normally)",
+                instance.definition_id,
+                exc_info=True,
+            )
+
         return instance
 
     def adjust(
@@ -378,6 +397,24 @@ class StockMovementService:
 
             logging.getLogger(__name__).warning(
                 "evaluate_low_stock after adjust failed for definition %d "
+                "(best-effort -- movement committed normally)",
+                instance.definition_id,
+                exc_info=True,
+            )
+
+        # Event hook: reconcile auto shopping-list rows after adjust.
+        # Separate best-effort + savepoint-isolated call so a reconcile failure
+        # NEVER rolls back the movement.
+        try:
+            from app.services.shopping_list import ShoppingListService
+
+            with self._db.begin_nested():
+                ShoppingListService(self._db).reconcile_auto_items()
+        except Exception:
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "reconcile_auto_items after adjust failed for definition %d "
                 "(best-effort -- movement committed normally)",
                 instance.definition_id,
                 exc_info=True,
@@ -567,6 +604,24 @@ class StockMovementService:
 
             logging.getLogger(__name__).warning(
                 "evaluate_low_stock after consume_fifo failed for definition %d "
+                "(best-effort -- movement committed normally)",
+                definition.id,
+                exc_info=True,
+            )
+
+        # Event hook: reconcile auto shopping-list rows after consume.
+        # Separate best-effort + savepoint-isolated call so a reconcile failure
+        # NEVER rolls back the movement.
+        try:
+            from app.services.shopping_list import ShoppingListService
+
+            with self._db.begin_nested():
+                ShoppingListService(self._db).reconcile_auto_items()
+        except Exception:
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "reconcile_auto_items after consume_fifo failed for definition %d "
                 "(best-effort -- movement committed normally)",
                 definition.id,
                 exc_info=True,

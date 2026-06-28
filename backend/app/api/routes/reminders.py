@@ -70,6 +70,23 @@ def run_reminders(
     """
     summary = ReminderEngine(db).run_scan()
 
+    # Auto-reconcile shopping list rows right after the scan (best-effort +
+    # savepoint-isolated so a reconcile failure never discards the scan's
+    # notification rows).  The engine stays decoupled: callers invoke both;
+    # the engine never imports ShoppingListService (M7 §2 locked decisions).
+    try:
+        import logging as _logging
+
+        from app.services.shopping_list import ShoppingListService
+
+        with db.begin_nested():
+            ShoppingListService(db).reconcile_auto_items()
+    except Exception:
+        _logging.getLogger(__name__).warning(
+            "reconcile_auto_items after /reminders/run failed (best-effort).",
+            exc_info=True,
+        )
+
     # Commit notification rows so they are durable before any network I/O.
     db.commit()
 

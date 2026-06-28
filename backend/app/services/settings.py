@@ -67,6 +67,8 @@ from app.schemas.settings import (
     RemindersUpdate,
     SettingsResponse,
     SettingsUpdate,
+    ShoppingListSettings,
+    ShoppingListUpdate,
 )
 
 # ---------------------------------------------------------------------------
@@ -79,6 +81,8 @@ _DEFAULTS: dict[str, Any] = {
     "reminders.warranty_lead_days": 30,
     "reminders.low_stock_repeat_days": [1, 3, 7],
     "reminders.scan_time": "08:00",
+    # Shopping list
+    "shopping_list.auto_add_low_stock": True,
     # Email channel
     "channels.email.enabled": False,
     "channels.email.host": None,
@@ -250,6 +254,12 @@ class SettingsService:
                 http=self._build_http_response(),
                 mqtt=self._build_mqtt_response(),
             ),
+            shopping_list=self._build_shopping_list_response(),
+        )
+
+    def _build_shopping_list_response(self) -> ShoppingListSettings:
+        return ShoppingListSettings(
+            auto_add_low_stock=self._get_value("shopping_list.auto_add_low_stock"),
         )
 
     def _build_reminders_response(self) -> RemindersSettings:
@@ -347,10 +357,16 @@ class SettingsService:
             self._apply_reminders_update(update.reminders)
         if update.channels is not None:
             self._apply_channels_update(update.channels)
+        if update.shopping_list is not None:
+            self._apply_shopping_list_update(update.shopping_list)
         # Flush so the identity map reflects the merged rows before we read
         # back the full settings in the same transaction.
         self._db.flush()
         return self.get_settings()
+
+    def _apply_shopping_list_update(self, upd: ShoppingListUpdate) -> None:
+        if upd.auto_add_low_stock is not None:
+            self._set_value("shopping_list.auto_add_low_stock", upd.auto_add_low_stock)
 
     def _apply_reminders_update(self, upd: RemindersUpdate) -> None:
         if upd.best_before_lead_days is not None:
@@ -451,6 +467,14 @@ class SettingsService:
     def best_before_lead_days_value(self) -> int:
         """Alias matching the reminder engine accessor name pattern."""
         return self.best_before_lead_days()
+
+    def shopping_list_auto_add(self) -> bool:
+        """Return whether auto-adding low-stock items to the shopping list is enabled.
+
+        Default is ``True``; can be toggled via ``PATCH /settings`` with
+        ``{shopping_list: {auto_add_low_stock: false}}``.
+        """
+        return bool(self._get_value("shopping_list.auto_add_low_stock"))
 
     # ------------------------------------------------------------------
     # Public channel config getters (Step 8)

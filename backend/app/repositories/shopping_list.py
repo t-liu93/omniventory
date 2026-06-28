@@ -1,18 +1,23 @@
-"""Repository for the ShoppingListItem table (M7 §4.1 / §9 Step 1).
+"""Repository for the ShoppingListItem table (M7 §4.1 / §9 Step 1 + Step 2).
 
 All DB access to the ``shopping_list_items`` table goes through this class.
 Route handlers and services must not issue raw queries; they call
 ``ShoppingListRepository`` methods.
 
-Public methods (Step 1 — CRUD only; reconcile helpers added in Step 2)
+Public methods (Step 1 — CRUD)
 -----------------------------------------------------------------------
 ``create(...)``
-    Insert and flush a new ShoppingListItem row.
+    Insert a new ShoppingListItem row inside a SAVEPOINT.  If the partial-unique
+    index ``uq_shopping_list_one_auto_per_def`` fires (concurrent reconcile for
+    the same auto+definition), the IntegrityError is caught, the savepoint is
+    rolled back, and the **existing** row is returned instead.  Manual creates
+    (source='manual') are unaffected because the constraint only applies to
+    ``source='auto'`` rows.
 
 ``get(item_id)``
     Return a ShoppingListItem by PK (with definition joinedloaded), or None.
 
-``list(include_purchased, ...)``
+``list_all(include_purchased, ...)``
     Return all items (open first, then purchased) with definition joinedloaded.
 
 ``update(item, **fields)``
@@ -24,6 +29,16 @@ Public methods (Step 1 — CRUD only; reconcile helpers added in Step 2)
 ``clear_purchased()``
     Delete all rows where ``purchased_at IS NOT NULL``; return the count of
     deleted rows.
+
+Public methods (Step 2 — reconcile helpers)
+-----------------------------------------------------------------------
+``get_auto_item(definition_id)``
+    Return the auto row for a definition in **any** purchased state (open or
+    checked), or None.  Used by reconcile to decide whether to create a new
+    auto row.
+
+``list_open_auto_items()``
+    Return all auto rows with ``purchased_at IS NULL`` (the prune candidates).
 """
 
 from __future__ import annotations
@@ -32,6 +47,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import case, delete, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.shopping_list_item import ShoppingListItem
@@ -56,7 +72,7 @@ class ShoppingListRepository:
         )
         return self._db.execute(stmt).scalar_one_or_none()
 
-    def list(self, *, include_purchased: bool = False) -> list[ShoppingListItem]:
+    def list_all(self, *, include_purchased: bool = False) -> list[ShoppingListItem]:
         """Return shopping list items with definition joinedloaded.
 
         Ordering: open items (``purchased_at IS NULL``) first, then purchased,
@@ -96,10 +112,24 @@ class ShoppingListRepository:
         note: str | None = None,
         created_by: int | None = None,
     ) -> ShoppingListItem:
-        """Insert a new ShoppingListItem row and flush to get its PK.
+        """Insert a new ShoppingListItem row inside a SAVEPOINT and flush.
 
         The caller is responsible for source validation (app-layer) and the
         cross-field name/definition_id check before calling this method.
+
+        Step 2 change: the INSERT is wrapped in a ``begin_nested()`` savepoint
+        so that an ``IntegrityError`` from the partial-unique index
+        ``uq_shopping_list_one_auto_per_def`` (which fires when a concurrent
+        reconcile already inserted an auto row for the same definition) rolls
+        back only the savepoint, **not** the outer transaction.  The method then
+        re-fetches and returns the existing winning row.
+
+        Manual creates (source='manual') are never subject to this constraint
+        (the index predicate is ``WHERE source='auto'``), so their behaviour is
+        unchanged.
+
+        Implementation mirrors ``NotificationRepository.create_if_absent``
+        (M4 §9 Step 4 F2 fix).
         """
         item = ShoppingListItem(
             source=source,
@@ -110,9 +140,23 @@ class ShoppingListRepository:
             note=note,
             created_by=created_by,
         )
-        self._db.add(item)
-        self._db.flush()
-        return item
+        try:
+            with self._db.begin_nested():
+                self._db.add(item)
+                # flush() inside the savepoint materialises the INSERT so the
+                # unique-constraint check happens now (within the savepoint).
+                self._db.flush()
+            return item
+        except IntegrityError:
+            # Unique constraint hit: another concurrent reconcile inserted an
+            # auto row for the same definition between our check and INSERT.
+            # The savepoint was rolled back automatically; the outer transaction
+            # is intact.  Re-fetch and return the winning row.
+            if definition_id is not None:
+                existing = self.get_auto_item(definition_id)
+                if existing is not None:
+                    return existing
+            raise  # Unexpected integrity error — re-raise.
 
     def update(self, item: ShoppingListItem, **fields: object) -> ShoppingListItem:
         """Apply field updates to an existing ShoppingListItem and flush.
@@ -157,6 +201,43 @@ class ShoppingListRepository:
         self._db.execute(bulk_stmt)
         self._db.flush()
         return count
+
+    # ---------------------------------------------------------------------- #
+    # Helpers for auto-reconcile (Step 2)                                     #
+    # ---------------------------------------------------------------------- #
+
+    def get_auto_item(self, definition_id: int) -> ShoppingListItem | None:
+        """Return the auto row for a definition in **any** purchased state, or None.
+
+        The partial-unique index ``uq_shopping_list_one_auto_per_def`` guarantees
+        there is at most one such row per definition.  Both open (purchased_at IS
+        NULL) and checked (purchased_at IS NOT NULL) rows are considered —
+        matching the state-independent uniqueness invariant from M7 §3.1.
+
+        Used by ``reconcile_auto_items`` to decide whether an auto row already
+        exists before attempting a create (which would be a no-op via the
+        IntegrityError guard), and to block a duplicate open row when a checked
+        auto row for the same definition is still present.
+        """
+        stmt = select(ShoppingListItem).where(
+            ShoppingListItem.source == "auto",
+            ShoppingListItem.definition_id == definition_id,
+        )
+        return self._db.execute(stmt).scalar_one_or_none()
+
+    def list_open_auto_items(self) -> list[ShoppingListItem]:
+        """Return all auto rows with ``purchased_at IS NULL`` (prune candidates).
+
+        Used by ``reconcile_auto_items`` in the prune phase: auto rows whose
+        definition has recovered above its threshold are deleted from this list.
+        Only open/unchecked rows are pruned; checked auto rows are left alone
+        (M7 §4.3).
+        """
+        stmt = select(ShoppingListItem).where(
+            ShoppingListItem.source == "auto",
+            ShoppingListItem.purchased_at.is_(None),
+        )
+        return list(self._db.execute(stmt).scalars().all())
 
     # ---------------------------------------------------------------------- #
     # Helpers used by check-off / uncheck (Step 1)                            #

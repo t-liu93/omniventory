@@ -1,4 +1,4 @@
-"""Shopping-list endpoints (M7 Step 1).
+"""Shopping-list endpoints (M7 Steps 1 + 2).
 
 All endpoints require a valid session.  Reads require VIEW (any authenticated
 user); mutations require EDIT (member or admin).
@@ -6,14 +6,19 @@ user); mutations require EDIT (member or admin).
 Routes (all under the api_prefix, e.g. /api):
     GET    /shopping-list?include_purchased=  List items (open first; VIEW).
     POST   /shopping-list                     Add a manual item (EDIT).
+    POST   /shopping-list/clear-purchased     Delete all checked items (EDIT).
+    POST   /shopping-list/refresh             Force auto-reconcile; return list (EDIT).
     PATCH  /shopping-list/{id}                Edit qty/name/note (EDIT).
     POST   /shopping-list/{id}/check          Mark purchased (EDIT).
     POST   /shopping-list/{id}/uncheck        Revert purchased (EDIT).
     DELETE /shopping-list/{id}                Remove an item (EDIT).
-    POST   /shopping-list/clear-purchased     Delete all checked items (EDIT).
 
 Step 1 scope: CRUD + check/uncheck (no intake — that is Step 3).
-Step 2 scope: POST /shopping-list/refresh + auto-reconcile.
+Step 2 scope: POST /shopping-list/refresh + auto-reconcile wired in.
+
+Route ordering note: ``/clear-purchased`` and ``/refresh`` are registered
+BEFORE ``/{item_id}`` to avoid FastAPI trying (and failing) to convert the
+literal strings to integers for the path parameter.
 
 Error contract:
     401  No/invalid session.
@@ -141,6 +146,33 @@ def clear_purchased(
     count = service.clear_purchased()
     db.commit()
     return ClearPurchasedResponse(deleted_count=count)
+
+
+# ---------------------------------------------------------------------------
+# Refresh (Step 2) — must be registered BEFORE /{item_id} routes
+# ---------------------------------------------------------------------------
+
+
+@router.post("/refresh", response_model=list[ShoppingListItemResponse])
+def refresh_shopping_list(
+    _ctx: Annotated[RequestContext, Depends(get_authenticated_context)],
+    _: Annotated[User, Depends(require_edit)],
+    service: Annotated[ShoppingListService, Depends(_get_service)],
+    db: Annotated[Session, Depends(get_db)],
+) -> list[ShoppingListItemResponse]:
+    """Force auto-reconcile and return the current (open) shopping list.
+
+    Immediately runs ``reconcile_auto_items()`` so that newly-low definitions
+    appear as auto rows and recovered definitions' open auto rows are pruned,
+    without waiting for the daily scan.  This is the in-UI way to demo
+    auto-population.
+
+    Returns only open (unchecked) items after the reconcile.
+    """
+    service.reconcile_auto_items()
+    db.commit()
+    items = service.list_items(include_purchased=False)
+    return [ShoppingListItemResponse.from_item(item) for item in items]
 
 
 @router.patch("/{item_id}", response_model=ShoppingListItemResponse)

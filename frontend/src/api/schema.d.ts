@@ -1529,6 +1529,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/shopping-list/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh Shopping List
+         * @description Force auto-reconcile and return the current (open) shopping list.
+         *
+         *     Immediately runs ``reconcile_auto_items()`` so that newly-low definitions
+         *     appear as auto rows and recovered definitions' open auto rows are pruned,
+         *     without waiting for the daily scan.  This is the in-UI way to demo
+         *     auto-population.
+         *
+         *     Returns only open (unchecked) items after the reconcile.
+         */
+        post: operations["refresh_shopping_list_api_shopping_list_refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/shopping-list/{item_id}": {
         parameters: {
             query?: never;
@@ -3316,6 +3343,7 @@ export interface components {
         SettingsResponse: {
             channels: components["schemas"]["ChannelsResponse"];
             reminders: components["schemas"]["RemindersSettings"];
+            shopping_list: components["schemas"]["ShoppingListSettings"];
         };
         /**
          * SettingsUpdate
@@ -3324,6 +3352,7 @@ export interface components {
         SettingsUpdate: {
             channels?: components["schemas"]["ChannelsUpdate"] | null;
             reminders?: components["schemas"]["RemindersUpdate"] | null;
+            shopping_list?: components["schemas"]["ShoppingListUpdate"] | null;
         };
         /**
          * SetupRequest
@@ -3417,6 +3446,22 @@ export interface components {
             name?: string | null;
             /** Note */
             note?: string | null;
+        };
+        /**
+         * ShoppingListSettings
+         * @description Shopping-list configuration (read).
+         */
+        ShoppingListSettings: {
+            /** Auto Add Low Stock */
+            auto_add_low_stock: boolean;
+        };
+        /**
+         * ShoppingListUpdate
+         * @description Partial update for shopping-list configuration (all fields optional).
+         */
+        ShoppingListUpdate: {
+            /** Auto Add Low Stock */
+            auto_add_low_stock?: boolean | null;
         };
         /**
          * TagCreate
@@ -7873,6 +7918,62 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ClearPurchasedResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    refresh_shopping_list_api_shopping_list_refresh_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShoppingListItemResponse"][];
                 };
             };
             /** @description Unauthorized */

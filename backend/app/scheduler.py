@@ -142,6 +142,22 @@ def _run_scan_job() -> None:
     db = factory()
     try:
         summary = ReminderEngine(db).run_scan()
+
+        # Auto-reconcile shopping list rows after the scan (best-effort +
+        # savepoint-isolated so a reconcile failure never discards the scan's
+        # notification rows).  Local import avoids a circular-import risk at
+        # module load time.
+        try:
+            from app.services.shopping_list import ShoppingListService
+
+            with db.begin_nested():
+                ShoppingListService(db).reconcile_auto_items()
+        except Exception:
+            logger.warning(
+                "reconcile_auto_items after scheduled scan failed (best-effort).",
+                exc_info=True,
+            )
+
         db.commit()
         logger.info("Scheduled reminder scan completed successfully.")
         # Dispatch external channels AFTER commit (F1).

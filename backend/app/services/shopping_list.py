@@ -1,6 +1,8 @@
-"""ShoppingListService — CRUD for the shopping list (M7 §4.1 / §4.2 / §9 Step 1).
+"""ShoppingListService — CRUD + auto-reconcile for the shopping list.
 
-Step 1 responsibilities (CRUD only; reconcile + intake added in Steps 2/3)
+Covers M7 §4.1 / §4.2 / §4.3 / §9 Step 1 (CRUD) + Step 2 (reconcile).
+
+Step 1 responsibilities (CRUD)
 ---------------------------------------------------------------------------
 ``add_manual(definition_id?, name?, desired_quantity?, unit?, note?, created_by?)``
     Add a manual item.  Cross-field guard: at least one of definition_id / name.
@@ -28,11 +30,21 @@ Step 1 responsibilities (CRUD only; reconcile + intake added in Steps 2/3)
 ``clear_purchased()``
     Delete all rows where purchased_at IS NOT NULL.  Returns the count.
 
+Step 2 responsibilities (auto-reconcile)
+---------------------------------------------------------------------------
+``reconcile_auto_items()``
+    Idempotent reconcile: open one auto row per currently-low definition (any
+    purchased state blocks a duplicate); prune open unchecked auto rows whose
+    definition recovered.  Gated by ``shopping_list.auto_add_low_stock``
+    setting (default True).  Reuses ``LowStockService.compute()`` — never
+    re-derives the low-stock rule (roadmap §2.6 / M7 §4.3).
+
 DB access only through ShoppingListRepository (roadmap §2.10).
 """
 
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
@@ -43,6 +55,9 @@ from app.models.shopping_list_item import ShoppingListItem
 from app.repositories.item_definition import ItemDefinitionRepository
 from app.repositories.shopping_list import ShoppingListRepository
 from app.schemas.shopping_list import ShoppingListItemUpdate
+from app.services.settings import SettingsService
+
+logger = logging.getLogger(__name__)
 
 
 class ShoppingListService:
@@ -57,6 +72,7 @@ class ShoppingListService:
         self._db = db
         self._repo = ShoppingListRepository(db)
         self._def_repo = ItemDefinitionRepository(db)
+        self._settings = SettingsService(db)
 
     # ---------------------------------------------------------------------- #
     # Private helpers                                                          #
@@ -229,4 +245,76 @@ class ShoppingListService:
         include_purchased:
             When ``True``, include checked items as well as open items.
         """
-        return self._repo.list(include_purchased=include_purchased)
+        return self._repo.list_all(include_purchased=include_purchased)
+
+    # ---------------------------------------------------------------------- #
+    # Auto-reconcile (Step 2)                                                  #
+    # ---------------------------------------------------------------------- #
+
+    def reconcile_auto_items(self) -> None:
+        """Idempotent reconcile: open auto rows for low definitions, prune recovered ones.
+
+        Implements M7 §4.3 exactly:
+
+        1. **Gate**: if ``shopping_list.auto_add_low_stock`` is False → return
+           immediately (no-op).
+
+        2. **Open**: for each currently-low definition (from
+           ``LowStockService.compute()``), ensure exactly one auto row exists in
+           **any** purchased state (open *or* checked).  If none exists, create
+           one.  The partial-unique index + ``create``'s IntegrityError guard
+           provide the DB backstop for concurrent reconcile calls.
+
+        3. **Prune**: delete open (``purchased_at IS NULL``), unchecked auto
+           rows whose definition is no longer low.  Never prune manual rows;
+           never prune checked auto rows (they're cleared only by
+           ``clear_purchased``).
+
+        Invariants preserved:
+        - Exactly one auto row per definition in any purchased state
+          (``WHERE source='auto'`` partial-unique index).
+        - A checked auto row blocks a duplicate open row — a definition that
+          goes low while its auto row is still in the "purchased" section will
+          not get a second auto row until the first is cleared.
+        - A check-off → uncheck round-trip on an auto row never collides
+          (state-independent per-def uniqueness).
+
+        Callers (M7 §4.3 / §2 locked-decisions):
+        - ``_run_scan_job`` (daily scheduler)
+        - ``POST /reminders/run`` route handler
+        - ``StockMovementService`` event hook beside ``evaluate_low_stock``
+          (best-effort + savepoint-isolated at the call site)
+        - ``POST /shopping-list/refresh`` route handler
+
+        All DB access is through ``ShoppingListRepository`` (roadmap §2.10).
+        """
+        # Gate: if auto-add is disabled, this is a no-op.
+        if not self._settings.shopping_list_auto_add():
+            logger.debug("reconcile_auto_items: auto_add_low_stock=false — skipping.")
+            return
+
+        # Reuse the M2/M4 low-stock signal — never re-derive the rule (roadmap §2.6).
+        from app.services.low_stock import LowStockService
+
+        low_items = LowStockService(self._db).compute()
+        low_def_ids = {item.definition_id for item in low_items}
+
+        # 1. Open: ensure ONE auto row per currently-low definition.
+        #    Any purchased state (open or checked) blocks a duplicate.
+        for item in low_items:
+            if self._repo.get_auto_item(item.definition_id) is None:
+                # create() uses a savepoint + IntegrityError guard as the DB
+                # backstop for a concurrent reconcile that inserted between our
+                # check and this call.
+                self._repo.create(
+                    source="auto",
+                    definition_id=item.definition_id,
+                    desired_quantity=None,  # NULL = unspecified (M7 §4.3 / §1 level-mode)
+                    created_by=None,
+                )
+
+        # 2. Prune: drop OPEN, UNCHECKED auto rows whose definition recovered.
+        #    Never prune manual rows; never prune checked auto rows.
+        for row in self._repo.list_open_auto_items():
+            if row.definition_id not in low_def_ids:
+                self._repo.delete(row)

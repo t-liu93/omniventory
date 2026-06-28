@@ -3927,11 +3927,15 @@
           },
           "reminders": {
             "$ref": "#/components/schemas/RemindersSettings"
+          },
+          "shopping_list": {
+            "$ref": "#/components/schemas/ShoppingListSettings"
           }
         },
         "required": [
           "reminders",
-          "channels"
+          "channels",
+          "shopping_list"
         ],
         "title": "SettingsResponse",
         "type": "object"
@@ -3953,6 +3957,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/RemindersUpdate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "shopping_list": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ShoppingListUpdate"
               },
               {
                 "type": "null"
@@ -4226,6 +4240,38 @@
           }
         },
         "title": "ShoppingListItemUpdate",
+        "type": "object"
+      },
+      "ShoppingListSettings": {
+        "description": "Shopping-list configuration (read).",
+        "properties": {
+          "auto_add_low_stock": {
+            "title": "Auto Add Low Stock",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "auto_add_low_stock"
+        ],
+        "title": "ShoppingListSettings",
+        "type": "object"
+      },
+      "ShoppingListUpdate": {
+        "description": "Partial update for shopping-list configuration (all fields optional).",
+        "properties": {
+          "auto_add_low_stock": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto Add Low Stock"
+          }
+        },
+        "title": "ShoppingListUpdate",
         "type": "object"
       },
       "TagCreate": {
@@ -10182,6 +10228,72 @@
           }
         },
         "summary": "Clear Purchased",
+        "tags": [
+          "shopping-list"
+        ]
+      }
+    },
+    "/api/shopping-list/refresh": {
+      "post": {
+        "description": "Force auto-reconcile and return the current (open) shopping list.\n\nImmediately runs ``reconcile_auto_items()`` so that newly-low definitions\nappear as auto rows and recovered definitions' open auto rows are pruned,\nwithout waiting for the daily scan.  This is the in-UI way to demo\nauto-population.\n\nReturns only open (unchecked) items after the reconcile.",
+        "operationId": "refresh_shopping_list_api_shopping_list_refresh_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ShoppingListItemResponse"
+                  },
+                  "title": "Response Refresh Shopping List Api Shopping List Refresh Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Refresh Shopping List",
         "tags": [
           "shopping-list"
         ]

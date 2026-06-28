@@ -239,6 +239,23 @@ class ChannelsUpdate(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Shopping-list sub-schemas (Step 2)
+# ---------------------------------------------------------------------------
+
+
+class ShoppingListSettings(BaseModel):
+    """Shopping-list configuration (read)."""
+
+    auto_add_low_stock: bool
+
+
+class ShoppingListUpdate(BaseModel):
+    """Partial update for shopping-list configuration (all fields optional)."""
+
+    auto_add_low_stock: bool | None = None
+
+
+# ---------------------------------------------------------------------------
 # Top-level settings schemas
 # ---------------------------------------------------------------------------
 
@@ -248,6 +265,7 @@ class SettingsResponse(BaseModel):
 
     reminders: RemindersSettings
     channels: ChannelsResponse
+    shopping_list: ShoppingListSettings
 
 
 class SettingsUpdate(BaseModel):
@@ -255,3 +273,4 @@ class SettingsUpdate(BaseModel):
 
     reminders: RemindersUpdate | None = None
     channels: ChannelsUpdate | None = None
+    shopping_list: ShoppingListUpdate | None = None
