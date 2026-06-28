@@ -63,6 +63,7 @@ import { CustomFieldsEditor } from "../components/CustomFieldsEditor";
 import { BarcodePanel } from "../components/BarcodePanel";
 import { BarcodeScanModal } from "../components/BarcodeScanModal";
 import { ExportMenu } from "../components/ExportMenu";
+import { ResponsiblePicker } from "../components/ResponsiblePicker";
 import { formatDate, formatQuantity } from "../i18n/format";
 
 // ── Schema types ─────────────────────────────────────────────────────────────
@@ -73,6 +74,7 @@ type KindResponse = components["schemas"]["KindResponse"];
 type CategoryResponse = components["schemas"]["CategoryResponse"];
 type LocationResponse = components["schemas"]["LocationResponse"];
 type TagResponse = components["schemas"]["TagResponse"];
+type UserSummary = components["schemas"]["UserSummary"];
 
 // ── Definition form state ────────────────────────────────────────────────────
 
@@ -89,6 +91,8 @@ interface DefinitionFormState {
   reminder_lead_days: string; // integer string or "" when not set (M4 per-item override)
   /** M5: arbitrary JSON key/value map; null when empty. */
   custom_fields: Record<string, string | number | boolean | null> | null;
+  /** M6 Step 11: responsible party (user id or null = unassigned). */
+  responsible_user_id: number | null;
 }
 
 const emptyDefForm = (): DefinitionFormState => ({
@@ -103,6 +107,7 @@ const emptyDefForm = (): DefinitionFormState => ({
   default_best_before_days: "",
   reminder_lead_days: "",
   custom_fields: null,
+  responsible_user_id: null,
 });
 
 const emptyInstanceForm = (definitionId?: number): InstanceFormState => ({
@@ -120,6 +125,7 @@ const emptyInstanceForm = (definitionId?: number): InstanceFormState => ({
   purchase_date: "",
   purchase_source: "",
   custom_fields: null,
+  responsible_user_id: null,
 });
 
 // ── Modal discriminated unions ────────────────────────────────────────────────
@@ -150,6 +156,8 @@ interface DefinitionFormModalProps {
   kinds: KindResponse[];
   categories: CategoryResponse[];
   locations: LocationResponse[];
+  /** M6 Step 11: user list for the responsible-party picker. */
+  users: UserSummary[];
 }
 
 function DefinitionFormModal({
@@ -164,6 +172,7 @@ function DefinitionFormModal({
   kinds,
   categories,
   locations,
+  users,
 }: DefinitionFormModalProps) {
   const { t } = useTranslation("items");
   const { t: tStock } = useTranslation("stock");
@@ -288,6 +297,12 @@ function DefinitionFormModal({
           suffix=" days"
           data-testid="def-reminder-lead-days-input"
         />
+        <ResponsiblePicker
+          value={form.responsible_user_id}
+          onChange={(v) => setForm((f) => ({ ...f, responsible_user_id: v }))}
+          users={users}
+          emptyLabel="unassigned"
+        />
         <CustomFieldsEditor
           value={form.custom_fields}
           onChange={(v) => setForm((f) => ({ ...f, custom_fields: v }))}
@@ -323,6 +338,7 @@ export function Items() {
   const [categories, setCategories] = useState<CategoryResponse[]>([]);
   const [locations, setLocations] = useState<LocationResponse[]>([]);
   const [tags, setTags] = useState<TagResponse[]>([]);
+  const [users, setUsers] = useState<UserSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -349,12 +365,13 @@ export function Items() {
     setLoading(true);
     setLoadError(null);
     try {
-      const [defsRes, kindsRes, catsRes, locsRes, tagsRes] = await Promise.all([
+      const [defsRes, kindsRes, catsRes, locsRes, tagsRes, usersRes] = await Promise.all([
         client.GET("/api/definitions", { params: { query: {} } }),
         client.GET("/api/kinds"),
         client.GET("/api/categories", { params: { query: {} } }),
         client.GET("/api/locations", { params: { query: {} } }),
         client.GET("/api/tags"),
+        client.GET("/api/users"),
       ]);
       if (defsRes.error) {
         setLoadError(t("loadError"));
@@ -365,6 +382,7 @@ export function Items() {
       setCategories(catsRes.data ?? []);
       setLocations(locsRes.data ?? []);
       setTags(tagsRes.data ?? []);
+      setUsers(usersRes.data ?? []);
     } finally {
       setLoading(false);
     }
@@ -467,6 +485,7 @@ export function Items() {
       reminder_lead_days:
         def.reminder_lead_days != null ? String(def.reminder_lead_days) : "",
       custom_fields: def.custom_fields ?? null,
+      responsible_user_id: def.responsible_user_id ?? null,
     });
     setDefError(null);
     setDefModal({ kind: "edit", def });
@@ -511,6 +530,7 @@ export function Items() {
               ? Number(defForm.reminder_lead_days)
               : null,
           custom_fields: defForm.custom_fields ?? null,
+          responsible_user_id: defForm.responsible_user_id,
         },
       });
       if (error) {
@@ -567,6 +587,7 @@ export function Items() {
                 ? Number(defForm.reminder_lead_days)
                 : null,
             custom_fields: defForm.custom_fields ?? null,
+            responsible_user_id: defForm.responsible_user_id,
           },
         },
       );
@@ -771,6 +792,7 @@ export function Items() {
         kinds={kinds}
         categories={categories}
         locations={locations}
+        users={users}
       />
 
       {/* Edit definition modal */}
@@ -786,6 +808,7 @@ export function Items() {
         kinds={kinds}
         categories={categories}
         locations={locations}
+        users={users}
       />
 
       {/* Delete definition modal */}
@@ -879,6 +902,7 @@ export function ItemDetail() {
   const [categories, setCategories] = useState<CategoryResponse[]>([]);
   const [locations, setLocations] = useState<LocationResponse[]>([]);
   const [allDefs, setAllDefs] = useState<DefinitionResponse[]>([]);
+  const [users, setUsers] = useState<UserSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -918,7 +942,7 @@ export function ItemDetail() {
     setLoading(true);
     setLoadError(null);
     try {
-      const [defRes, instsRes, kindsRes, catsRes, locsRes, allDefsRes] =
+      const [defRes, instsRes, kindsRes, catsRes, locsRes, allDefsRes, usersRes] =
         await Promise.all([
           client.GET("/api/definitions/{definition_id}", {
             params: { path: { definition_id: defId } },
@@ -930,6 +954,7 @@ export function ItemDetail() {
           client.GET("/api/categories", { params: { query: {} } }),
           client.GET("/api/locations", { params: { query: {} } }),
           client.GET("/api/definitions", { params: { query: {} } }),
+          client.GET("/api/users"),
         ]);
       if (defRes.error) {
         setLoadError(t("notFound"));
@@ -941,6 +966,7 @@ export function ItemDetail() {
       setCategories(catsRes.data ?? []);
       setLocations(locsRes.data ?? []);
       setAllDefs(allDefsRes.data ?? []);
+      setUsers(usersRes.data ?? []);
     } finally {
       setLoading(false);
     }
@@ -988,6 +1014,7 @@ export function ItemDetail() {
       reminder_lead_days:
         def.reminder_lead_days != null ? String(def.reminder_lead_days) : "",
       custom_fields: def.custom_fields ?? null,
+      responsible_user_id: def.responsible_user_id ?? null,
     });
     setDefError(null);
     setDefModal({ kind: "edit", def });
@@ -1031,6 +1058,7 @@ export function ItemDetail() {
                 ? Number(defForm.reminder_lead_days)
                 : null,
             custom_fields: defForm.custom_fields ?? null,
+            responsible_user_id: defForm.responsible_user_id,
           },
         },
       );
@@ -1103,6 +1131,7 @@ export function ItemDetail() {
       purchase_date: inst.purchase_date ?? "",
       purchase_source: inst.purchase_source ?? "",
       custom_fields: inst.custom_fields ?? null,
+      responsible_user_id: inst.responsible_user_id ?? null,
     });
     setInstError(null);
     setInstModal({ kind: "edit", inst });
@@ -1144,6 +1173,7 @@ export function ItemDetail() {
           purchase_date: instForm.purchase_date.trim() || null,
           purchase_source: instForm.purchase_source.trim() || null,
           custom_fields: instForm.custom_fields ?? null,
+          responsible_user_id: instForm.responsible_user_id,
         },
       });
       if (error) {
@@ -1185,6 +1215,7 @@ export function ItemDetail() {
             purchase_date: instForm.purchase_date.trim() || null,
             purchase_source: instForm.purchase_source.trim() || null,
             custom_fields: instForm.custom_fields ?? null,
+            responsible_user_id: instForm.responsible_user_id,
           },
         },
       );
@@ -1495,6 +1526,16 @@ export function ItemDetail() {
                 </Text>
               </Stack>
             )}
+            <Stack gap={2}>
+              <Text size="xs" c="dimmed" fw={500} tt="uppercase">
+                {t("responsible:displayLabel")}
+              </Text>
+              <Text size="sm" data-testid="def-responsible-display">
+                {def.responsible_user_id != null
+                  ? (users.find((u) => u.id === def.responsible_user_id)?.email ?? String(def.responsible_user_id))
+                  : t("responsible:unassigned")}
+              </Text>
+            </Stack>
           </SimpleGrid>
           {def.custom_fields && Object.keys(def.custom_fields).length > 0 && (
             <>
@@ -1886,6 +1927,7 @@ export function ItemDetail() {
         kinds={kinds}
         categories={categories}
         locations={locations}
+        users={users}
       />
 
       {/* Delete definition modal */}
@@ -1945,6 +1987,7 @@ export function ItemDetail() {
         trackingMode={def?.stock_tracking_mode ?? "exact"}
         isEdit={false}
         definitionDefaultBestBeforeDays={def?.default_best_before_days}
+        users={users}
       />
 
       {/* Edit instance modal */}
@@ -1963,6 +2006,7 @@ export function ItemDetail() {
         trackingMode={def?.stock_tracking_mode ?? "exact"}
         isEdit={true}
         definitionDefaultBestBeforeDays={def?.default_best_before_days}
+        users={users}
       />
 
       {/* Delete instance modal */}

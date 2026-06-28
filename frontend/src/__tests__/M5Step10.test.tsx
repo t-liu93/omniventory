@@ -386,6 +386,7 @@ const baseInstForm: InstanceFormState = {
   purchase_date: "",
   purchase_source: "",
   custom_fields: null,
+  responsible_user_id: null,
 };
 
 function renderInstanceModal(

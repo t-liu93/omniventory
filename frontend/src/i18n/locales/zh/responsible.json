@@ -1,0 +1,7 @@
+{
+  "label": "责任人",
+  "placeholder": "未分配",
+  "displayLabel": "责任人",
+  "unassigned": "未分配",
+  "inheritedFromDef": "继承自定义"
+}

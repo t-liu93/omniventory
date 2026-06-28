@@ -29,6 +29,7 @@ import { useTranslation } from "react-i18next";
 import type { components } from "../api/schema";
 import { formatDate } from "../i18n/format";
 import { CustomFieldsEditor } from "./CustomFieldsEditor";
+import { ResponsiblePicker } from "./ResponsiblePicker";
 
 /**
  * Compute today + N days as an ISO YYYY-MM-DD string (UTC).
@@ -47,6 +48,7 @@ function computeDefaultBestBefore(days: number): string {
 
 type DefinitionResponse = components["schemas"]["DefinitionResponse"];
 type LocationResponse = components["schemas"]["LocationResponse"];
+type UserSummary = components["schemas"]["UserSummary"];
 
 export interface InstanceFormState {
   definition_id: string;
@@ -64,6 +66,8 @@ export interface InstanceFormState {
   purchase_source: string;
   /** M5: arbitrary JSON key/value map; null when empty. */
   custom_fields: Record<string, string | number | boolean | null> | null;
+  /** M6 Step 11: responsible party override (null = inherit from definition). */
+  responsible_user_id: number | null;
 }
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -98,6 +102,11 @@ export interface InstanceFormModalProps {
    * computed date (today + N) and shows a hint. Mode-independent.
    */
   definitionDefaultBestBeforeDays?: number | null;
+  /**
+   * User list for the responsible-party picker (M6 Step 11).
+   * Injected by the parent to avoid redundant fetches. Defaults to [].
+   */
+  users?: UserSummary[];
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -117,6 +126,7 @@ export function InstanceFormModal({
   trackingMode = "exact",
   isEdit = false,
   definitionDefaultBestBeforeDays,
+  users = [],
 }: InstanceFormModalProps) {
   const { t } = useTranslation("instances");
   const { t: tStock } = useTranslation("stock");
@@ -323,6 +333,12 @@ export function InstanceFormModal({
             const value = e.currentTarget.value;
             setForm((f) => ({ ...f, purchase_source: value }));
           }}
+        />
+        <ResponsiblePicker
+          value={form.responsible_user_id}
+          onChange={(v) => setForm((f) => ({ ...f, responsible_user_id: v }))}
+          users={users}
+          emptyLabel="inherited"
         />
         <CustomFieldsEditor
           value={form.custom_fields}

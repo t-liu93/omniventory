@@ -47,6 +47,7 @@ import enRoles from "./locales/en/roles.json";
 import enUsers from "./locales/en/users.json";
 import enInvitations from "./locales/en/invitations.json";
 import enAccount from "./locales/en/account.json";
+import enResponsible from "./locales/en/responsible.json";
 
 // Locale bundles — zh
 import zhCommon from "./locales/zh/common.json";
@@ -73,6 +74,7 @@ import zhRoles from "./locales/zh/roles.json";
 import zhUsers from "./locales/zh/users.json";
 import zhInvitations from "./locales/zh/invitations.json";
 import zhAccount from "./locales/zh/account.json";
+import zhResponsible from "./locales/zh/responsible.json";
 
 const NAMESPACES = [
   "common",
@@ -99,6 +101,7 @@ const NAMESPACES = [
   "users",
   "invitations",
   "account",
+  "responsible",
 ] as const;
 
 i18next
@@ -136,6 +139,7 @@ i18next
         users: enUsers,
         invitations: enInvitations,
         account: enAccount,
+        responsible: enResponsible,
       },
       zh: {
         common: zhCommon,
@@ -162,6 +166,7 @@ i18next
         users: zhUsers,
         invitations: zhInvitations,
         account: zhAccount,
+        responsible: zhResponsible,
       },
     },
     detection: {

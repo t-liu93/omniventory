@@ -1,0 +1,7 @@
+{
+  "label": "Responsible party",
+  "placeholder": "Unassigned",
+  "displayLabel": "Responsible",
+  "unassigned": "Unassigned",
+  "inheritedFromDef": "Inherited from definition"
+}

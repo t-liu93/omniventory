@@ -61,6 +61,7 @@ type InstanceResponse = components["schemas"]["InstanceResponse"];
 type DefinitionResponse = components["schemas"]["DefinitionResponse"];
 type LocationResponse = components["schemas"]["LocationResponse"];
 type MovementResponse = components["schemas"]["MovementResponse"];
+type UserSummary = components["schemas"]["UserSummary"];
 
 function instToForm(inst: InstanceResponse): InstanceFormState {
   return {
@@ -78,6 +79,7 @@ function instToForm(inst: InstanceResponse): InstanceFormState {
     purchase_date: inst.purchase_date ?? "",
     purchase_source: inst.purchase_source ?? "",
     custom_fields: inst.custom_fields ?? null,
+    responsible_user_id: inst.responsible_user_id ?? null,
   };
 }
 
@@ -96,6 +98,7 @@ const emptyForm: InstanceFormState = {
   purchase_date: "",
   purchase_source: "",
   custom_fields: null,
+  responsible_user_id: null,
 };
 
 // ── Detail field helper ───────────────────────────────────────────────────────
@@ -133,6 +136,7 @@ export function InstanceDetail() {
   const { t } = useTranslation("instances");
   const { t: tStock } = useTranslation("stock");
   const { t: tCF } = useTranslation("customFields");
+  const { t: tResponsible } = useTranslation("responsible");
   const { can } = useAuth();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -143,6 +147,7 @@ export function InstanceDetail() {
   const [locations, setLocations] = useState<LocationResponse[]>([]);
   const [allDefs, setAllDefs] = useState<DefinitionResponse[]>([]);
   const [movements, setMovements] = useState<MovementResponse[]>([]);
+  const [users, setUsers] = useState<UserSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -178,7 +183,7 @@ export function InstanceDetail() {
       const instance = instRes.data;
       setInst(instance);
 
-      const [defRes, locsRes, allDefsRes, movRes] = await Promise.all([
+      const [defRes, locsRes, allDefsRes, movRes, usersRes] = await Promise.all([
         client.GET("/api/definitions/{definition_id}", {
           params: { path: { definition_id: instance.definition_id } },
         }),
@@ -187,11 +192,13 @@ export function InstanceDetail() {
         client.GET("/api/instances/{instance_id}/movements", {
           params: { path: { instance_id: instId } },
         }),
+        client.GET("/api/users"),
       ]);
       setDef(defRes.data ?? null);
       setLocations(locsRes.data ?? []);
       setAllDefs(allDefsRes.data ?? []);
       setMovements(movRes.data ?? []);
+      setUsers(usersRes.data ?? []);
     } finally {
       setLoading(false);
     }
@@ -248,6 +255,7 @@ export function InstanceDetail() {
           purchase_date: form.purchase_date.trim() || null,
           purchase_source: form.purchase_source.trim() || null,
           custom_fields: form.custom_fields ?? null,
+          responsible_user_id: form.responsible_user_id,
         },
       });
       if (error) {
@@ -524,6 +532,16 @@ export function InstanceDetail() {
             label={t("detail.createdField")}
             value={formatDate(inst.created_at)}
           />
+          <Stack gap={2}>
+            <Text size="xs" c="dimmed" fw={500}>
+              {tResponsible("displayLabel")}
+            </Text>
+            <Text size="sm" data-testid="inst-responsible-display">
+              {inst.responsible_user_id != null
+                ? (users.find((u) => u.id === inst.responsible_user_id)?.email ?? String(inst.responsible_user_id))
+                : tResponsible("inheritedFromDef")}
+            </Text>
+          </Stack>
         </SimpleGrid>
         {inst.custom_fields && Object.keys(inst.custom_fields).length > 0 && (
           <>
@@ -716,6 +734,7 @@ export function InstanceDetail() {
         lockDefinition
         trackingMode={def?.stock_tracking_mode ?? "exact"}
         isEdit={true}
+        users={users}
       />
 
       {/* Delete confirmation modal */}
