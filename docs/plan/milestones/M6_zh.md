@@ -316,14 +316,19 @@ recipients_for(subject):
 ### 7.3 公开 token 页(`pages/AcceptInvite.tsx`、`pages/ResetPassword.tsx`)
 **预登录**页(像 Login/Setup)。`App.tsx` 的门必须在 `me` 检查**之前**路由 `/invite/accept` 与 `/password-reset/accept`(它们无会话工作):从 query 读 `token`,调 `GET …/accept` 校验,渲染设密码表单,POST,然后跳 Login。这是对外层鉴权门的唯一改动(在 `loading`/`anon` 分支里的一个小路径检查,或提升一个极小公开路由)。
 
-### 7.4 改密(资料)
-资料/账户区一个"改密"表单(当前 + 新 + 确认),调 `POST /auth/change-password`,浮现 `auth.password_incorrect`。
+### 7.4 自助账户 / 偏好页(`pages/Account.tsx`)
+一个**自助**页,**所有角色**经用户菜单可达(区别于 admin 专属的 **Configuration** 页)。它承载用户对*自己*的全部管理项:
+- **改密**(当前 + 新 + 确认)→ `POST /auth/change-password`,浮现 `auth.password_incorrect`(Step 10)。
+- **每用户提醒提前期**(`reminder_best_before_lead_days` / `reminder_warranty_lead_days`,`PATCH /auth/me`)—— **从** Step 8 已门控为 `MANAGE_SETTINGS` 的 admin **Configuration** 页**迁入此处**(Step 10)。
+- **每用户通知开关**(站内收件箱 + 邮件摘要)→ `PATCH /auth/me`(Step 12,§7.6)。
+
+理由(M6 实施期间敲定的决策):Step 8 把 **Configuration** 改为 admin-only,故原本放在那里的**自助**每用户提醒偏好必须迁到非管理员也能到达的界面 —— 否则 member/viewer 会失去对自己提醒的控制。**Configuration** 仅保留**全局**提醒 + 通道配置(admin)。语言仍在头部 `LanguageSwitcher`。
 
 ### 7.5 责任人指派
 定义表单(`DefinitionFormModal`)与实例表单(`InstanceFormModal`)上一个**用户选择器**(在 `GET /users` 上自动补全、可清空),外加详情页一行只读"责任人:…"。清空 = 继承(实例 → 定义)/ 未指派(定义)。
 
 ### 7.6 按用户通知偏好
-偏好区(与 M1.5/M4 的语言 + lead-time 偏好并列)两个开关 —— **站内收件箱**与**邮件摘要**,经 `PATCH /auth/me` 持久化。
+自助 **Account** 页(§7.4,与每用户提醒提前期偏好并列)上两个开关 —— **站内收件箱**与**邮件摘要**,经 `PATCH /auth/me` 持久化。
 
 ### 7.7 审计日志页(`pages/Audit.tsx`,admin)
 一张只读、分页表(时间、事件、操作者、目标、细节),带按 事件类型 / 操作者 / 日期范围 的过滤。
@@ -404,7 +409,7 @@ recipients_for(subject):
 - **提交:** `feat(frontend): users administration and invitations`
 
 **步骤 10 — 公开接受页 + 改密**
-- **构建:** `pages/AcceptInvite.tsx` + `pages/ResetPassword.tsx`(预登录,token 取自 query)+ `App.tsx` 门改动以匿名路由它们;资料/账户区改密表单;`account` 命名空间(en+zh)。
+- **构建:** `pages/AcceptInvite.tsx` + `pages/ResetPassword.tsx`(预登录,token 取自 query)+ `App.tsx` 门改动以匿名路由它们;一个自助 **`pages/Account.tsx`**(所有角色、经用户菜单进入)承载改密表单**以及从** admin Configuration 页**迁出的**每用户提醒提前期偏好(§7.4);`account` 命名空间(en+zh)。
 - **测试:** 接受邀请设密码→登录;接受重置;无效 token 态;改密 当前错/对。
 - **提交:** `feat(frontend): invite/reset accept pages and change-password`
 
@@ -414,7 +419,7 @@ recipients_for(subject):
 - **提交:** `feat(frontend): responsible-party assignment`
 
 **步骤 12 — 按用户通知偏好 UI**
-- **构建:** 偏好区站内 + 邮件摘要开关,经 `PATCH /auth/me` 持久化。
+- **构建:** 自助 **Account** 页(§7.4/§7.6)站内 + 邮件摘要开关,经 `PATCH /auth/me` 持久化。
 - **测试:** 开关往返;反映服务端态。
 - **提交:** `feat(frontend): per-user notification preferences`
 
