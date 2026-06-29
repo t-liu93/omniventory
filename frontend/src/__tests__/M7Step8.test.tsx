@@ -108,6 +108,7 @@ const notifMaintenanceNormal = {
     next_due_date: "2026-07-06",
     days_remaining: 7,
     location_id: 1,
+    instance_id: 42,
   },
   offset_days: null,
   created_at: "2026-06-29T08:00:00Z",
@@ -127,6 +128,7 @@ const notifMaintenanceOverdue = {
     next_due_date: "2026-06-26",
     days_remaining: -3,
     location_id: 2,
+    instance_id: 43,
   },
   offset_days: null,
   created_at: "2026-06-29T08:00:00Z",
@@ -541,7 +543,7 @@ describe("/notifications page — renders reminder.maintenance", () => {
     });
   });
 
-  it("maintenance notification subject links to /instances/:id (schedule type renders instance link)", async () => {
+  it("maintenance notification subject links to /instances/:id via params.instance_id", async () => {
     vi.mocked(client.GET).mockImplementation(async (path: AnyResult) => {
       if (path === "/api/notifications") {
         return { data: [notifMaintenanceNormal], response: new Response(null, { status: 200 }) };
@@ -552,9 +554,46 @@ describe("/notifications page — renders reminder.maintenance", () => {
     renderNotificationsPage();
 
     await waitFor(() => {
-      // subject_type = "maintenance_schedule" falls to the /items/:id path in subjectLink
-      // (the backend may route it differently, but we test the current behavior)
-      expect(screen.getByTestId("notification-subject-link-10")).toBeDefined();
+      const link = screen.getByTestId("notification-subject-link-10");
+      expect(link).toBeDefined();
+      // Must navigate to the owning instance, not to /items/{scheduleId}
+      const href = link.getAttribute("href") ?? "";
+      expect(href).toContain("/instances/42");
+      expect(href).not.toContain("/items/");
+    });
+  });
+
+  it("maintenance notification without instance_id falls back to dashboard, not /items/", async () => {
+    const legacyNotif = {
+      ...notifMaintenanceNormal,
+      id: 20,
+      params: {
+        name: "Old schedule",
+        instance_name: "Old device",
+        next_due_date: "2026-07-06",
+        days_remaining: 7,
+        location_id: 1,
+        // instance_id intentionally absent (legacy row)
+      },
+    };
+
+    vi.mocked(client.GET).mockImplementation(async (path: AnyResult) => {
+      if (path === "/api/notifications") {
+        return { data: [legacyNotif], response: new Response(null, { status: 200 }) };
+      }
+      return { data: null, error: {}, response: new Response(null, { status: 404 }) };
+    });
+
+    renderNotificationsPage();
+
+    await waitFor(() => {
+      const link = screen.getByTestId("notification-subject-link-20");
+      expect(link).toBeDefined();
+      const href = link.getAttribute("href") ?? "";
+      // Legacy fallback: must NOT link to /items/{scheduleId}
+      expect(href).not.toContain("/items/");
+      // Falls back to the dashboard root
+      expect(href).toBe("/");
     });
   });
 });

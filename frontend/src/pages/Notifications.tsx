@@ -74,6 +74,13 @@ function localizeMessage(n: Notification, t: TFunction<any, any>): string {
 /** Resolve the subject link based on subject_type. */
 function subjectLink(n: Notification): string {
   if (n.subject_type === "instance") return `/instances/${n.subject_id}`;
+  if (n.subject_type === "maintenance_schedule") {
+    const instanceId = n.params?.["instance_id"];
+    if (typeof instanceId === "number") return `/instances/${instanceId}`;
+    // Legacy rows created before instance_id was added to params: no safe instance
+    // target — fall back to the dashboard rather than a wrong /items/{scheduleId}.
+    return "/";
+  }
   return `/items/${n.subject_id}`;
 }
 
@@ -206,7 +213,7 @@ export function Notifications() {
                         size="sm"
                         data-testid={`notification-subject-link-${n.id}`}
                       >
-                        {n.subject_type === "instance"
+                        {n.subject_type === "instance" || n.subject_type === "maintenance_schedule"
                           ? t("subject.viewInstance")
                           : t("subject.viewItem")}
                       </Anchor>

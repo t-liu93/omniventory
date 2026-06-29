@@ -585,6 +585,7 @@ class TestMaintenanceFiring:
         assert len(notifs) == 1
         params = json.loads(notifs[0].params)
         assert params["days_remaining"] == -5  # (next_due - today).days = -5
+        assert params["instance_id"] == inst.id  # type: ignore[attr-defined]
 
     def test_lead_zero_fires_on_due_date(self, db: DBSession) -> None:
         """lead_days=0 fires exactly on the due date."""
@@ -703,6 +704,30 @@ class TestMaintenanceFiring:
         params = json.loads(notifs[0].params)
         # days_remaining = (next_due - today).days = 200 (positive, window was opened long ago)
         assert params["days_remaining"] == 200
+        assert params["instance_id"] == inst.id  # type: ignore[attr-defined]
+
+    def test_params_include_instance_id(self, db: DBSession) -> None:
+        """Maintenance notification params carry instance_id for frontend deep-linking."""
+        _, kind = _seed_base(db)
+        _make_user(db, "a@test.com")
+        defn = _make_definition(db, kind.id)
+        inst = _make_instance(db, defn.id)
+
+        today = date(2026, 7, 10)
+        _make_schedule(db, inst.id, next_due_date=today, lead_days=0)  # type: ignore[attr-defined]
+
+        from app.services.reminder_engine import ReminderEngine
+
+        summary = ReminderEngine(db).run_scan(today_local=today)
+        assert summary.maintenance == 1
+
+        notifs = _maintenance_notifs(db)
+        assert len(notifs) == 1
+        params = json.loads(notifs[0].params)
+        # instance_id must equal the owning stock instance's id so the frontend
+        # can link maintenance notifications to /instances/{instance_id}.
+        assert "instance_id" in params
+        assert params["instance_id"] == inst.id  # type: ignore[attr-defined]
 
 
 # ---------------------------------------------------------------------------

@@ -891,6 +891,7 @@ class ReminderEngine:
                     "next_due_date": s.next_due_date.isoformat(),
                     "days_remaining": (s.next_due_date - today_local).days,
                     "location_id": s.instance.location_id,
+                    "instance_id": s.instance_id,
                 }
                 notification, created = self._notification_repo.create_if_absent(
                     user_id=u.id,
