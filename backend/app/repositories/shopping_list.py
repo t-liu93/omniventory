@@ -51,6 +51,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.shopping_list_item import ShoppingListItem
+from app.repositories._update_guard import reject_null_on_non_nullable
 
 
 class ShoppingListRepository:
@@ -166,7 +167,15 @@ class ShoppingListRepository:
 
         SQLAlchemy's ``onupdate=func.now()`` on ``updated_at`` ensures the
         timestamp is refreshed when the row is flushed.
+
+        Raises
+        ------
+        AppError(validation.invalid_input, 422)
+            When any field maps to a NOT NULL column and the supplied value is
+            ``None`` (guard: converts a potential IntegrityError 500 to a clean
+            422 before the flush).
         """
+        reject_null_on_non_nullable(item, fields)
         for key, value in fields.items():
             setattr(item, key, value)
         self._db.flush()

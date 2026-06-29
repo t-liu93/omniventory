@@ -39,6 +39,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.models.maintenance_schedule import MaintenanceSchedule
 from app.models.stock_instance import StockInstance
+from app.repositories._update_guard import reject_null_on_non_nullable
 
 
 class MaintenanceScheduleRepository:
@@ -178,7 +179,15 @@ class MaintenanceScheduleRepository:
 
         SQLAlchemy's ``onupdate=func.now()`` on ``updated_at`` ensures the
         timestamp is refreshed when the row is flushed.
+
+        Raises
+        ------
+        AppError(validation.invalid_input, 422)
+            When any field maps to a NOT NULL column and the supplied value is
+            ``None`` (guard: converts a potential IntegrityError 500 to a clean
+            422 before the flush).
         """
+        reject_null_on_non_nullable(schedule, fields)
         for key, value in fields.items():
             setattr(schedule, key, value)
         self._db.flush()
