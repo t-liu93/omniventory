@@ -65,6 +65,9 @@
     "cannot_reverse_reversal": "Cannot reverse movement #{{id}} because it is itself a reversal.",
     "reverse_would_go_negative": "Reversing movement #{{id}} would drive the lot quantity below zero."
   },
+  "shopping_list": {
+    "not_found": "Shopping list item #{{id}} was not found."
+  },
   "notification": {
     "not_found": "Notification #{{id}} was not found."
   },

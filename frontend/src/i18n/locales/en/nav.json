@@ -19,6 +19,7 @@
   "languageZh": "中文",
   "userMenu": "User menu",
   "language": "Language",
+  "shoppingList": "Shopping List",
   "account": "My Account",
   "success": {
     "languageSaved": "Language preference saved."

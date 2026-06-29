@@ -46,6 +46,7 @@ import { AcceptInvite } from "./pages/AcceptInvite";
 import { ResetPassword } from "./pages/ResetPassword";
 import { Account } from "./pages/Account";
 import { Audit } from "./pages/Audit";
+import { ShoppingList } from "./pages/ShoppingList";
 
 type AuthState = "loading" | "setup" | "authed" | "anon";
 type UserData = components["schemas"]["UserResponse"];
@@ -146,6 +147,7 @@ function App() {
             <Route path="/items" element={<Items />} />
             <Route path="/items/:id" element={<ItemDetail />} />
             <Route path="/instances/:id" element={<InstanceDetail />} />
+            <Route path="/shopping-list" element={<ShoppingList />} />
             <Route path="/low-stock" element={<LowStock />} />
             <Route path="/expiring" element={<Expiring />} />
             <Route path="/notifications" element={<Notifications />} />

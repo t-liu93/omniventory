@@ -49,6 +49,7 @@ import enInvitations from "./locales/en/invitations.json";
 import enAccount from "./locales/en/account.json";
 import enResponsible from "./locales/en/responsible.json";
 import enAudit from "./locales/en/audit.json";
+import enShoppingList from "./locales/en/shoppingList.json";
 
 // Locale bundles — zh
 import zhCommon from "./locales/zh/common.json";
@@ -77,6 +78,7 @@ import zhInvitations from "./locales/zh/invitations.json";
 import zhAccount from "./locales/zh/account.json";
 import zhResponsible from "./locales/zh/responsible.json";
 import zhAudit from "./locales/zh/audit.json";
+import zhShoppingList from "./locales/zh/shoppingList.json";
 
 const NAMESPACES = [
   "common",
@@ -105,6 +107,7 @@ const NAMESPACES = [
   "account",
   "responsible",
   "audit",
+  "shoppingList",
 ] as const;
 
 i18next
@@ -144,6 +147,7 @@ i18next
         account: enAccount,
         responsible: enResponsible,
         audit: enAudit,
+        shoppingList: enShoppingList,
       },
       zh: {
         common: zhCommon,
@@ -172,6 +176,7 @@ i18next
         account: zhAccount,
         responsible: zhResponsible,
         audit: zhAudit,
+        shoppingList: zhShoppingList,
       },
     },
     detection: {

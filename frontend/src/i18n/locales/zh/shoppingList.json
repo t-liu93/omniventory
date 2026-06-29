@@ -1,0 +1,67 @@
+{
+  "title": "购物清单",
+  "empty": "购物清单为空。",
+  "section": {
+    "open": "待购买",
+    "purchased": "已购买 ({{count}})"
+  },
+  "source": {
+    "auto": "自动",
+    "manual": "手动"
+  },
+  "col": {
+    "name": "名称",
+    "source": "来源",
+    "quantity": "数量",
+    "note": "备注"
+  },
+  "actions": {
+    "addItem": "添加物品",
+    "refresh": "刷新",
+    "clearPurchased": "清除已购",
+    "checkOff": "勾选",
+    "uncheck": "取消勾选",
+    "delete": "删除",
+    "edit": "编辑"
+  },
+  "addModal": {
+    "title": "添加购物清单项目",
+    "definitionLabel": "物品定义（可选）",
+    "nameLabel": "名称",
+    "namePlaceholder": "例如：纸巾",
+    "quantityLabel": "数量",
+    "unitLabel": "单位",
+    "noteLabel": "备注",
+    "definitionOrNameHint": "请提供物品定义或自由文本名称（至少填写一项）。",
+    "submit": "添加"
+  },
+  "editModal": {
+    "title": "编辑物品",
+    "quantityLabel": "期望数量",
+    "noteLabel": "备注",
+    "submit": "保存"
+  },
+  "checkModal": {
+    "title": "勾选物品",
+    "intakeSection": "可选：添加到库存",
+    "intakeHint": "填写位置和/或数量，将通过 M2 入库台账创建新的库存批次。",
+    "locationLabel": "位置",
+    "noLocation": "（无位置）",
+    "quantityLabel": "数量",
+    "justCheckOff": "仅勾选",
+    "addToStock": "勾选并入库"
+  },
+  "errors": {
+    "loadFailed": "加载购物清单失败。"
+  },
+  "success": {
+    "added": "物品已添加到购物清单。",
+    "edited": "物品已更新。",
+    "checked": "已勾选。",
+    "checkedWithIntake": "已勾选并入库。",
+    "unchecked": "已取消勾选。",
+    "deleted": "物品已移除。",
+    "cleared": "已购项目已清除。",
+    "refreshed": "购物清单已刷新。"
+  }
+}

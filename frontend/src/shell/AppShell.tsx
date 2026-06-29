@@ -61,6 +61,7 @@ import {
   Search as SearchIcon,
   Users,
   FileText,
+  ShoppingCart,
 } from "react-feather";
 import { useTranslation } from "react-i18next";
 import { client } from "../api/client";
@@ -212,6 +213,12 @@ function NavContent({ onClose }: { onClose?: () => void }) {
         to="/items"
         label={t("items")}
         icon={<Package size={16} />}
+        onClick={onClose}
+      />
+      <NavItem
+        to="/shopping-list"
+        label={t("shoppingList")}
+        icon={<ShoppingCart size={16} />}
         onClick={onClose}
       />
       <NavItem

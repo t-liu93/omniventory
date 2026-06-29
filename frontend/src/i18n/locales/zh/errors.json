@@ -65,6 +65,9 @@
     "cannot_reverse_reversal": "无法撤销库存移动记录 #{{id}}，因为它本身是一条撤销记录。",
     "reverse_would_go_negative": "撤销库存移动记录 #{{id}} 将导致批次数量变为负数。"
   },
+  "shopping_list": {
+    "not_found": "未找到购物清单项目 #{{id}}。"
+  },
   "notification": {
     "not_found": "未找到通知 #{{id}}。"
   },

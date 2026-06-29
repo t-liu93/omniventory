@@ -1,0 +1,67 @@
+{
+  "title": "Shopping List",
+  "empty": "Nothing on the shopping list.",
+  "section": {
+    "open": "To buy",
+    "purchased": "Purchased ({{count}})"
+  },
+  "source": {
+    "auto": "Auto",
+    "manual": "Manual"
+  },
+  "col": {
+    "name": "Name",
+    "source": "Source",
+    "quantity": "Quantity",
+    "note": "Note"
+  },
+  "actions": {
+    "addItem": "Add item",
+    "refresh": "Refresh",
+    "clearPurchased": "Clear purchased",
+    "checkOff": "Check off",
+    "uncheck": "Uncheck",
+    "delete": "Delete",
+    "edit": "Edit"
+  },
+  "addModal": {
+    "title": "Add item to shopping list",
+    "definitionLabel": "Item definition (optional)",
+    "nameLabel": "Name",
+    "namePlaceholder": "e.g. Paper towels",
+    "quantityLabel": "Quantity",
+    "unitLabel": "Unit",
+    "noteLabel": "Note",
+    "definitionOrNameHint": "Provide an item definition or a free-text name (at least one required).",
+    "submit": "Add"
+  },
+  "editModal": {
+    "title": "Edit item",
+    "quantityLabel": "Desired quantity",
+    "noteLabel": "Note",
+    "submit": "Save"
+  },
+  "checkModal": {
+    "title": "Check off item",
+    "intakeSection": "Optionally add to stock",
+    "intakeHint": "Fill in location and/or quantity to create a new stock lot via the M2 intake ledger.",
+    "locationLabel": "Location",
+    "noLocation": "(no location)",
+    "quantityLabel": "Quantity",
+    "justCheckOff": "Just check off",
+    "addToStock": "Check off & add to stock"
+  },
+  "errors": {
+    "loadFailed": "Failed to load the shopping list."
+  },
+  "success": {
+    "added": "Item added to the shopping list.",
+    "edited": "Item updated.",
+    "checked": "Checked off.",
+    "checkedWithIntake": "Checked off and added to stock.",
+    "unchecked": "Unchecked.",
+    "deleted": "Item removed.",
+    "cleared": "Purchased items cleared.",
+    "refreshed": "Shopping list refreshed."
+  }
+}
