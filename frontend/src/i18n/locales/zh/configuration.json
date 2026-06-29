@@ -5,6 +5,7 @@
   },
   "section": {
     "reminders": "提醒（全局默认）",
+    "shoppingList": "购物清单",
     "channels": "通知渠道",
     "email": "邮件 / SMTP",
     "http": "HTTP",
@@ -22,8 +23,16 @@
     "scanTimeLabel": "每日扫描时间（HH:MM）",
     "scanTimeDescription": "提醒扫描每天运行的时间（家庭本地时间，24 小时制）。",
     "scanTimePlaceholder": "例如 08:00",
+    "maintenanceLeadDaysLabel": "维护提前量（天）",
+    "maintenanceLeadDaysDescription": "在维护日期前多少天触发提醒。",
     "saveReminders": "保存提醒设置",
     "savedReminders": "提醒设置已保存。"
+  },
+  "shoppingList": {
+    "autoAddLowStockLabel": "自动添加低库存物品",
+    "autoAddLowStockDescription": "当库存低于阈值时，自动将物品添加到购物清单。",
+    "saveShoppingList": "保存购物清单设置",
+    "savedShoppingList": "购物清单设置已保存。"
   },
   "email": {
     "enabledLabel": "启用邮件（SMTP）",
@@ -99,7 +108,7 @@
   "scan": {
     "runNow": "立即执行扫描",
     "running": "执行中…",
-    "result": "扫描完成 — 最佳食用期：{{best_before}}，保修：{{warranty}}，低库存：{{low_stock}} 条新通知。",
+    "result": "扫描完成 — 最佳食用期：{{best_before}}，保修：{{warranty}}，低库存：{{low_stock}}，维护：{{maintenance}} 条新通知。",
     "error": "扫描失败，请重试。"
   },
   "loadError": "加载配置失败。",

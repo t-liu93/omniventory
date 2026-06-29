@@ -62,6 +62,20 @@ function localizeNotification(n: Notification, t: TFunction<any, any>): string {
     formattedParams["current"] = levelLabel;
     formattedParams["threshold"] = levelLabel;
   }
+  // Maintenance reminders: format next_due_date and select overdue vs normal key.
+  if (n.message_code === "reminder.maintenance") {
+    if (typeof formattedParams["next_due_date"] === "string") {
+      formattedParams["next_due_date"] = formatDate(formattedParams["next_due_date"] as string);
+    }
+    const daysRemaining =
+      typeof formattedParams["days_remaining"] === "number"
+        ? (formattedParams["days_remaining"] as number)
+        : 0;
+    if (daysRemaining < 0) {
+      formattedParams["days_overdue"] = Math.abs(daysRemaining);
+      return t("reminder.maintenance_overdue", { ns: "notifications", ...formattedParams }) as string;
+    }
+  }
   return t(n.message_code, { ns: "notifications", ...formattedParams }) as string;
 }
 

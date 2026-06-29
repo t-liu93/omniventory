@@ -25,7 +25,9 @@
     "best_before": "{{name}} 将于 {{date}} 到期（剩余 {{days_remaining}} 天）",
     "warranty": "{{name}} 保修将于 {{date}} 到期（剩余 {{days_remaining}} 天）",
     "low_stock": "{{name}} 库存不足（当前：{{current}}，阈值：{{threshold}}）",
-    "low_stock_repeat": "{{name}} 库存仍然不足（当前：{{current}}，阈值：{{threshold}}，已持续 {{offset}} 天）"
+    "low_stock_repeat": "{{name}} 库存仍然不足（当前：{{current}}，阈值：{{threshold}}，已持续 {{offset}} 天）",
+    "maintenance": "{{instance_name}} 的维护任务「{{name}}」将于 {{next_due_date}} 到期（剩余 {{days_remaining}} 天）",
+    "maintenance_overdue": "{{instance_name}} 的维护任务「{{name}}」已逾期 {{days_overdue}} 天（原计划 {{next_due_date}}）"
   },
   "level": {
     "low": "低",

@@ -174,10 +174,16 @@ export function Configuration() {
   // ── Reminders (global) form ──
   const [bbLeadDays, setBbLeadDays] = useState<string>("");
   const [wLeadDays, setWLeadDays] = useState<string>("");
+  const [maintenanceLeadDays, setMaintenanceLeadDays] = useState<string>("");
   const [repeatDaysRaw, setRepeatDaysRaw] = useState<string>("");
   const [scanTime, setScanTime] = useState<string>("");
   const [remindersBusy, setRemindersBusy] = useState(false);
   const [remindersError, setRemindersError] = useState<string | null>(null);
+
+  // ── Shopping list form ──
+  const [autoAddLowStock, setAutoAddLowStock] = useState(true);
+  const [shoppingListBusy, setShoppingListBusy] = useState(false);
+  const [shoppingListError, setShoppingListError] = useState<string | null>(null);
 
   // ── Email channel form ──
   const [emailEnabled, setEmailEnabled] = useState(false);
@@ -225,7 +231,7 @@ export function Configuration() {
 
   // ── Run scan ──
   const [scanBusy, setScanBusy] = useState(false);
-  const [scanResult, setScanResult] = useState<{ best_before: number; warranty: number; low_stock: number } | null>(null);
+  const [scanResult, setScanResult] = useState<{ best_before: number; warranty: number; low_stock: number; maintenance: number } | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
 
   // ── Load data ─────────────────────────────────────────────────────────────
@@ -247,8 +253,12 @@ export function Configuration() {
       // Populate reminders (global) form
       setBbLeadDays(String(s.reminders.best_before_lead_days));
       setWLeadDays(String(s.reminders.warranty_lead_days));
+      setMaintenanceLeadDays(String(s.reminders.maintenance_lead_days));
       setRepeatDaysRaw(s.reminders.low_stock_repeat_days.join(","));
       setScanTime(s.reminders.scan_time);
+
+      // Populate shopping list form
+      setAutoAddLowStock(s.shopping_list.auto_add_low_stock);
 
       // Populate email form
       const em = s.channels.email;
@@ -317,6 +327,7 @@ export function Configuration() {
           reminders: {
             best_before_lead_days: bbLeadDays !== "" ? Number(bbLeadDays) : undefined,
             warranty_lead_days: wLeadDays !== "" ? Number(wLeadDays) : undefined,
+            maintenance_lead_days: maintenanceLeadDays !== "" ? Number(maintenanceLeadDays) : undefined,
             low_stock_repeat_days: repeatDays,
             scan_time: scanTime || undefined,
           },
@@ -330,6 +341,28 @@ export function Configuration() {
       await loadAll();
     } finally {
       setRemindersBusy(false);
+    }
+  }
+
+  async function handleSaveShoppingList() {
+    setShoppingListBusy(true);
+    setShoppingListError(null);
+    try {
+      const { error } = await client.PATCH("/api/settings", {
+        body: {
+          shopping_list: {
+            auto_add_low_stock: autoAddLowStock,
+          },
+        },
+      });
+      if (error) {
+        setShoppingListError(mapApiError(error));
+        return;
+      }
+      notifySuccess(t("shoppingList.savedShoppingList"));
+      await loadAll();
+    } finally {
+      setShoppingListBusy(false);
     }
   }
 
@@ -572,6 +605,16 @@ export function Configuration() {
               suffix=" days"
               data-testid="reminders-warranty-lead-input"
             />
+            <NumberInput
+              label={t("reminders.maintenanceLeadDaysLabel")}
+              description={t("reminders.maintenanceLeadDaysDescription")}
+              value={maintenanceLeadDays === "" ? "" : Number(maintenanceLeadDays)}
+              onChange={(v) => setMaintenanceLeadDays(v === "" ? "" : String(Math.round(Number(v))))}
+              min={0}
+              allowDecimal={false}
+              suffix=" days"
+              data-testid="reminders-maintenance-lead-input"
+            />
             <TextInput
               label={t("reminders.lowStockRepeatDaysLabel")}
               description={t("reminders.lowStockRepeatDaysDescription")}
@@ -596,6 +639,38 @@ export function Configuration() {
                 data-testid="save-reminders-btn"
               >
                 {t("reminders.saveReminders")}
+              </Button>
+            </Group>
+          </Stack>
+        </Paper>
+
+        {/* ── Shopping list ─────────────────────────────────────────────── */}
+        <Paper withBorder p="md">
+          <Stack gap="sm">
+            <Title order={4}>{t("section.shoppingList")}</Title>
+            <Divider />
+
+            {shoppingListError && (
+              <Alert icon={<AlertCircle size={16} />} color="red" variant="light" data-testid="shopping-list-error">
+                {shoppingListError}
+              </Alert>
+            )}
+
+            <Switch
+              label={t("shoppingList.autoAddLowStockLabel")}
+              description={t("shoppingList.autoAddLowStockDescription")}
+              checked={autoAddLowStock}
+              onChange={(e) => setAutoAddLowStock(e.currentTarget.checked)}
+              data-testid="shopping-list-auto-add-switch"
+            />
+
+            <Group justify="flex-end">
+              <Button
+                onClick={() => void handleSaveShoppingList()}
+                loading={shoppingListBusy}
+                data-testid="save-shopping-list-btn"
+              >
+                {t("shoppingList.saveShoppingList")}
               </Button>
             </Group>
           </Stack>
@@ -988,6 +1063,7 @@ export function Configuration() {
                   best_before: scanResult.best_before,
                   warranty: scanResult.warranty,
                   low_stock: scanResult.low_stock,
+                  maintenance: scanResult.maintenance,
                 })}
               </Alert>
             )}

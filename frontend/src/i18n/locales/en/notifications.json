@@ -25,7 +25,9 @@
     "best_before": "{{name}} expires on {{date}} ({{days_remaining}} days remaining)",
     "warranty": "{{name}} warranty expires on {{date}} ({{days_remaining}} days remaining)",
     "low_stock": "{{name}} is running low (current: {{current}}, threshold: {{threshold}})",
-    "low_stock_repeat": "{{name}} is still running low (current: {{current}}, threshold: {{threshold}}, since {{offset}} days ago)"
+    "low_stock_repeat": "{{name}} is still running low (current: {{current}}, threshold: {{threshold}}, since {{offset}} days ago)",
+    "maintenance": "{{name}} on {{instance_name}} due {{next_due_date}} ({{days_remaining}} days remaining)",
+    "maintenance_overdue": "{{name}} on {{instance_name}} is {{days_overdue}} days overdue (was due {{next_due_date}})"
   },
   "level": {
     "low": "low",

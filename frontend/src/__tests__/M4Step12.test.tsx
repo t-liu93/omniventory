@@ -77,8 +77,12 @@ const baseSettings: AnyResult = {
   reminders: {
     best_before_lead_days: 3,
     warranty_lead_days: 30,
+    maintenance_lead_days: 7,
     low_stock_repeat_days: [1, 3, 7],
     scan_time: "08:00",
+  },
+  shopping_list: {
+    auto_add_low_stock: true,
   },
   channels: {
     email: {

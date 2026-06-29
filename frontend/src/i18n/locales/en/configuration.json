@@ -5,6 +5,7 @@
   },
   "section": {
     "reminders": "Reminders (global defaults)",
+    "shoppingList": "Shopping list",
     "channels": "Channels",
     "email": "Email / SMTP",
     "http": "HTTP",
@@ -22,8 +23,16 @@
     "scanTimeLabel": "Daily scan time (HH:MM)",
     "scanTimeDescription": "Time of day the reminder scan runs (household local time, 24-hour format).",
     "scanTimePlaceholder": "e.g. 08:00",
+    "maintenanceLeadDaysLabel": "Maintenance lead (days)",
+    "maintenanceLeadDaysDescription": "How many days before a maintenance date to trigger a reminder.",
     "saveReminders": "Save reminder settings",
     "savedReminders": "Reminder settings saved."
+  },
+  "shoppingList": {
+    "autoAddLowStockLabel": "Auto-add low-stock items",
+    "autoAddLowStockDescription": "Automatically add items to the shopping list when stock falls below threshold.",
+    "saveShoppingList": "Save shopping list settings",
+    "savedShoppingList": "Shopping list settings saved."
   },
   "email": {
     "enabledLabel": "Enable email (SMTP)",
@@ -99,7 +108,7 @@
   "scan": {
     "runNow": "Run scan now",
     "running": "Running…",
-    "result": "Scan complete — best-before: {{best_before}}, warranty: {{warranty}}, low-stock: {{low_stock}} new notifications.",
+    "result": "Scan complete — best-before: {{best_before}}, warranty: {{warranty}}, low-stock: {{low_stock}}, maintenance: {{maintenance}} new notifications.",
     "error": "Scan failed. Please try again."
   },
   "loadError": "Failed to load configuration.",
