@@ -36,7 +36,7 @@
 | 领域 | 决策 |
 |---|---|
 | **购物清单是*持久化表*,不是计算视图** | 一份计算式"显示哪些低了"的清单无法承载 roadmap M7 要求的**手动条目**与**勾选状态**。所以用一张真实的 `shopping_list_items` 表,同时承载**`manual`**行(用户录入)与**`auto`**行(由低库存物化)。这镜像 Grocy 的真实购物清单表,并让行携带欲购数量、备注、已购状态。 |
-| **自动行靠*对账*,而非实时** | `auto` 行由一个**幂等对账 pass**(`ShoppingListService.reconcile_auto_items()`)插入/删除,它读取 `LowStockService.compute()` —— 与 M4 消费的同一信号。它为每个当前低、却**完全没有自动行**(开放或已勾选)的定义**开**一行,并**删除**任何**开放未勾选**、其定义已恢复的自动行(**已勾选**的自动行留到*清空已购*为止 —— §4.3)。**部分唯一索引** `(definition_id) WHERE source='auto'` 是"**每定义恰好一条自动行,不论已购状态**"的数据库兜底 —— 做成与状态无关意味着勾选(只盖 `purchased_at`)永远不会产生第二条自动行,故取消勾选时不会冲突。由 `shopping_list.auto_add_low_stock` 设置控制(默认**true**)。 |
+| **自动行靠*对账*,而非实时** | `auto` 行由一个**幂等对账 pass**(`ShoppingListService.reconcile_auto_items()`)插入/删除,它读取 `LowStockService.compute()` —— 与 M4 消费的同一信号。它为每个当前低的定义**开**一条开放自动行:若不存在则创建;若存在一条已勾选的自动行(勾选后未补货),则**重开**它(`purchased_at` 清空),使建议重新浮现(§4.3)。**删除**任何**开放未勾选**、其定义已恢复的自动行(已勾选且已恢复的行留在"已购"区,直到*清空已购*)。**部分唯一索引** `(definition_id) WHERE source='auto'` 是"**每定义恰好一条自动行,不论已购状态**"的数据库兜底 —— 做成与状态无关意味着勾选(只盖 `purchased_at`)永远不会产生第二条自动行,故取消勾选时不会冲突。由 `shopping_list.auto_add_low_stock` 设置控制(默认**true**)。 |
 | **对账在低库存已触发的同一钩子上运行(双保险)** | `reconcile_auto_items()` 由 (a) **每日扫描** job、(b) 按需 `POST /reminders/run`、(c) `StockMovementService` 中的**低库存事件钩子** —— 在**全部三条**已调用 `evaluate_low_stock` 的移动路径(`consume_fifo` / `discard` / `adjust`)里,**尽力而为 + savepoint 隔离**,使对账失败永不回滚移动 —— 调用,使消耗品一掉低就**立刻**出现在清单上,与提醒引擎的事件 + 定时双保险一致。**`ReminderEngine` 自身与购物清单保持解耦**(调用方各自调用二者;引擎对购物清单零依赖)。 |
 | **勾选 → 入库委托给 M2 账本(不新增库存路径)** | 勾选一条绑定定义、带入库参数的条目,**经现有 `StockInstanceService` 创建路径新建一个库存批次**(它记录初始 `intake` 移动,M2 §2)—— 数量保持**由账本派生、绝不盲设**(roadmap §2.3)。不带入库参数时,勾选只盖 `purchased_at`。二者都在**一个事务**内。入库仅对 **`exact`** 定义有意义,故 `check_off` **预检模式**,对 `level`/`none` 定义以现有 `stock.movement_not_applicable` 拒绝入库(一个小的模式守卫 —— 唯一勾选专有的库存逻辑;建批次本身是纯委托)。 |
 | **养护计划挂在*库存实例*(耐用品单元)** | `maintenance_schedules.instance_id` → `stock_instances.id`,`ondelete=CASCADE`(计划随耐用品消亡)。具体单元锚点契合"耐用品"(序列化实例),并让提醒复用 M6 的**按批**负责人链(`实例 → 定义 → 回退全员`)。按定义的计划推迟(§13)。 |
@@ -153,11 +153,14 @@ reconcile_auto_items():
     low = LowStockService(db).compute()            # 复用 M2/M4 信号 —— 绝不重新推导规则
     low_def_ids = { item.definition_id for item in low }
 
-    # 1. 开:为每个当前低的定义确保唯一一条自动行(任意已购状态都算)
+    # 1. 开:为每个当前低的定义确保唯一一条开放自动行
     for item in low:
-        if repo.get_auto_item(item.definition_id) is None:        # 开放 或 已勾选 —— 任一都挡掉重复
+        existing = repo.get_auto_item(item.definition_id)
+        if existing is None:
             repo.create(source='auto', definition_id=item.definition_id,
                         desired_quantity=None, created_by=None)   # create 捕获 IntegrityError -> 无操作(DB 兜底)
+        elif existing.purchased_at is not None:
+            repo.clear_purchased_at(existing)      # 勾选后未补货便再次掉低:重开(保底行为)
 
     # 2. 剪:删除其定义已恢复的、开放且未勾选的自动行
     for row in repo.list_open_auto_items():
@@ -165,9 +168,10 @@ reconcile_auto_items():
             repo.delete(row)
 ```
 
-- "开放" = `purchased_at IS NULL`。**已勾选**的自动行不动(它作为一次进行中/已完成的真实购买留在"已购"区),仅由**清空已购**删除;因为它仍算作"该定义的那条自动行",对账绝不在它旁边再加一条。
+- "开放" = `purchased_at IS NULL`。**已勾选**且其定义**仍低**的自动行会被**重开**(`purchased_at` 清空),使建议重新浮现,无需用户先"清空已购"。真实补货使库存高于 `min_stock`,故已真正恢复的定义不会为低,其已勾选行不会被重开。
+- 有意后果:若用户勾选了一条自动行却没有真正补货(定义仍低于 `min_stock`),下次对账/刷新会重开该行。这是有意的保底行为。
 - 部分唯一索引 `(definition_id) WHERE source='auto'` 使"**每定义恰好一条自动行(任意状态)**"成为 DB 不变量;`create` 捕获 `IntegrityError` 并无操作,故重跑对账 —— 或任何勾选/取消勾选往返 —— 都不会产生重复(这正是堵住取消勾选冲突洞的 B 类修复)。
-- **恢复会剪掉建议**(回到阈值之上的*开放未勾选*自动行消失)—— 但绝不删手动行、绝不删已勾选行。
+- **恢复会剪掉建议**(回到阈值之上的*开放未勾选*自动行消失)—— 但绝不删手动行;已勾选且定义已恢复的行留在"已购"区,直到"清空已购"。
 - 由**每日扫描**、**按需 `POST /reminders/run`**、`consume_fifo` / `discard` / `adjust` 三者中的**低库存事件钩子**(尽力而为 + savepoint 隔离;可复用钩子已跑出的 `LowStockService.compute()` 结果)、**`POST /refresh`** 调用 —— 均幂等。
 
 ### 4.4 `add_interval` —— 日历正确的循环(必测)
@@ -271,7 +275,7 @@ for s in schedules:
 
 **后端**
 - **`add_interval` 日历运算**(§4.4 —— 必测):天/周加;月/年加;**月末夹取**(1-31 +1月 → 2-28/29;8-31 +6月 → 2-28/29);闰年二月;跨年;`count ≥ 2`;年 = ×12 月。
-- **购物清单对账幂等**(§4.3 —— 必测):无自动行的低定义 → 创建一条;**重跑不创建**(幂等 / 与状态无关的部分唯一);已恢复定义的**开放未勾选**自动行被**剪掉**;**手动**行绝不被自动剪;**已勾选**自动行在恢复后留存并**挡掉同定义的重复开放行**;对一条自动行**勾选 → 取消勾选往返永不冲突**(B 类回归 —— 与状态无关的每定义唯一性);`auto_add_low_stock=false` 门使对账无操作;level 模式低条目得到一条 NULL 数量的自动行。
+- **购物清单对账幂等**(§4.3 —— 必测):无自动行的低定义 → 创建一条;**重跑不创建**(幂等 / 与状态无关的部分唯一);已恢复定义的**开放未勾选**自动行被**剪掉**;**手动**行绝不被自动剪;**已勾选且其定义仍低**的自动行被**重开**(`purchased_at` 清空,建议重新浮现);**已勾选且其定义已恢复**的自动行留在"已购"区(不剪);对一条自动行**勾选 → 取消勾选往返永不冲突**(B 类回归 —— 与状态无关的每定义唯一性);`auto_add_low_stock=false` 门使对账无操作;level 模式低条目得到一条 NULL 数量的自动行。
 - **勾选 → 入库**(§4.2):不带入库的勾选只盖 `purchased_at`;**带**入库的勾选经现有服务建批次且数量**由账本派生**(存在 `intake` 移动;`quantity == SUM(deltas)`);入库数量 = `intake.quantity ?? desired_quantity`,**二者皆 NULL → `validation.invalid_input`**;对非 `exact` 定义入库 → `stock.movement_not_applicable`(`check_off` 模式预检);整操作原子(入库失败回滚勾选);入库后该定义(已高于 min)在下次对账**从清单消失**。
 - **养护完成 → 顺延**(§4.5/§4.4):完成置 `last_completed_date` 并顺延 `next_due_date = add_interval(completed_on, unit, count)`;回填 `completed_on` 从该日顺延;顺延后的日期得新去重命名空间。
 - **养护提醒触发与路由**(§4.5 —— 必测):恰在 `today_local ≥ next_due_date − lead` 触发,**边界**(`== window` 触发,`window − 1` 不触发);**逾期**以负 `days_remaining` 触发;**按计划 lead 胜过全局**;lead `0` 当天触发;**`next_due_date` 很远但窗口已开的长 lead 计划仍触发**(全活跃候选查询 —— 无 horizon 漏掉它,B 类修复);**暂停**(`is_active=false`)计划从不触发;重跑扫描不创建(去重);路由 = 实例→定义→回退全员(复用 M6 助手)并遵守偏好门;**三个现有来源不受影响**(回归测试断言有养护在场时 best_before/warranty/低库存计数不变)。
@@ -444,5 +448,5 @@ for s in schedules:
 - **自动行数量建议:** 自动行 `desired_quantity` 为 NULL。建议补货量(如 `min_stock − current`,或按定义的补货量)是补货点 UX 稳定后的改进(关联 M2 §12 `min_stock` 语义)。
 - **勾选入库目标:** M7 勾选入库**新建批次**。补到**现有**批次,或选批次,是后续选项(M2 已暴露按批 `intake`)。
 - **勾选入库归属 + 字段:** 勾选时创建的初始入库移动记 `user_id=None`(`StockInstanceService.create` 既有限制,**非** M7 引入 —— 购物清单行本身记 `created_by`);且 `ShoppingListIntake` 省去 `occurred_at`/`note`,因 M2 创建路径不贯穿它们。把操作用户 + 回填/备注贯穿创建路径是个小跟进。
-- **清空已购前再次掉低:** 若某定义在其自动行仍**已勾选**(留在"已购"区、尚未清空)时恢复、随后又掉低,对账在该已购行清空前不会浮现新的*开放*建议(每定义一条自动行不变量)。轻微陈旧,接受 —— 与 M4 同日重开同类。
+- **清空已购前再次掉低(已修复):** 若某定义在其自动行仍**已勾选**(留在"已购"区)时恢复、随后又掉低,对账现在会**重开该已勾选行**(`purchased_at` 清空),使建议立刻重新浮现 —— 无需用户先"清空已购"。有意后果:勾选自动行而未真正补货(定义仍低于 `min_stock`)也会被下次对账/刷新重开 —— 这是有意的保底设计(真实补货使库存高于 `min_stock`,故已真正恢复的定义永不为低,其行也不会被重开)。
 - **TickTick / 外部待办同步:** 仅预留接缝(§12);真正的 OAuth2 + 双向实现排入集成里程碑家族(roadmap §6/§7)。

@@ -363,15 +363,31 @@ class ShoppingListService:
     def reconcile_auto_items(self) -> None:
         """Idempotent reconcile: open auto rows for low definitions, prune recovered ones.
 
-        Implements M7 §4.3 exactly:
+        Implements M7 §4.3 (with post-M7 reopen-on-re-low fix):
 
         1. **Gate**: if ``shopping_list.auto_add_low_stock`` is False → return
            immediately (no-op).
 
         2. **Open**: for each currently-low definition (from
-           ``LowStockService.compute()``), ensure exactly one auto row exists in
-           **any** purchased state (open *or* checked).  If none exists, create
-           one.  The partial-unique index + ``create``'s IntegrityError guard
+           ``LowStockService.compute()``), ensure exactly one *open* auto row
+           exists.
+
+           - If no auto row exists at all → create one.
+           - If an auto row exists and is **open** (``purchased_at IS NULL``)
+             → already satisfied, skip.
+           - If an auto row exists but is **checked** (``purchased_at IS NOT
+             NULL``) → **reopen it** by clearing ``purchased_at``.  This
+             re-surfaces the suggestion when a definition goes low again after
+             a prior check-off that was not backed by a real restock.  The
+             one-auto-row-per-definition invariant is preserved (no new row).
+
+           Intentional consequence: if a user checks off an auto row while its
+           definition is still below ``min_stock`` (check without restock), the
+           next reconcile/refresh will reopen it.  A genuine restock raises
+           stock above ``min_stock``, so a recovered definition is never low
+           and its checked row is never reopened.
+
+           The partial-unique index + ``create``'s IntegrityError guard
            provide the DB backstop for concurrent reconcile calls.
 
         3. **Prune**: delete open (``purchased_at IS NULL``), unchecked auto
@@ -382,9 +398,8 @@ class ShoppingListService:
         Invariants preserved:
         - Exactly one auto row per definition in any purchased state
           (``WHERE source='auto'`` partial-unique index).
-        - A checked auto row blocks a duplicate open row — a definition that
-          goes low while its auto row is still in the "purchased" section will
-          not get a second auto row until the first is cleared.
+        - A checked auto row whose definition is **still low** is reopened
+          (``purchased_at`` cleared) so the suggestion resurfaces.
         - A check-off → uncheck round-trip on an auto row never collides
           (state-independent per-def uniqueness).
 
@@ -408,10 +423,10 @@ class ShoppingListService:
         low_items = LowStockService(self._db).compute()
         low_def_ids = {item.definition_id for item in low_items}
 
-        # 1. Open: ensure ONE auto row per currently-low definition.
-        #    Any purchased state (open or checked) blocks a duplicate.
+        # 1. Open: ensure ONE open auto row per currently-low definition.
         for item in low_items:
-            if self._repo.get_auto_item(item.definition_id) is None:
+            existing = self._repo.get_auto_item(item.definition_id)
+            if existing is None:
                 # create() uses a savepoint + IntegrityError guard as the DB
                 # backstop for a concurrent reconcile that inserted between our
                 # check and this call.
@@ -421,6 +436,11 @@ class ShoppingListService:
                     desired_quantity=None,  # NULL = unspecified (M7 §4.3 / §1 level-mode)
                     created_by=None,
                 )
+            elif existing.purchased_at is not None:
+                # Re-low after a prior purchase that was never cleared: reopen the
+                # checked auto row so the suggestion resurfaces (fail-safe). Keeps the
+                # one-auto-row-per-definition invariant — no new row, no collision.
+                self._repo.clear_purchased_at(existing)
 
         # 2. Prune: drop OPEN, UNCHECKED auto rows whose definition recovered.
         #    Never prune manual rows; never prune checked auto rows.

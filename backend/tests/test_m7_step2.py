@@ -624,12 +624,13 @@ class TestReconcileAlgorithm:
         assert _count_auto_rows(db_session, defn.id) == 1
         assert _count_all_rows(db_session) == 1
 
-    def test_checked_auto_row_blocks_duplicate_open_row(self, db_session: Session) -> None:
-        """A checked auto row blocks reconcile from creating a duplicate open row.
+    def test_checked_auto_row_reopened_when_still_low(self, db_session: Session) -> None:
+        """A checked auto row is REOPENED by reconcile when its definition is still low.
 
-        This verifies the state-independent uniqueness: even though the checked
-        auto row is not 'open', it still counts as the existing auto row for its
-        definition and prevents a second row from being inserted.
+        This verifies the reopen-on-re-low fix: a checked auto row whose
+        definition is still below min_stock has its purchased_at cleared so the
+        suggestion resurfaces.  Exactly 1 auto row is preserved (no duplicate
+        created); it transitions back to open (purchased_at IS NULL).
         """
         _, _, defn, inst = _seed_exact_low(
             db_session, min_stock=Decimal("5"), quantity=Decimal("3")
@@ -641,7 +642,7 @@ class TestReconcileAlgorithm:
         svc.reconcile_auto_items()
         db_session.flush()
 
-        # Check off the auto row (definition still low).
+        # Check off the auto row (definition still low — no restock).
         repo = ShoppingListRepository(db_session)
         auto_row = repo.get_auto_item(defn.id)
         assert auto_row is not None
@@ -649,15 +650,19 @@ class TestReconcileAlgorithm:
 
         repo.stamp_purchased(auto_row, datetime.now(tz=UTC))
         db_session.flush()
+        assert auto_row.purchased_at is not None  # sanity: it is checked
 
         # Run reconcile again while definition is STILL low.
-        # The checked auto row must block a second row from being created.
+        # The checked auto row must be REOPENED (purchased_at cleared).
         svc.reconcile_auto_items()
         db_session.flush()
 
-        # Still exactly 1 auto row (the checked one), not 2.
+        # Still exactly 1 auto row — and it is now open again.
         assert _count_auto_rows(db_session, defn.id) == 1
         assert _count_all_rows(db_session) == 1
+        reopened = repo.get_auto_item(defn.id)
+        assert reopened is not None
+        assert reopened.purchased_at is None  # reopened: suggestion resurfaces
 
     def test_check_off_uncheck_round_trip_no_collision(self, db_session: Session) -> None:
         """Check → uncheck → reconcile never produces a duplicate auto row.
@@ -692,6 +697,128 @@ class TestReconcileAlgorithm:
         # Must still be exactly 1 auto row — no collision from the round-trip.
         assert _count_auto_rows(db_session, defn.id) == 1
         assert _count_all_rows(db_session) == 1
+
+    def test_reopen_on_re_low_focused_unit(self, db_session: Session) -> None:
+        """Unit test: a low definition with a checked auto row is reopened by reconcile.
+
+        Directly exercises the reopen branch of reconcile_auto_items():
+        seed low → reconcile (auto row created) → check off → reconcile again
+        (still low) → purchased_at cleared (open), count stays 1.
+        """
+        _, _, defn, _ = _seed_exact_low(db_session, min_stock=Decimal("5"), quantity=Decimal("3"))
+        from app.repositories.shopping_list import ShoppingListRepository
+        from app.services.shopping_list import ShoppingListService
+
+        svc = ShoppingListService(db_session)
+        repo = ShoppingListRepository(db_session)
+
+        # Step 1: reconcile creates the auto row.
+        svc.reconcile_auto_items()
+        db_session.flush()
+        auto_row = repo.get_auto_item(defn.id)
+        assert auto_row is not None
+
+        # Step 2: check off (definition still low — no restock).
+        from datetime import UTC, datetime
+
+        repo.stamp_purchased(auto_row, datetime.now(tz=UTC))
+        db_session.flush()
+        assert auto_row.purchased_at is not None
+
+        # Step 3: reconcile again while still low — must reopen.
+        svc.reconcile_auto_items()
+        db_session.flush()
+
+        assert _count_auto_rows(db_session, defn.id) == 1
+        assert _count_all_rows(db_session) == 1
+        row = repo.get_auto_item(defn.id)
+        assert row is not None
+        assert row.purchased_at is None  # reopened by reconcile
+
+    def test_reopen_re_low_end_to_end(self, db_session: Session) -> None:
+        """End-to-end fail-safe: definition goes low → check off WITH genuine restock
+        → row stays in done → stock drops low again → reconcile reopens the row.
+
+        Sequence:
+        1. Seed low (qty=3, min_stock=5) → reconcile → auto row created (open).
+        2. Check off auto row and simulate a restock: raise qty to 10 (above 5).
+           Row is now checked; definition has recovered.
+        3. Reconcile: definition is NOT low → open unchecked auto rows pruned; but
+           this row is checked, so it is NOT pruned (checked rows survive recovery).
+           Row stays in "done", count = 1, purchased_at is NOT NULL.
+        4. Simulate re-low: drop qty back to 3 (below min_stock).
+        5. Reconcile: definition is low again, row is checked → REOPEN it.
+           purchased_at is NULL (open), count still 1.
+        """
+        _, _, defn, inst = _seed_exact_low(
+            db_session, min_stock=Decimal("5"), quantity=Decimal("3")
+        )
+        from app.repositories.shopping_list import ShoppingListRepository
+        from app.services.shopping_list import ShoppingListService
+
+        svc = ShoppingListService(db_session)
+        repo = ShoppingListRepository(db_session)
+
+        # Step 1: reconcile creates the auto row.
+        svc.reconcile_auto_items()
+        db_session.flush()
+        auto_row = repo.get_auto_item(defn.id)
+        assert auto_row is not None
+
+        # Step 2: check off, then raise stock above min_stock (genuine restock).
+        from datetime import UTC, datetime
+
+        repo.stamp_purchased(auto_row, datetime.now(tz=UTC))
+        db_session.flush()
+        inst.quantity = Decimal("10")  # above min_stock=5 → recovered
+        db_session.flush()
+        db_session.commit()
+
+        # Step 3: reconcile while recovered — checked row must survive (not pruned).
+        svc.reconcile_auto_items()
+        db_session.flush()
+        assert _count_auto_rows(db_session, defn.id) == 1
+        row_after_recovery = repo.get_auto_item(defn.id)
+        assert row_after_recovery is not None
+        assert row_after_recovery.purchased_at is not None  # still checked / in done
+
+        # Confirm open list does NOT include this row.
+        from sqlalchemy import select
+
+        from app.models.shopping_list_item import ShoppingListItem
+
+        open_rows = (
+            db_session.execute(
+                select(ShoppingListItem).where(ShoppingListItem.purchased_at.is_(None))
+            )
+            .scalars()
+            .all()
+        )
+        assert all(r.definition_id != defn.id for r in open_rows)
+
+        # Step 4: simulate re-low (stock drops below min_stock again).
+        inst.quantity = Decimal("3")
+        db_session.flush()
+        db_session.commit()
+
+        # Step 5: reconcile re-low → row must be reopened.
+        svc.reconcile_auto_items()
+        db_session.flush()
+        assert _count_auto_rows(db_session, defn.id) == 1
+        assert _count_all_rows(db_session) == 1
+        reopened = repo.get_auto_item(defn.id)
+        assert reopened is not None
+        assert reopened.purchased_at is None  # reopened: suggestion resurfaces
+
+        # Must appear in the open list now.
+        open_rows_after = (
+            db_session.execute(
+                select(ShoppingListItem).where(ShoppingListItem.purchased_at.is_(None))
+            )
+            .scalars()
+            .all()
+        )
+        assert any(r.definition_id == defn.id for r in open_rows_after)
 
     def test_gate_off_no_op(self, db_session: Session) -> None:
         """When auto_add_low_stock=false the reconcile does nothing (no rows created)."""
@@ -955,7 +1082,13 @@ class TestRefreshEndpoint:
         assert auto_items_after == []
 
     def test_refresh_only_returns_open_items(self, admin_client: tuple[TestClient, Any]) -> None:
-        """POST /refresh returns only open (unchecked) items, not purchased ones."""
+        """POST /refresh returns only open (unchecked) items, not purchased ones.
+
+        The definition must GENUINELY recover before the second refresh so that
+        the checked auto row stays in "done" without being reopened.  We achieve
+        this by checking off WITH intake (quantity=5 on a stock=2, min_stock=5
+        definition): stock rises to 7 ≥ 5, so reconcile sees it as recovered.
+        """
         client, engine = admin_client
         self._setup_low_stock(client, engine, quantity="2", min_stock="5")
 
@@ -963,11 +1096,17 @@ class TestRefreshEndpoint:
         items = _refresh(client)
         auto_item = next(i for i in items if i["source"] == "auto")
 
-        # Check off the auto item.
-        _check_off(client, auto_item["id"])
+        # Check off WITH intake (quantity=5 → stock 2+5=7 ≥ min_stock=5, genuinely
+        # recovered).  This keeps the row in "done" legitimately — reconcile will
+        # NOT reopen it because the definition is no longer low.
+        resp = client.post(
+            f"/api/shopping-list/{auto_item['id']}/check",
+            json={"intake": {"quantity": "5"}},
+        )
+        assert resp.status_code == 200
 
-        # Refresh again — should return empty open list
-        # (the checked auto row is present but not returned).
+        # Refresh: definition is recovered → reconcile skips this def in the open
+        # phase; the checked row stays in "done" (not reopened, not pruned).
         items_after_check = _refresh(client)
         open_auto = [i for i in items_after_check if i["source"] == "auto"]
         assert open_auto == []
