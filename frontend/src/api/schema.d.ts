@@ -2887,6 +2887,34 @@ export interface components {
             name: string;
         };
         /**
+         * LlmConfigResponse
+         * @description LLM provider config returned to the client (api_key masked as api_key_is_set).
+         */
+        LlmConfigResponse: {
+            /** Api Key Is Set */
+            api_key_is_set: boolean;
+            /** Base Url */
+            base_url: string | null;
+            /** Enabled */
+            enabled: boolean;
+            /** Model */
+            model: string | null;
+        };
+        /**
+         * LlmConfigUpdate
+         * @description Partial update for LLM provider config.
+         */
+        LlmConfigUpdate: {
+            /** Api Key */
+            api_key?: string | null;
+            /** Base Url */
+            base_url?: string | null;
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Model */
+            model?: string | null;
+        };
+        /**
          * LocationCreate
          * @description Body for POST /locations.
          */
@@ -3643,6 +3671,7 @@ export interface components {
          */
         SettingsResponse: {
             channels: components["schemas"]["ChannelsResponse"];
+            llm: components["schemas"]["LlmConfigResponse"];
             reminders: components["schemas"]["RemindersSettings"];
             shopping_list: components["schemas"]["ShoppingListSettings"];
         };
@@ -3652,6 +3681,7 @@ export interface components {
          */
         SettingsUpdate: {
             channels?: components["schemas"]["ChannelsUpdate"] | null;
+            llm?: components["schemas"]["LlmConfigUpdate"] | null;
             reminders?: components["schemas"]["RemindersUpdate"] | null;
             shopping_list?: components["schemas"]["ShoppingListUpdate"] | null;
         };

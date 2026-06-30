@@ -41,6 +41,11 @@ Key-name conventions (dot-namespaced, matching §3.1):
     channels.mqtt.discovery_enabled
     channels.mqtt.commands_enabled
 
+    llm.enabled
+    llm.base_url
+    llm.model
+    llm.api_key               ← write-only secret
+
 All DB access is via ``SettingsRepository``; no raw queries here.
 """
 
@@ -61,6 +66,8 @@ from app.schemas.settings import (
     EmailChannelUpdate,
     HttpChannelResponse,
     HttpChannelUpdate,
+    LlmConfigResponse,
+    LlmConfigUpdate,
     MqttChannelResponse,
     MqttChannelUpdate,
     RemindersSettings,
@@ -114,6 +121,11 @@ _DEFAULTS: dict[str, Any] = {
     "channels.mqtt.use_tls": False,
     "channels.mqtt.discovery_enabled": False,
     "channels.mqtt.commands_enabled": False,
+    # LLM provider (M9.1)
+    "llm.enabled": False,
+    "llm.base_url": None,
+    "llm.model": None,
+    "llm.api_key": None,  # secret — never echoed
 }
 
 # Keys that hold write-only secrets (never echoed in read paths)
@@ -123,6 +135,7 @@ _SECRET_KEYS: frozenset[str] = frozenset(
         "channels.http.auth_header",
         "channels.http.integration_token",
         "channels.mqtt.password",
+        "llm.api_key",
     }
 )
 
@@ -181,6 +194,21 @@ class MqttChannelConfig:
     use_tls: bool
     discovery_enabled: bool
     commands_enabled: bool
+
+
+@dataclass
+class LlmConfig:
+    """Full (decrypted) LLM provider configuration for internal adapter use.
+
+    Never returned from API routes — use SettingsService.llm_config()
+    inside provider code only.  The api_key is the real value; it is
+    never serialised to the API (only api_key_is_set: bool is exposed).
+    """
+
+    enabled: bool
+    base_url: str | None
+    model: str | None
+    api_key: str | None  # noqa: S105 — internal use only, never serialised
 
 
 # ---------------------------------------------------------------------------
@@ -262,6 +290,7 @@ class SettingsService:
                 mqtt=self._build_mqtt_response(),
             ),
             shopping_list=self._build_shopping_list_response(),
+            llm=self._build_llm_response(),
         )
 
     def _build_shopping_list_response(self) -> ShoppingListSettings:
@@ -343,6 +372,14 @@ class SettingsService:
             commands_enabled=self._get_value("channels.mqtt.commands_enabled"),
         )
 
+    def _build_llm_response(self) -> LlmConfigResponse:
+        return LlmConfigResponse(
+            enabled=self._get_value("llm.enabled"),
+            base_url=self._get_value("llm.base_url"),
+            model=self._get_value("llm.model"),
+            api_key_is_set=bool(self._get_value("llm.api_key")),
+        )
+
     # ------------------------------------------------------------------
     # Write: apply a partial update
     # ------------------------------------------------------------------
@@ -367,6 +404,8 @@ class SettingsService:
             self._apply_channels_update(update.channels)
         if update.shopping_list is not None:
             self._apply_shopping_list_update(update.shopping_list)
+        if update.llm is not None:
+            self._apply_llm_update(update.llm)
         # Flush so the identity map reflects the merged rows before we read
         # back the full settings in the same transaction.
         self._db.flush()
@@ -452,6 +491,17 @@ class SettingsService:
             self._set_value("channels.mqtt.discovery_enabled", upd.discovery_enabled)
         if upd.commands_enabled is not None:
             self._set_value("channels.mqtt.commands_enabled", upd.commands_enabled)
+
+    def _apply_llm_update(self, upd: LlmConfigUpdate) -> None:
+        if upd.enabled is not None:
+            self._set_value("llm.enabled", upd.enabled)
+        if upd.base_url is not None:
+            self._set_value("llm.base_url", upd.base_url)
+        if upd.model is not None:
+            self._set_value("llm.model", upd.model)
+        # Secret: omit (None) = keep / "" = clear / non-empty = set
+        if upd.api_key is not None:
+            self._set_value("llm.api_key", upd.api_key if upd.api_key else None)
 
     # ------------------------------------------------------------------
     # Convenience accessors (used by other services in later steps)
@@ -542,6 +592,19 @@ class SettingsService:
             use_tls=self._get_value("channels.mqtt.use_tls"),
             discovery_enabled=self._get_value("channels.mqtt.discovery_enabled"),
             commands_enabled=self._get_value("channels.mqtt.commands_enabled"),
+        )
+
+    def llm_config(self) -> LlmConfig:
+        """Return the full (decrypted) LLM provider config for internal adapter use.
+
+        Never exposed via the API in plain text — only api_key_is_set: bool is
+        returned to clients.  Call this inside provider/service code only.
+        """
+        return LlmConfig(
+            enabled=self._get_value("llm.enabled"),
+            base_url=self._get_value("llm.base_url"),
+            model=self._get_value("llm.model"),
+            api_key=self._get_value("llm.api_key"),
         )
 
     def get_or_create_integration_token(self) -> str:

@@ -241,6 +241,29 @@ class ChannelsUpdate(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# LLM provider sub-schemas (M9.1 Step 1)
+# ---------------------------------------------------------------------------
+
+
+class LlmConfigResponse(BaseModel):
+    """LLM provider config returned to the client (api_key masked as api_key_is_set)."""
+
+    enabled: bool
+    base_url: str | None
+    model: str | None
+    api_key_is_set: bool  # write-only secret masked as boolean
+
+
+class LlmConfigUpdate(BaseModel):
+    """Partial update for LLM provider config."""
+
+    enabled: bool | None = None
+    base_url: str | None = None
+    model: str | None = None
+    api_key: str | None = None  # write-only; "" = clear
+
+
+# ---------------------------------------------------------------------------
 # Shopping-list sub-schemas (Step 2)
 # ---------------------------------------------------------------------------
 
@@ -268,6 +291,7 @@ class SettingsResponse(BaseModel):
     reminders: RemindersSettings
     channels: ChannelsResponse
     shopping_list: ShoppingListSettings
+    llm: LlmConfigResponse
 
 
 class SettingsUpdate(BaseModel):
@@ -276,3 +300,4 @@ class SettingsUpdate(BaseModel):
     reminders: RemindersUpdate | None = None
     channels: ChannelsUpdate | None = None
     shopping_list: ShoppingListUpdate | None = None
+    llm: LlmConfigUpdate | None = None

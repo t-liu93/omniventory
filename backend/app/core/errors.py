@@ -141,6 +141,15 @@ class ErrorCode:
     MAINTENANCE_NOT_FOUND = "maintenance.not_found"  # 404 — operate on a missing schedule
     VALIDATION_UNSUPPORTED_INTERVAL_UNIT = "validation.unsupported_interval_unit"  # 422
 
+    # --- LLM (M9.1) ---
+    LLM_NOT_CONFIGURED = "llm.not_configured"  # 409 — operate with no base_url/model/api_key
+    LLM_UNSAFE_URL = "llm.unsafe_url"  # 422 — base_url blocked by the SSRF guard
+    LLM_CONNECTION_FAILED = "llm.connection_failed"  # 502 — unreachable / timeout / DNS
+    LLM_AUTH_FAILED = "llm.auth_failed"  # 502 — provider 401/403
+    LLM_MODEL_UNAVAILABLE = "llm.model_unavailable"  # 502 — model not found/served
+    LLM_NOT_MULTIMODAL = "llm.not_multimodal"  # diagnostic — model cannot process images
+    LLM_PROVIDER_ERROR = "llm.provider_error"  # 502 — any other provider error
+
     # --- Internal / catch-all ---
     INTERNAL_ERROR = "internal.error"
 
@@ -201,6 +210,13 @@ _DEFAULT_MESSAGES: dict[str, str] = {
     ErrorCode.SHOPPING_LIST_NOT_FOUND: "Shopping list item not found.",
     ErrorCode.MAINTENANCE_NOT_FOUND: "Maintenance schedule not found.",
     ErrorCode.VALIDATION_UNSUPPORTED_INTERVAL_UNIT: "Unsupported maintenance interval unit.",
+    ErrorCode.LLM_NOT_CONFIGURED: "LLM provider is not configured (base_url, model, and api_key are all required).",
+    ErrorCode.LLM_UNSAFE_URL: "The provided base_url is blocked by the outbound URL guard.",
+    ErrorCode.LLM_CONNECTION_FAILED: "Could not reach the LLM provider (connection error, timeout, or DNS failure).",
+    ErrorCode.LLM_AUTH_FAILED: "LLM provider rejected the request (authentication failed — check the API key).",
+    ErrorCode.LLM_MODEL_UNAVAILABLE: "The configured model was not found or is not served by this provider.",
+    ErrorCode.LLM_NOT_MULTIMODAL: "The model does not support image input (multimodal capability required for receipt scanning).",
+    ErrorCode.LLM_PROVIDER_ERROR: "The LLM provider returned an unexpected error.",
     ErrorCode.INTERNAL_ERROR: "An internal error occurred.",
 }
 

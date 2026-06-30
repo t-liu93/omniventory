@@ -2632,6 +2632,100 @@
         "title": "KindResponse",
         "type": "object"
       },
+      "LlmConfigResponse": {
+        "description": "LLM provider config returned to the client (api_key masked as api_key_is_set).",
+        "properties": {
+          "api_key_is_set": {
+            "title": "Api Key Is Set",
+            "type": "boolean"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          }
+        },
+        "required": [
+          "enabled",
+          "base_url",
+          "model",
+          "api_key_is_set"
+        ],
+        "title": "LlmConfigResponse",
+        "type": "object"
+      },
+      "LlmConfigUpdate": {
+        "description": "Partial update for LLM provider config.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Key"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          }
+        },
+        "title": "LlmConfigUpdate",
+        "type": "object"
+      },
       "LocationCreate": {
         "description": "Body for POST /locations.",
         "properties": {
@@ -4257,6 +4351,9 @@
           "channels": {
             "$ref": "#/components/schemas/ChannelsResponse"
           },
+          "llm": {
+            "$ref": "#/components/schemas/LlmConfigResponse"
+          },
           "reminders": {
             "$ref": "#/components/schemas/RemindersSettings"
           },
@@ -4267,7 +4364,8 @@
         "required": [
           "reminders",
           "channels",
-          "shopping_list"
+          "shopping_list",
+          "llm"
         ],
         "title": "SettingsResponse",
         "type": "object"
@@ -4279,6 +4377,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/ChannelsUpdate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "llm": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LlmConfigUpdate"
               },
               {
                 "type": "null"
