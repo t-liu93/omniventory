@@ -82,6 +82,15 @@
   "integration": {
     "invalid_token": "集成令牌无效或缺失。"
   },
+  "llm": {
+    "not_configured": "LLM 提供商未配置，请设置基础 URL、模型和 API 密钥。",
+    "unsafe_url": "LLM 提供商 URL 被 SSRF 安全防护拦截。",
+    "connection_failed": "无法连接到 LLM 提供商，请检查基础 URL 和网络。",
+    "auth_failed": "认证失败，请检查 API 密钥。",
+    "model_unavailable": "所配置的模型在此提供商处不可用。",
+    "not_multimodal": "所配置的模型不支持图片输入（小票扫描功能需要此能力）。",
+    "provider_error": "LLM 提供商返回错误。"
+  },
   "internal": {
     "error": "服务器内部错误，请稍后重试。"
   },

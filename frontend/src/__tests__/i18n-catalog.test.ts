@@ -42,6 +42,7 @@ import enResponsible from "../i18n/locales/en/responsible.json";
 import enAudit from "../i18n/locales/en/audit.json";
 import enShoppingList from "../i18n/locales/en/shoppingList.json";
 import enMaintenance from "../i18n/locales/en/maintenance.json";
+import enLlm from "../i18n/locales/en/llm.json";
 
 import zhCommon from "../i18n/locales/zh/common.json";
 import zhAuth from "../i18n/locales/zh/auth.json";
@@ -71,6 +72,7 @@ import zhResponsible from "../i18n/locales/zh/responsible.json";
 import zhAudit from "../i18n/locales/zh/audit.json";
 import zhShoppingList from "../i18n/locales/zh/shoppingList.json";
 import zhMaintenance from "../i18n/locales/zh/maintenance.json";
+import zhLlm from "../i18n/locales/zh/llm.json";
 
 // ── Deep key extraction ───────────────────────────────────────────────────────
 
@@ -123,6 +125,7 @@ const namespacePairs: [string, unknown, unknown][] = [
   ["audit", enAudit, zhAudit],
   ["shoppingList", enShoppingList, zhShoppingList],
   ["maintenance", enMaintenance, zhMaintenance],
+  ["llm", enLlm, zhLlm],
 ];
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

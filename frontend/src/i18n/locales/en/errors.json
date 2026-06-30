@@ -82,6 +82,15 @@
   "integration": {
     "invalid_token": "Invalid or missing integration token."
   },
+  "llm": {
+    "not_configured": "LLM provider is not configured. Set the base URL, model, and API key.",
+    "unsafe_url": "The LLM provider URL is blocked by the SSRF security guard.",
+    "connection_failed": "Could not connect to the LLM provider. Check the base URL and network.",
+    "auth_failed": "Authentication failed. Check the API key.",
+    "model_unavailable": "The configured model is not available from this provider.",
+    "not_multimodal": "The configured model does not support image input (required for receipt scanning).",
+    "provider_error": "The LLM provider returned an error."
+  },
   "internal": {
     "error": "An internal error occurred. Please try again later."
   },

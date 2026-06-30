@@ -1,0 +1,23 @@
+{
+  "section": "AI / 大语言模型提供商",
+  "enabledLabel": "启用大语言模型",
+  "baseUrlLabel": "基础 URL",
+  "modelLabel": "模型",
+  "apiKeyLabel": "API 密钥",
+  "apiKeyPlaceholder": "留空以保留当前密钥",
+  "clearApiKey": "清除 API 密钥",
+  "save": "保存 LLM 设置",
+  "saved": "LLM 设置已保存。",
+  "testButton": "测试连接",
+  "testHint": "验证连接、模型响应以及图片处理能力（小票扫描的前提条件）。",
+  "testStage": {
+    "connectivity": "连接 / 认证",
+    "modelAnswers": "模型响应",
+    "multimodal": "多模态（小票扫描前提条件）"
+  },
+  "testStatus": {
+    "pass": "通过",
+    "fail": "失败",
+    "skipped": "已跳过"
+  }
+}

@@ -61,6 +61,7 @@ import type { components } from "../api/schema";
 // ── Schema types ──────────────────────────────────────────────────────────────
 
 type SettingsResponse = components["schemas"]["SettingsResponse"];
+type LlmTestResult = components["schemas"]["LlmTestResult"];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -86,6 +87,19 @@ function parseRepeatDays(raw: string): number[] | null {
 /** Generate a strong random token using the Web Crypto API. */
 function generateToken(): string {
   return crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+}
+
+/**
+ * Parse a LLM test-stage detail string that may be a pure error code
+ * ("llm.auth_failed") or a composite code + model reply
+ * ("llm.not_multimodal: 'I see a cat.'", as emitted by the backend §4.3).
+ * Returns the leading code token and any trailing model reply (free text).
+ * Pure-code strings (no ": " separator) yield an empty reply.
+ */
+function parseStageDetail(detail: string): { code: string; reply: string } {
+  const sep = detail.indexOf(": ");
+  if (sep === -1) return { code: detail, reply: "" };
+  return { code: detail.slice(0, sep).trim(), reply: detail.slice(sep + 2).trim() };
 }
 
 // ── Subcomponents ─────────────────────────────────────────────────────────────
@@ -165,6 +179,7 @@ const MQTT_TEMPORARILY_DISABLED: boolean = true;
 
 export function Configuration() {
   const { t } = useTranslation("configuration");
+  const { t: tLlm } = useTranslation("llm");
 
   // ── Loading state ──
   const [loading, setLoading] = useState(true);
@@ -228,6 +243,18 @@ export function Configuration() {
   const [mqttError, setMqttError] = useState<string | null>(null);
   const [mqttTestBusy, setMqttTestBusy] = useState(false);
   const [mqttTestResult, setMqttTestResult] = useState<{ ok: boolean; detail: string | null; topic: string } | null>(null);
+
+  // ── LLM provider form ──
+  const [llmEnabled, setLlmEnabled] = useState(false);
+  const [llmBaseUrl, setLlmBaseUrl] = useState<string>("");
+  const [llmModel, setLlmModel] = useState<string>("");
+  const [llmNewApiKey, setLlmNewApiKey] = useState<string>("");
+  const [llmClearApiKey, setLlmClearApiKey] = useState(false);
+  const [llmApiKeyIsSet, setLlmApiKeyIsSet] = useState(false);
+  const [llmBusy, setLlmBusy] = useState(false);
+  const [llmError, setLlmError] = useState<string | null>(null);
+  const [llmTestBusy, setLlmTestBusy] = useState(false);
+  const [llmTestResult, setLlmTestResult] = useState<LlmTestResult | null>(null);
 
   // ── Run scan ──
   const [scanBusy, setScanBusy] = useState(false);
@@ -298,6 +325,16 @@ export function Configuration() {
       setMqttDiscoveryEnabled(mq.discovery_enabled);
       setMqttCommandsEnabled(mq.commands_enabled);
       setMqttTestResult(null);
+
+      // Populate LLM form (defensive: llm block may be absent in test fixtures)
+      const llm = s.llm;
+      setLlmEnabled(llm?.enabled ?? false);
+      setLlmBaseUrl(llm?.base_url ?? "");
+      setLlmModel(llm?.model ?? "");
+      setLlmNewApiKey("");
+      setLlmClearApiKey(false);
+      setLlmApiKeyIsSet(llm?.api_key_is_set ?? false);
+      setLlmTestResult(null);
     } finally {
       setLoading(false);
     }
@@ -537,6 +574,60 @@ export function Configuration() {
       setMqttTestResult(data);
     } finally {
       setMqttTestBusy(false);
+    }
+  }
+
+  async function handleSaveLlm() {
+    setLlmBusy(true);
+    setLlmError(null);
+    try {
+      // Build api_key: clear wins > new value > omit
+      // "" = clear, non-empty string = set, undefined = omit (keep)
+      let apiKey: string | undefined = undefined;
+      if (llmClearApiKey) {
+        apiKey = "";
+      } else if (llmNewApiKey) {
+        apiKey = llmNewApiKey;
+      }
+
+      const llmUpdate: Record<string, unknown> = {
+        enabled: llmEnabled,
+        base_url: llmBaseUrl || null,
+        model: llmModel || null,
+      };
+      if (apiKey !== undefined) {
+        llmUpdate["api_key"] = apiKey;
+      }
+
+      const { error } = await client.PATCH("/api/settings", {
+        body: {
+          llm: llmUpdate as components["schemas"]["LlmConfigUpdate"],
+        },
+      });
+      if (error) {
+        setLlmError(mapApiError(error));
+        return;
+      }
+      notifySuccess(tLlm("saved"));
+      await loadAll();
+    } finally {
+      setLlmBusy(false);
+    }
+  }
+
+  async function handleTestLlm() {
+    setLlmTestBusy(true);
+    setLlmTestResult(null);
+    setLlmError(null);
+    try {
+      const { data, error } = await client.POST("/api/settings/llm/test");
+      if (error || !data) {
+        setLlmError(mapApiError(error));
+        return;
+      }
+      setLlmTestResult(data);
+    } finally {
+      setLlmTestBusy(false);
     }
   }
 
@@ -1040,6 +1131,127 @@ export function Configuration() {
                 disabled={MQTT_TEMPORARILY_DISABLED}
               >
                 {t("mqtt.save")}
+              </Button>
+            </Group>
+          </Stack>
+        </Paper>
+
+        {/* ── LLM provider ──────────────────────────────────────────────── */}
+        <Paper withBorder p="md">
+          <Stack gap="sm">
+            <Title order={4}>{tLlm("section")}</Title>
+            <Divider />
+
+            {llmError && (
+              <Alert icon={<AlertCircle size={16} />} color="red" variant="light" data-testid="llm-error">
+                {llmError}
+              </Alert>
+            )}
+
+            <Switch
+              label={tLlm("enabledLabel")}
+              checked={llmEnabled}
+              onChange={(e) => setLlmEnabled(e.currentTarget.checked)}
+              data-testid="llm-enabled-switch"
+            />
+            <TextInput
+              label={tLlm("baseUrlLabel")}
+              value={llmBaseUrl}
+              onChange={(e) => setLlmBaseUrl(e.currentTarget.value)}
+              data-testid="llm-base-url-input"
+            />
+            <TextInput
+              label={tLlm("modelLabel")}
+              value={llmModel}
+              onChange={(e) => setLlmModel(e.currentTarget.value)}
+              data-testid="llm-model-input"
+            />
+            <SecretField
+              label={tLlm("apiKeyLabel")}
+              isSet={llmApiKeyIsSet}
+              newValue={llmNewApiKey}
+              placeholder={tLlm("apiKeyPlaceholder")}
+              clearLabel={tLlm("clearApiKey")}
+              onNewValueChange={(v) => {
+                setLlmNewApiKey(v);
+                if (llmClearApiKey) setLlmClearApiKey(false);
+              }}
+              onClear={() => {
+                setLlmClearApiKey(true);
+                setLlmNewApiKey("");
+              }}
+              testIdPrefix="llm-api-key"
+            />
+
+            {/* Staged test results — rendered inline, failure never blocks */}
+            {llmTestResult && (
+              <Stack gap="xs" data-testid="llm-test-results">
+                {[
+                  { id: "connectivity", label: tLlm("testStage.connectivity"), stage: llmTestResult.connectivity },
+                  { id: "model_answers", label: tLlm("testStage.modelAnswers"), stage: llmTestResult.model_answers },
+                  { id: "multimodal", label: tLlm("testStage.multimodal"), stage: llmTestResult.multimodal },
+                ].map(({ id, label, stage }) => {
+                  const badgeColor = stage.status === "pass" ? "teal" : stage.status === "fail" ? "red" : "gray";
+                  const statusLabel =
+                    stage.status === "pass"
+                      ? tLlm("testStatus.pass")
+                      : stage.status === "fail"
+                        ? tLlm("testStatus.fail")
+                        : tLlm("testStatus.skipped");
+                  // detail may be a pure code ("llm.auth_failed") or a composite
+                  // "code: <reply>" string emitted by the backend §4.3 for the
+                  // multimodal stage — split so the code is localized and the
+                  // model's reply is shown as secondary supplementary text.
+                  const stageDetail = stage.detail != null ? parseStageDetail(stage.detail) : null;
+                  return (
+                    <Stack key={id} gap={2} data-testid={`llm-test-stage-${id}`}>
+                      <Group gap={8} align="center">
+                        <Text size="sm">{label}</Text>
+                        <Badge color={badgeColor} variant="light" data-testid={`llm-test-badge-${id}`}>
+                          {statusLabel}
+                        </Badge>
+                      </Group>
+                      {stageDetail && (
+                        <>
+                          <Text
+                            size="xs"
+                            c={stage.status === "fail" ? "red" : "dimmed"}
+                            data-testid={`llm-test-detail-${id}`}
+                          >
+                            {mapApiError({ code: stageDetail.code })}
+                          </Text>
+                          {stageDetail.reply && (
+                            <Text size="xs" c="dimmed" data-testid={`llm-test-detail-${id}-reply`}>
+                              {stageDetail.reply}
+                            </Text>
+                          )}
+                        </>
+                      )}
+                    </Stack>
+                  );
+                })}
+              </Stack>
+            )}
+
+            <Text size="xs" c="dimmed">
+              {tLlm("testHint")}
+            </Text>
+
+            <Group justify="flex-end">
+              <Button
+                variant="outline"
+                onClick={() => void handleTestLlm()}
+                loading={llmTestBusy}
+                data-testid="test-llm-btn"
+              >
+                {tLlm("testButton")}
+              </Button>
+              <Button
+                onClick={() => void handleSaveLlm()}
+                loading={llmBusy}
+                data-testid="save-llm-btn"
+              >
+                {tLlm("save")}
               </Button>
             </Group>
           </Stack>

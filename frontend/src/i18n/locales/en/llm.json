@@ -1,0 +1,23 @@
+{
+  "section": "AI / LLM Provider",
+  "enabledLabel": "Enable LLM provider",
+  "baseUrlLabel": "Base URL",
+  "modelLabel": "Model",
+  "apiKeyLabel": "API key",
+  "apiKeyPlaceholder": "Leave blank to keep current key",
+  "clearApiKey": "Clear API key",
+  "save": "Save LLM settings",
+  "saved": "LLM settings saved.",
+  "testButton": "Test connection",
+  "testHint": "Verify connectivity, model response, and image support (required for receipt scanning).",
+  "testStage": {
+    "connectivity": "Connectivity / auth",
+    "modelAnswers": "Model answers",
+    "multimodal": "Multimodal (receipt scan prerequisite)"
+  },
+  "testStatus": {
+    "pass": "Pass",
+    "fail": "Fail",
+    "skipped": "Skipped"
+  }
+}
