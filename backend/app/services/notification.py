@@ -5,10 +5,17 @@ This service encapsulates the inbox-API business logic:
 - return the unread count
 - mark one notification as read (raises 404 when missing or not owned by caller)
 - mark all notifications as read
+- dismiss one notification (soft-dismiss; raises 404 when missing or not
+  owned by caller)
+- dismiss all notifications (soft-dismiss)
 
 All DB access is delegated to ``NotificationRepository``; no raw queries here.
 ``params`` deserialization (JSON text → dict) lives here so routes and schemas
 receive clean Python dicts, not raw strings.
+
+Soft-dismiss note: ``dismiss`` / ``dismiss_all`` only stamp ``dismissed_at``;
+they never touch the dedup or low-stock episode state (see
+``NotificationRepository`` module docstring for the full invariant).
 """
 
 from __future__ import annotations
@@ -129,5 +136,36 @@ class NotificationService:
         Returns the number of rows actually updated.
         """
         count = self._repo.mark_all_read(user_id)
+        self._db.flush()
+        return count
+
+    def dismiss(
+        self,
+        user_id: int,
+        notification_id: int,
+    ) -> tuple[Notification, dict[str, Any] | None]:
+        """Soft-dismiss a single notification and return it with parsed params.
+
+        Raises
+        ------
+        AppError(NOTIFICATION_NOT_FOUND, 404)
+            When the notification does not exist or belongs to a different user.
+        """
+        notification = self._repo.dismiss(user_id, notification_id)
+        if notification is None:
+            raise AppError(
+                ErrorCode.NOTIFICATION_NOT_FOUND,
+                status_code=404,
+                params={"id": notification_id},
+            )
+        self._db.flush()
+        return notification, _deserialize_params(notification)
+
+    def dismiss_all(self, user_id: int) -> int:
+        """Soft-dismiss all currently-visible notifications for a user.
+
+        Returns the number of rows actually updated.
+        """
+        count = self._repo.dismiss_all(user_id)
         self._db.flush()
         return count

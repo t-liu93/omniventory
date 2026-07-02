@@ -30,8 +30,37 @@ Public methods
     Stamp ``resolved_at`` on the opener and all its open sibling repeat rows
     (same user_id + subject_id + episode_started_on, resolved_at NULL).
 
-Step 6 will add: ``list_for_user``, ``unread_count``, ``mark_read``,
-                  ``mark_all_read``.
+``list_for_user(user_id, unread_only=False, limit=50) -> list[Notification]``
+    Newest-first inbox listing.  Always excludes soft-dismissed rows
+    (``dismissed_at IS NOT NULL``); ``unread_only`` additionally excludes read
+    rows.
+
+``unread_count(user_id) -> int``
+    Badge count.  Excludes soft-dismissed rows in addition to read rows.
+
+``mark_read(user_id, notification_id) -> Notification | None``
+``mark_all_read(user_id) -> int``
+    In-app read state.
+
+``dismiss(user_id, notification_id) -> Notification | None``
+    Soft-dismiss a single notification owned by ``user_id``.  Hides the row
+    from ``list_for_user`` / ``unread_count`` only; does not touch the dedup
+    or low-stock episode lookups (see the "Notification hygiene" note below).
+
+``dismiss_all(user_id) -> int``
+    Soft-dismiss every currently-visible notification owned by ``user_id``.
+
+Notification hygiene (soft-dismiss) — the non-negotiable invariant
+--------------------------------------------------------------------
+Soft-dismiss (``dismissed_at``) hides a row from the inbox ONLY.  It must
+never be consulted by ``_get_by_dedup`` / ``create_if_absent`` (a dismissed
+row must still anchor its dedup key, so a still-active source does not
+re-spam the user) or by the low-stock episode helpers
+(``open_low_stock_opener``, ``open_low_stock_openers``,
+``count_low_stock_openers_on``, ``mark_resolved`` — a dismissed opener must
+still hold live episode state, so a rescan does not open a duplicate
+episode).  Only ``list_for_user`` and ``unread_count`` filter on
+``dismissed_at``.
 """
 
 from __future__ import annotations
@@ -310,13 +339,19 @@ class NotificationRepository:
             Maximum number of rows to return.  Callers should validate
             the value before calling (route layer enforces 1 ≤ limit ≤ 200).
 
+        Always excludes soft-dismissed rows (``dismissed_at IS NOT NULL``) --
+        dismiss is meant to empty the inbox view, not just mark rows read.
+
         Ordering is ``created_at DESC, id DESC`` — the secondary ``id DESC``
         break ties deterministically when multiple rows land in the same
         second (e.g. a batch scan).
         """
         stmt = (
             select(Notification)
-            .where(Notification.user_id == user_id)
+            .where(
+                Notification.user_id == user_id,
+                Notification.dismissed_at.is_(None),
+            )
             .order_by(Notification.created_at.desc(), Notification.id.desc())
             .limit(limit)
         )
@@ -327,7 +362,9 @@ class NotificationRepository:
     def unread_count(self, user_id: int) -> int:
         """Return the number of unread notifications for a user.
 
-        Counts rows where ``read_at IS NULL`` for the given user.
+        Counts rows where ``read_at IS NULL`` for the given user, excluding
+        soft-dismissed rows (a dismissed row never counts toward the badge,
+        read or not).
         """
         stmt = (
             select(func.count())
@@ -335,6 +372,7 @@ class NotificationRepository:
             .where(
                 Notification.user_id == user_id,
                 Notification.read_at.is_(None),
+                Notification.dismissed_at.is_(None),
             )
         )
         return self._db.execute(stmt).scalar_one()
@@ -399,6 +437,78 @@ class NotificationRepository:
                 Notification.read_at.is_(None),
             )
             .values(read_at=now_utc)
+            .execution_options(synchronize_session="fetch")
+        )
+        self._db.execute(update_stmt)
+        self._db.flush()
+        return affected
+
+    def dismiss(self, user_id: int, notification_id: int) -> Notification | None:
+        """Stamp ``dismissed_at`` on a notification owned by the given user.
+
+        Only dismisses the row if it belongs to ``user_id``; returns ``None``
+        when the row does not exist or belongs to a different user (the route
+        layer raises 404 in that case).
+
+        Idempotency: if the row is already dismissed, the existing
+        ``dismissed_at`` is preserved (not refreshed) and the row is returned
+        unchanged.
+
+        IMPORTANT: this is a soft-dismiss.  It hides the row from
+        ``list_for_user`` / ``unread_count`` only.  It does NOT delete the
+        row, and it must NEVER be mirrored onto ``_get_by_dedup`` /
+        ``create_if_absent`` or the low-stock episode helpers -- a dismissed
+        row still anchors its dedup key and still holds live episode state.
+
+        Flushes but does not commit.
+        """
+        stmt = select(Notification).where(
+            Notification.id == notification_id,
+            Notification.user_id == user_id,
+        )
+        notification = self._db.execute(stmt).scalar_one_or_none()
+        if notification is None:
+            return None
+        if notification.dismissed_at is None:
+            notification.dismissed_at = datetime.now(tz=UTC)
+            self._db.flush()
+        return notification
+
+    def dismiss_all(self, user_id: int) -> int:
+        """Soft-dismiss all currently-visible notifications for a user.
+
+        Returns the number of rows affected (rows that were not already
+        dismissed and had ``dismissed_at`` stamped on them).
+
+        Strategy mirrors ``mark_all_read``: count first, then bulk-UPDATE.
+        The two operations are within the same transaction.
+
+        IMPORTANT: soft-dismiss only.  Does not delete rows; does not touch
+        the dedup or low-stock episode state (see ``dismiss`` docstring).
+
+        Flushes but does not commit.
+        """
+        count_stmt = (
+            select(func.count())
+            .select_from(Notification)
+            .where(
+                Notification.user_id == user_id,
+                Notification.dismissed_at.is_(None),
+            )
+        )
+        affected: int = self._db.execute(count_stmt).scalar_one()
+
+        if affected == 0:
+            return 0
+
+        now_utc = datetime.now(tz=UTC)
+        update_stmt = (
+            update(Notification)
+            .where(
+                Notification.user_id == user_id,
+                Notification.dismissed_at.is_(None),
+            )
+            .values(dismissed_at=now_utc)
             .execution_options(synchronize_session="fetch")
         )
         self._db.execute(update_stmt)

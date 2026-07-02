@@ -12,6 +12,16 @@
 ``ReadAllResponse``
     Returned by ``POST /notifications/read-all``.  Confirms how many rows
     were actually marked read (useful for debugging; ignored by the bell).
+
+``DismissAllResponse``
+    Returned by ``POST /notifications/dismiss-all``.  Confirms how many rows
+    were actually soft-dismissed.  Mirrors ``ReadAllResponse``.
+
+Note: ``NotificationResponse`` deliberately does NOT expose ``dismissed_at``.
+Dismissed rows are never returned by the inbox (``list_for_user`` excludes
+them), and the single-dismiss endpoint's caller only needs to drop the row
+locally -- keeping the response shape unchanged avoids needless contract
+churn.
 """
 
 from __future__ import annotations
@@ -73,3 +83,14 @@ class ReadAllResponse(BaseModel):
     """
 
     marked: int
+
+
+class DismissAllResponse(BaseModel):
+    """Result of ``POST /notifications/dismiss-all``.
+
+    ``dismissed`` is the number of rows that were actually soft-dismissed
+    (rows that were still visible before the call).  Zero means there was
+    nothing to dismiss.  Mirrors ``ReadAllResponse``.
+    """
+
+    dismissed: int

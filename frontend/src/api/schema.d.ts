@@ -1308,6 +1308,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/notifications/dismiss-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss All Notifications
+         * @description Soft-dismiss all currently-visible notifications for the current user.
+         *
+         *     Returns ``{ dismissed: N }`` where ``N`` is the number of rows that were
+         *     actually updated.  Zero means there was nothing to dismiss.  This is a
+         *     soft-dismiss (``dismissed_at`` stamped); rows are not deleted and remain
+         *     fully intact for dedup / low-stock episode purposes.
+         */
+        post: operations["dismiss_all_notifications_api_notifications_dismiss_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/notifications/read-all": {
         parameters: {
             query?: never;
@@ -1351,6 +1376,34 @@ export interface paths {
         get: operations["get_unread_count_api_notifications_unread_count_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/{notification_id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss Notification
+         * @description Soft-dismiss a single notification and return the updated row.
+         *
+         *     The notification must belong to the current user; if the id is missing or
+         *     owned by another user the endpoint returns 404 ``notification.not_found``.
+         *
+         *     Idempotent: calling this endpoint on an already-dismissed notification is
+         *     a no-op that returns the row unchanged (the original ``dismissed_at`` is
+         *     preserved).  This is a soft-dismiss: the row is hidden from the inbox
+         *     only, and remains fully intact for dedup / low-stock episode purposes.
+         */
+        post: operations["dismiss_notification_api_notifications__notification_id__dismiss_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2480,6 +2533,18 @@ export interface components {
             occurred_at?: string | null;
             /** Quantity */
             quantity: number | string;
+        };
+        /**
+         * DismissAllResponse
+         * @description Result of ``POST /notifications/dismiss-all``.
+         *
+         *     ``dismissed`` is the number of rows that were actually soft-dismissed
+         *     (rows that were still visible before the call).  Zero means there was
+         *     nothing to dismiss.  Mirrors ``ReadAllResponse``.
+         */
+        DismissAllResponse: {
+            /** Dismissed */
+            dismissed: number;
         };
         /**
          * EmailChannelResponse
@@ -8159,6 +8224,44 @@ export interface operations {
             };
         };
     };
+    dismiss_all_notifications_api_notifications_dismiss_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DismissAllResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     mark_all_notifications_read_api_notifications_read_all_post: {
         parameters: {
             query?: never;
@@ -8231,6 +8334,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    dismiss_notification_api_notifications__notification_id__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notification_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

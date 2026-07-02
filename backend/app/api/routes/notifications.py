@@ -1,24 +1,34 @@
-"""In-app notification inbox endpoints (M4 §4.10 / §9 Step 6).
+"""In-app notification inbox endpoints (M4 §4.10 / §9 Step 6; notification
+hygiene hardening round Step 1).
 
 Routes (all under the api_prefix, e.g. /api; all session-authenticated):
     GET  /notifications                      Current user's inbox (newest-first).
     GET  /notifications/unread-count         Badge count (unread rows).
     POST /notifications/{id}/read            Mark one notification read.
     POST /notifications/read-all             Mark all current-user notifications read.
+    POST /notifications/dismiss-all          Soft-dismiss all current-user notifications.
+    POST /notifications/{id}/dismiss         Soft-dismiss one notification.
 
 Design notes
 ------------
-- All four endpoints are scoped to the **current user** (``ctx.user``); a user
-  can only list, count, or mark their own notifications.
+- All six endpoints are scoped to the **current user** (``ctx.user``); a user
+  can only list, count, mark, or dismiss their own notifications.
 - ``GET /notifications/unread-count`` is declared **before** the ``/{id}/read``
   route so FastAPI does not attempt to parse the literal "unread-count" as an
-  integer path parameter.
+  integer path parameter.  ``POST /notifications/dismiss-all`` is likewise
+  declared **before** ``/{id}/dismiss`` for the same reason (and consistency
+  with the existing idiom, even though the two paths differ in segment count).
 - ``NotificationService`` is the single entry point; no raw queries in handlers.
 - ``params`` is surfaced as a parsed dict (not the raw JSON string) — the service
   layer handles deserialization.
-- The ``POST /notifications/{id}/read`` returns the updated ``NotificationResponse``
-  (rather than 204) so the client can update the local row immediately without a
-  second round-trip.
+- The ``POST /notifications/{id}/read`` and ``POST /notifications/{id}/dismiss``
+  return the updated ``NotificationResponse`` (rather than 204) so the client
+  can update the local row immediately without a second round-trip.
+- Dismiss is soft (``dismissed_at`` stamped, row kept) — see
+  ``app/repositories/notification.py`` for the full invariant.  Unlike
+  list/count, the dismiss endpoints do **not** gate on ``notify_in_app``: a
+  dismiss is a write the user explicitly initiated, and it is harmless when
+  the inbox is off.
 
 Error contract:
     401  No/invalid session.
@@ -35,6 +45,7 @@ from app.core.errors import ErrorResponse
 from app.db.session import get_db
 from app.models.notification import Notification
 from app.schemas.notification import (
+    DismissAllResponse,
     NotificationResponse,
     ReadAllResponse,
     UnreadCountResponse,
@@ -159,3 +170,44 @@ def mark_all_notifications_read(
     assert ctx.user is not None
     count = service.mark_all_read(ctx.user.id)
     return ReadAllResponse(marked=count)
+
+
+# NOTE: this route must be declared BEFORE /{notification_id}/dismiss so that
+# FastAPI does not attempt to coerce the literal string "dismiss-all" into an
+# integer (mirrors the /unread-count idiom above).
+@router.post("/notifications/dismiss-all", response_model=DismissAllResponse)
+def dismiss_all_notifications(
+    ctx: Annotated[RequestContext, Depends(get_authenticated_context)],
+    service: Annotated[NotificationService, Depends(_get_service)],
+) -> DismissAllResponse:
+    """Soft-dismiss all currently-visible notifications for the current user.
+
+    Returns ``{ dismissed: N }`` where ``N`` is the number of rows that were
+    actually updated.  Zero means there was nothing to dismiss.  This is a
+    soft-dismiss (``dismissed_at`` stamped); rows are not deleted and remain
+    fully intact for dedup / low-stock episode purposes.
+    """
+    assert ctx.user is not None
+    count = service.dismiss_all(ctx.user.id)
+    return DismissAllResponse(dismissed=count)
+
+
+@router.post("/notifications/{notification_id}/dismiss", response_model=NotificationResponse)
+def dismiss_notification(
+    notification_id: int,
+    ctx: Annotated[RequestContext, Depends(get_authenticated_context)],
+    service: Annotated[NotificationService, Depends(_get_service)],
+) -> NotificationResponse:
+    """Soft-dismiss a single notification and return the updated row.
+
+    The notification must belong to the current user; if the id is missing or
+    owned by another user the endpoint returns 404 ``notification.not_found``.
+
+    Idempotent: calling this endpoint on an already-dismissed notification is
+    a no-op that returns the row unchanged (the original ``dismissed_at`` is
+    preserved).  This is a soft-dismiss: the row is hidden from the inbox
+    only, and remains fully intact for dedup / low-stock episode purposes.
+    """
+    assert ctx.user is not None
+    notification, params = service.dismiss(ctx.user.id, notification_id)
+    return _build_response(notification, params)

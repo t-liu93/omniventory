@@ -20,6 +20,13 @@ Design notes
   ``resolved_at``) are NULL for date sources (best_before / warranty).  They are
   used by the low-stock evaluator in Step 4.
 - ``read_at`` is NULL while unread; stamped on mark-read (Step 6).
+- ``dismissed_at`` is NULL while visible in the inbox; stamped on soft-dismiss
+  (notification hygiene hardening round, Step 1).  Dismiss hides a row from the
+  inbox ONLY — it is deliberately invisible to ``dismissed_at`` in the dedup
+  lookup (``_get_by_dedup`` / ``create_if_absent``) and the low-stock episode
+  helpers (``open_low_stock_opener`` et al.), so a dismissed row still anchors
+  its dedup key and still holds live episode state.  See
+  ``app/repositories/notification.py`` module docstring for the full contract.
 """
 
 from __future__ import annotations
@@ -51,6 +58,9 @@ class Notification(Base):
     resolved_at         Low-stock only: stamped when the definition recovers.
                         NULL = open / not applicable.
     read_at             In-app read state.  NULL = unread.
+    dismissed_at        In-app soft-dismiss state.  NULL = visible in the inbox;
+                        stamped = hidden from the inbox.  Independent of
+                        ``read_at`` (a dismissed row may be read or unread).
     created_at          Row-creation timestamp (DB server default).
     """
 
@@ -61,6 +71,8 @@ class Notification(Base):
         Index("uq_notifications_user_dedup", "user_id", "dedup_key", unique=True),
         # Non-unique index for unread-count / inbox queries.
         Index("ix_notifications_user_read_at", "user_id", "read_at", unique=False),
+        # No index on dismissed_at: household scale, and the inbox query is
+        # already user-scoped + limited, so a full index is not warranted here.
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -83,6 +95,10 @@ class Notification(Base):
     )
     # In-app read state
     read_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
+    # In-app soft-dismiss state (notification hygiene hardening round, Step 1)
+    dismissed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, default=None
     )
     # Creation timestamp

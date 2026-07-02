@@ -1314,6 +1314,20 @@
         "title": "DiscardRequest",
         "type": "object"
       },
+      "DismissAllResponse": {
+        "description": "Result of ``POST /notifications/dismiss-all``.\n\n``dismissed`` is the number of rows that were actually soft-dismissed\n(rows that were still visible before the call).  Zero means there was\nnothing to dismiss.  Mirrors ``ReadAllResponse``.",
+        "properties": {
+          "dismissed": {
+            "title": "Dismissed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dismissed"
+        ],
+        "title": "DismissAllResponse",
+        "type": "object"
+      },
       "EmailChannelResponse": {
         "description": "Email channel config returned to the client (password masked).",
         "properties": {
@@ -10556,6 +10570,48 @@
         ]
       }
     },
+    "/api/notifications/dismiss-all": {
+      "post": {
+        "description": "Soft-dismiss all currently-visible notifications for the current user.\n\nReturns ``{ dismissed: N }`` where ``N`` is the number of rows that were\nactually updated.  Zero means there was nothing to dismiss.  This is a\nsoft-dismiss (``dismissed_at`` stamped); rows are not deleted and remain\nfully intact for dedup / low-stock episode purposes.",
+        "operationId": "dismiss_all_notifications_api_notifications_dismiss_all_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DismissAllResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          }
+        },
+        "summary": "Dismiss All Notifications",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
     "/api/notifications/read-all": {
       "post": {
         "description": "Mark all unread notifications for the current user as read.\n\nReturns ``{ marked: N }`` where ``N`` is the number of rows that were\nactually updated.  Zero means there were no unread notifications.",
@@ -10635,6 +10691,69 @@
           }
         },
         "summary": "Get Unread Count",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/notifications/{notification_id}/dismiss": {
+      "post": {
+        "description": "Soft-dismiss a single notification and return the updated row.\n\nThe notification must belong to the current user; if the id is missing or\nowned by another user the endpoint returns 404 ``notification.not_found``.\n\nIdempotent: calling this endpoint on an already-dismissed notification is\na no-op that returns the row unchanged (the original ``dismissed_at`` is\npreserved).  This is a soft-dismiss: the row is hidden from the inbox\nonly, and remains fully intact for dedup / low-stock episode purposes.",
+        "operationId": "dismiss_notification_api_notifications__notification_id__dismiss_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notification_id",
+            "required": true,
+            "schema": {
+              "title": "Notification Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dismiss Notification",
         "tags": [
           "notifications"
         ]
