@@ -1,0 +1,60 @@
+name: Release
+
+# Build the production Docker image and publish it to the GitHub Container
+# Registry (GHCR) whenever a version tag (v*) is pushed. The tag is the single
+# source of truth for the published version — e.g. pushing `v0.1.0` publishes
+#   ghcr.io/omniventory/omniventory:0.1.0
+#   ghcr.io/omniventory/omniventory:0.1
+#   ghcr.io/omniventory/omniventory:latest   (only for non-prerelease tags)
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  docker:
+    name: Build & publish Docker image (GHCR)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # QEMU + Buildx enable the multi-arch (amd64 + arm64) build below.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive image tags & labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          # latest=auto → the `latest` tag is applied only to full (non-prerelease)
+          # semver tags, so a future v0.2.0-rc1 won't move `latest`.
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
