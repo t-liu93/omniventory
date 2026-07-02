@@ -1,7 +1,9 @@
 # Omniventory — Production compose file
-# Uses a prebuilt image (no build step here).
-# Run with:  docker compose up -d
-# Dev override:  docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+# Pulls the prebuilt multi-arch image from GHCR (no build step here).
+# Run with:  docker compose up -d       (pulls ghcr.io/omniventory/omniventory:latest)
+# Pin a version:  set IMAGE_TAG=0.1.0 in .env  (defaults to :latest)
+# Dev override (build from source instead):
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 #
 # Schema migrations run in a dedicated one-shot `migrate` service
 # (`alembic upgrade head`). The `app` service waits for it via
@@ -19,7 +21,7 @@ services:
   # One-shot migration runner: applies Alembic migrations, then exits.
   # `app` depends on this completing successfully (fail-closed).
   migrate:
-    image: omniventory:latest
+    image: ghcr.io/omniventory/omniventory:${IMAGE_TAG:-latest}
     user: "1000:1000"
     command: ["alembic", "upgrade", "head"]
     env_file:
@@ -35,7 +37,7 @@ services:
       disable: true
 
   app:
-    image: omniventory:latest
+    image: ghcr.io/omniventory/omniventory:${IMAGE_TAG:-latest}
     restart: unless-stopped
     user: "1000:1000"
     # Start only after migrations have completed successfully (fail-closed).

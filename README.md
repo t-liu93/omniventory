@@ -59,13 +59,13 @@ Requirements: Docker + Docker Compose.
 git clone git@github.com:omniventory/omniventory.git
 cd omniventory
 
-# Build the image (the compose files reference omniventory:latest)
-make docker-build
-
-# Start: the one-shot `migrate` service runs `alembic upgrade head` first,
-# then the `app` service starts only after it succeeds (fail-closed).
+# Pulls the prebuilt multi-arch image from GHCR, runs the one-shot `migrate`
+# service (alembic upgrade head), then starts `app` only after it succeeds
+# (fail-closed).
 docker compose up -d
 ```
+
+Pin a specific release by setting `IMAGE_TAG=0.1.0` in `.env` (defaults to `latest`). To build from source instead of pulling, use `make docker-dev`.
 
 Then open the app in your browser and complete the **first-run setup** (create the admin account) — there is no environment-seeded admin.
 
@@ -77,6 +77,7 @@ Zero-config by default. Override via an optional `.env` file next to `docker-com
 
 | Variable | Purpose |
 | --- | --- |
+| `IMAGE_TAG` | Published image tag to run (`ghcr.io/omniventory/omniventory:<IMAGE_TAG>`); defaults to `latest`. |
 | `APP_PORT` | Host port to expose the app on. |
 | `DATA_DIR` | Host path bind-mounted to `/app/data` (SQLite + media). |
 | `SECRET_KEY` | Session-signing key. Auto-generated and persisted on first run if left blank. |
@@ -104,8 +105,8 @@ pnpm dev
 - `make check` — all quality gates (lint + type-check + tests, both sides). This is the Definition-of-Done gate.
 - `make lint` · `make test` — the halves of the above.
 - `make codegen` — regenerate `openapi.json` + the frontend API types. Re-run and commit whenever the API changes (a CI job fails on drift).
-- `make docker-build` — build the production image `omniventory:latest`.
-- `make docker-dev` — build + run via the dev compose override.
+- `make docker-build` — build a local image from source (`omniventory:latest`).
+- `make docker-dev` — build from source + run the dev stack (tagged `omniventory:dev`, so it never shadows the published GHCR image).
 
 ## Project status & roadmap
 

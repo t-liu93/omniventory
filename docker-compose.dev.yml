@@ -4,18 +4,23 @@
 #
 # Overrides both services from docker-compose.yml (`migrate` and `app`):
 #   - Adds `build:` so the image is built locally from source
+#   - Re-tags it as a LOCAL `omniventory:dev` image (overriding the base file's
+#     GHCR reference) so a dev build never shadows the published
+#     ghcr.io/omniventory/omniventory:latest in the local image store
 #   - Sets ENVIRONMENT=development
 # Both services share the same build (same image tag), declared once via a
 # YAML anchor so dev builds from source rather than pulling a prebuilt image.
 
 services:
   migrate:
+    image: omniventory:dev
     build: &build
       context: .
       dockerfile: docker/Dockerfile
     environment:
       ENVIRONMENT: development
   app:
+    image: omniventory:dev
     build: *build
     environment:
       ENVIRONMENT: development

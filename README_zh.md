@@ -59,13 +59,12 @@
 git clone git@github.com:omniventory/omniventory.git
 cd omniventory
 
-# 构建镜像（compose 文件引用的是 omniventory:latest）
-make docker-build
-
-# 启动：一次性的 migrate 服务先跑 `alembic upgrade head`，
-# 成功之后 app 服务才启动（fail-closed）。
+# 从 GHCR 拉取预构建的多架构镜像，先跑一次性的 migrate 服务
+# （alembic upgrade head），成功之后 app 才启动（fail-closed）。
 docker compose up -d
 ```
+
+在 `.env` 里设 `IMAGE_TAG=0.1.0` 可锁定到某个发布版本（默认 `latest`）。想从源码构建而非拉镜像，用 `make docker-dev`。
 
 然后在浏览器打开应用，完成**首次安装引导**（创建管理员账号）—— 不存在由环境变量预置的管理员。
 
@@ -77,6 +76,7 @@ docker compose up -d
 
 | 变量 | 用途 |
 | --- | --- |
+| `IMAGE_TAG` | 要运行的已发布镜像标签（`ghcr.io/omniventory/omniventory:<IMAGE_TAG>`）；默认 `latest`。 |
 | `APP_PORT` | 对外暴露应用的主机端口。 |
 | `DATA_DIR` | 绑定挂载到 `/app/data` 的主机路径（SQLite + 媒体）。 |
 | `SECRET_KEY` | 会话签名密钥。留空则首次运行时自动生成并持久化。 |
@@ -104,8 +104,8 @@ pnpm dev
 - `make check` —— 所有质量关卡（两端的 lint + 类型检查 + 测试）。这是 Definition-of-Done 关卡。
 - `make lint` · `make test` —— 上面的两半。
 - `make codegen` —— 重新生成 `openapi.json` + 前端 API 类型。API 一变就重跑并提交（有 CI 关卡在漂移时失败）。
-- `make docker-build` —— 构建生产镜像 `omniventory:latest`。
-- `make docker-dev` —— 通过 dev compose override 构建 + 运行。
+- `make docker-build` —— 从源码构建一个本地镜像（`omniventory:latest`）。
+- `make docker-dev` —— 从源码构建 + 运行 dev 栈（打成 `omniventory:dev`，绝不会遮蔽已发布的 GHCR 镜像）。
 
 ## 项目状态与路线图
 
